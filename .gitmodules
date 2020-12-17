@@ -1,0 +1,3 @@
+[submodule "WPIWebSockets"]
+	path = WPIWebSockets
+	url = https://github.com/DeepBlueRobotics/WPIWebSockets.git
