@@ -17,3 +17,10 @@ dependencies {
     testImplementation 'junit:junit:4.13'
     compile 'org.mockito:mockito-core:3.6.0'
 }
+
+task copyWebotsNativeLibs(type: Copy) {
+    from webots.nativeLibs.getFiles()
+    into "."
+}
+
+build.dependsOn(copyWebotsNativeLibs)
