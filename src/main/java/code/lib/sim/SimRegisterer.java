@@ -41,8 +41,8 @@ public class SimRegisterer {
                         if(isInitialized2) {
                             //Then sync the values of that motor's encoder to the sim device
                             new MockedSparkEncoder("PWM_" + (channelA/2), channelA/2);
+                            callback2.close();
                         }
-                        callback2.close();
                     }, true));
                     callback.close();
                 }, true));
