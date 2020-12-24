@@ -8,7 +8,7 @@ import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.BooleanCallback;
-import org.team199.wpiws.interfaces.LongCallback;
+import org.team199.wpiws.interfaces.IntegerCallback;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
 
 import code.lib.Future;
@@ -33,11 +33,11 @@ public class SimRegisterer {
         registerCallback(BooleanCallback.class, callbackU -> EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 //When an Encoder is initalized, wait for it's channels to become available
-                registerCallback(LongCallback.class, callback -> new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
+                registerCallback(IntegerCallback.class, callback -> new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
                     if(channelB == 0) {
                         return;
                     }
-                    int channelA = (int)channelB-1;
+                    int channelA = channelB-1;
                     PWMSim pwmSim = new PWMSim((channelA/2) + "");
                     //Then wait for the associated PWM motor to be initalized
                     registerCallback(BooleanCallback.class, callback2 -> pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
