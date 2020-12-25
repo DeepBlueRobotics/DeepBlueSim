@@ -2,7 +2,7 @@ package code.lib.sim;
 
 import com.cyberbotics.webots.controller.Gyro;
 
-import org.team199.wpiws.SimDeviceSim;
+import org.team199.wpiws.devices.SimDeviceSim;
 
 /**
  * Handles the linking of the simulated AHRS gyro to Webots

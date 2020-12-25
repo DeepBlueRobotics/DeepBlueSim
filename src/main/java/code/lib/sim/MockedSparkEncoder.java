@@ -2,7 +2,7 @@ package code.lib.sim;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 
-import org.team199.wpiws.EncoderSim;
+import org.team199.wpiws.devices.EncoderSim;
 
 public class MockedSparkEncoder implements Runnable {
     private String name;
