@@ -4,12 +4,12 @@ import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Robot;
 
 import org.team199.wpiws.interfaces.DoubleCallback;
-import org.team199.wpiws.interfaces.SimValueCallback;
+import org.team199.wpiws.interfaces.StringCallback;
 
 /**
  * Forwards motor calls from WPILib motor controllers to Webots
  */
-public class WebotsMotorForwarder implements DoubleCallback, Runnable, SimValueCallback {
+public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCallback {
 
     private double currentOutput;
     private Motor motor;

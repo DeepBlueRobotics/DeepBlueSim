@@ -1,13 +1,13 @@
 package code.lib.sim;
 
 import java.util.concurrent.atomic.AtomicReference;
-import org.team199.wpiws.EncoderSim;
-import org.team199.wpiws.PWMSim;
 import org.team199.wpiws.ScopedObject;
-import org.team199.wpiws.SimDeviceSim;
 import org.team199.wpiws.UniqueArrayList;
-import org.team199.wpiws.interfaces.BiLongCallback;
+import org.team199.wpiws.devices.EncoderSim;
+import org.team199.wpiws.devices.PWMSim;
+import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.BooleanCallback;
+import org.team199.wpiws.interfaces.IntegerCallback;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
 
 // Performs automatic registration of callbacks detecting both the initalization of new devices as well as data callbacks for devices such as Motors, Gyros, etc.
@@ -30,10 +30,13 @@ public class SimRegisterer {
         EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 //When an Encoder is initalized, wait for it's channels to become available
-                AtomicReference<ScopedObject<BiLongCallback>> callbackRef = new AtomicReference<>();
-                callbackRef.set(new EncoderSim(name).registerChannelInitializedCallback((nameU, channelAL, channelB) -> {
-                    int channelA = (int)channelAL;
-                    PWMSim pwmSim = new PWMSim(channelA/2);
+                AtomicReference<ScopedObject<IntegerCallback>> callbackRef = new AtomicReference<>();
+                callbackRef.set(new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
+                    if(channelB == 0) {
+                        return;
+                    }
+                    int channelA = channelB-1;
+                    PWMSim pwmSim = new PWMSim((channelA/2) + "");
                     //Then wait for the associated PWM motor to be initalized
                     AtomicReference<ScopedObject<BooleanCallback>> callbackRef2 = new AtomicReference<>();
                     callbackRef2.set(pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
