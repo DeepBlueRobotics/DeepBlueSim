@@ -21,10 +21,3 @@ dependencies {
 shadowJar {
     archiveClassifier.set('') // Stop the Shadow plugin from adding "-all" to the jar.
 }
-
-task copyWebotsNativeLibs(type: Copy) {
-    from webots.nativeLibs.getFiles()
-    into "."
-}
-
-build.dependsOn(copyWebotsNativeLibs)
