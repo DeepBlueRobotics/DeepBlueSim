@@ -31,36 +31,35 @@ public class SimRegisterer {
         CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 //When an Encoder is initalized, wait for it's channels to become available
-                AtomicBoolean callbackFinished = new AtomicBoolean(false);
-                AtomicReference<ScopedObject<IntegerCallback>> callbackRef = new AtomicReference<>();
-                callbackRef.set(new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
+                AtomicBoolean channelsAvailable = new AtomicBoolean(false);
+                AtomicReference<ScopedObject<IntegerCallback>> channelBCallbackRef = new AtomicReference<>();
+                channelBCallbackRef.set(new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
                     if(channelB == 0) {
                         return;
                     }
                     int channelA = channelB-1;
                     PWMSim pwmSim = new PWMSim((channelA/2) + "");
                     //Then wait for the associated PWM motor to be initalized
-                    AtomicBoolean callbackFinished2 = new AtomicBoolean(false);
-                    AtomicReference<ScopedObject<BooleanCallback>> callbackRef2 = new AtomicReference<>();
-                    callbackRef2.set(pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
+                    AtomicBoolean pwmInited = new AtomicBoolean(false);
+                    AtomicReference<ScopedObject<BooleanCallback>> pwmInitCallbackRef = new AtomicReference<>();
+                    pwmInitCallbackRef.set(pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
                         if(isInitialized2) {
                             //Then sync the values of that motor's encoder to the sim device
                             new MockedSparkEncoder("PWM_" + (channelA/2), channelA/2);
-                            callbackRef2.get().close();
-                            callbackFinished2.set(true);
-                            if (callbackRef2.get() != null) 
-                                callbackRef2.get().close();
-                        }
+                            pwmInited.set(true);
+                            if (pwmInitCallbackRef.get() != null) 
+                                pwmInitCallbackRef.get().close();
+                            }
                     }, true));
-                    if (callbackFinished2.get())
-                    callbackRef2.get().close();
+                    if (pwmInited.get())
+                        pwmInitCallbackRef.get().close();
 
-                    callbackFinished.set(true);
-                    if (callbackRef.get() != null) 
-                        callbackRef.get().close();
+                    channelsAvailable.set(true);
+                    if (channelBCallbackRef.get() != null) 
+                        channelBCallbackRef.get().close();
                 }, true));
-                if (callbackFinished.get())
-                    callbackRef.get().close();
+                if (channelsAvailable.get())
+                    channelBCallbackRef.get().close();
             }
         }, true));
     }
