@@ -19,15 +19,15 @@ public class SimRegisterer {
 
     static {
         // Register Initalized Callbacks for Misc Devices
-        SimDeviceSim.registerDeviceCreatedCallback("", MISC_DEVICE_CALLBACK, true);
+        CALLBACKS.add(SimDeviceSim.registerDeviceCreatedCallback("", MISC_DEVICE_CALLBACK, true));
         // Register Initalized Callbacks for PWM Devices
-        PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
+        CALLBACKS.add(PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 callback("PWM", name, 0);
             }
-        }, true);
+        }, true));
         // Register Initalized Callbacks for Encoder Devices
-        EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
+        CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 //When an Encoder is initalized, wait for it's channels to become available
                 AtomicReference<ScopedObject<IntegerCallback>> callbackRef = new AtomicReference<>();
@@ -49,7 +49,7 @@ public class SimRegisterer {
                     callbackRef.get().close();
                 }, true));
             }
-        }, true);
+        }, true));
     }
 
     // Initalize SimRegisterer. This method exists to ensure that the static block is called
