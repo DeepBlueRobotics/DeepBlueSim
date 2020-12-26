@@ -45,7 +45,7 @@ public class SimRegisterer {
                     pwmInitCallbackRef.set(pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
                         if(isInitialized2) {
                             //Then sync the values of that motor's encoder to the sim device
-                            new MockedSparkEncoder("PWM_" + (channelA/2), channelA/2);
+                            new MockedSparkEncoder("PWM_" + (channelA/2), name);
                             pwmInited.set(true);
                             if (pwmInitCallbackRef.get() != null) 
                                 pwmInitCallbackRef.get().close();
