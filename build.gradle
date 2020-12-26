@@ -1,5 +1,7 @@
 plugins {
+    // Builds a fat jar containing needed dependencies
     id 'com.github.johnrengelman.shadow' version '6.1.0'
+
     id "java"
     id "org.carlmontrobotics.webots" version "0.8"
     id "application"
@@ -18,6 +20,21 @@ dependencies {
     testImplementation 'junit:junit:4.13'
 }
 
+// Configure the building of the fat jar 
 shadowJar {
-    archiveClassifier.set('') // Stop the Shadow plugin from adding "-all" to the jar.
+    // Don't add "-all" to the jar filename.
+    archiveClassifier.set('')
+
+    // Webots puts the correct version of its libs on the classpath before 
+    // launching the controller, so don't include them.
+    exclude 'com/cyberbotics/**/*'
+
+    // Something in the dependency hierarchy depends on junit unnecessarily.
+    // Make sure it doesn't get included.
+    dependencies {
+        exclude(dependency('junit:junit:.*'))
+    }
+
+    // Remove anything that was required by something that was excluded
+    minimize()
 }
