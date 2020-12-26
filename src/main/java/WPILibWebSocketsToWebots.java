@@ -1,5 +1,3 @@
-package code;
-
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.cyberbotics.webots.controller.Robot;
@@ -7,9 +5,12 @@ import com.cyberbotics.webots.controller.Robot;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.WSConnection;
 
+import code.SimConfig;
 import code.lib.sim.Simulation;
 
-public class Main {
+// NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
+// the name of the jar.
+public class WPILibWebSocketsToWebots {
 
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
     
