@@ -5,7 +5,6 @@ import com.cyberbotics.webots.controller.Robot;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.WSConnection;
 
-import code.Constants;
 import code.SimConfig;
 import code.lib.sim.Simulation;
 
