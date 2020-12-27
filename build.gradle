@@ -30,9 +30,10 @@ shadowJar {
     exclude 'com/cyberbotics/**/*'
 
     // Something in the dependency hierarchy depends on junit unnecessarily.
-    // Make sure it doesn't get included.
+    // Make sure it, and Hamcrest, which it depends on, don't get included.
     dependencies {
         exclude(dependency('junit:junit:.*'))
+        exclude(dependency('org.hamcrest:hamcrest-core:.*'))
     }
 
     // Remove anything that was required by something that was excluded
