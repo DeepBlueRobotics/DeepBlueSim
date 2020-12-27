@@ -49,7 +49,7 @@ public class SimRegisterer {
             // If a navX is registered, try to link its SimDevice to the Webots robot
             MockGyro.linkGyro();
         }
-        if(deviceName.startsWith("EncoderSim")) {
+        if(deviceName.startsWith("CANEncoder_")) {
             new MockedSparkEncoder(deviceName);
         }
     }
