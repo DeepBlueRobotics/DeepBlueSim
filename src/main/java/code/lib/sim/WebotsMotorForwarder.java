@@ -32,7 +32,7 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
     public void callback(String name, String value) {
         try {
             callback(name, Double.parseDouble(value));
-        } catch(NumberFormatException e) {}
+        } catch(NullPointerException | NumberFormatException e) {}
     }
 
     @Override

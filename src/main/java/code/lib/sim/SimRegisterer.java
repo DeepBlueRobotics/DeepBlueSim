@@ -1,14 +1,9 @@
 package code.lib.sim;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.UniqueArrayList;
-import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.BooleanCallback;
-import org.team199.wpiws.interfaces.IntegerCallback;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
 
 // Performs automatic registration of callbacks detecting both the initalization of new devices as well as data callbacks for devices such as Motors, Gyros, etc.
@@ -27,41 +22,6 @@ public class SimRegisterer {
                 callback("PWM", name, 0);
             }
         }, true));
-        // Register Initalized Callbacks for Encoder Devices
-        CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
-            if(isInitialized) {
-                //When an Encoder is initalized, wait for it's channels to become available
-                AtomicBoolean channelsAvailable = new AtomicBoolean(false);
-                AtomicReference<ScopedObject<IntegerCallback>> channelBCallbackRef = new AtomicReference<>();
-                channelBCallbackRef.set(new EncoderSim(name).registerChannelBCallback((nameU, channelB) -> {
-                    if(channelB == 0) {
-                        return;
-                    }
-                    int channelA = channelB-1;
-                    PWMSim pwmSim = new PWMSim((channelA/2) + "");
-                    //Then wait for the associated PWM motor to be initalized
-                    AtomicBoolean pwmInited = new AtomicBoolean(false);
-                    AtomicReference<ScopedObject<BooleanCallback>> pwmInitCallbackRef = new AtomicReference<>();
-                    pwmInitCallbackRef.set(pwmSim.registerInitializedCallback((nameU2, isInitialized2) -> {
-                        if(isInitialized2) {
-                            //Then sync the values of that motor's encoder to the sim device
-                            new MockedSparkEncoder("PWM_" + (channelA/2), name);
-                            pwmInited.set(true);
-                            if (pwmInitCallbackRef.get() != null) 
-                                pwmInitCallbackRef.get().close();
-                            }
-                    }, true));
-                    if (pwmInited.get())
-                        pwmInitCallbackRef.get().close();
-
-                    channelsAvailable.set(true);
-                    if (channelBCallbackRef.get() != null) 
-                        channelBCallbackRef.get().close();
-                }, true));
-                if (channelsAvailable.get())
-                    channelBCallbackRef.get().close();
-            }
-        }, true));
     }
 
     // Initalize SimRegisterer. This method exists to ensure that the static block is called
@@ -74,7 +34,7 @@ public class SimRegisterer {
 
     // Callback for when a Miscellaneous Device is registered
     private static void callback(String deviceName) {
-        if(deviceName.startsWith("Talon") || deviceName.startsWith("Victor")) {
+        if(deviceName.startsWith("Talon") || deviceName.startsWith("Victor") || deviceName.startsWith("SparkMax")) {
             // If a new Talon or Victor has been initalized, attempt to link it to a Webots Motor
             // Create a WebotsMotorForwarder for this motor
             final WebotsMotorForwarder fwdr = new WebotsMotorForwarder(Simulation.getRobot(), deviceName);
@@ -89,6 +49,10 @@ public class SimRegisterer {
             // If a navX is registered, try to link its SimDevice to the Webots robot
             MockGyro.linkGyro();
         }
+        if(deviceName.startsWith("CANEncoder_")) {
+            //deviceName should be CANEncoder_<motorName>
+            new MockedSparkEncoder(new SimDeviceSim(deviceName), deviceName.substring(11));
+        }
     }
 
     // Callback for when a known device type is registered on a Non-Can port
@@ -98,7 +62,7 @@ public class SimRegisterer {
             // Register a speed callback on this device
             CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
                 // Call a motor forwarder for a callback
-                new WebotsMotorForwarder(Simulation.getRobot(), "PWM_" + port),
+                new WebotsMotorForwarder(Simulation.getRobot(), "PWM[" + port + "]"),
                 // Initalize with current speed
                 true));
         }

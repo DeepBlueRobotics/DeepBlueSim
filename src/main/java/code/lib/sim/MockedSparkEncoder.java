@@ -2,25 +2,21 @@ package code.lib.sim;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 
-import org.team199.wpiws.devices.EncoderSim;
+import org.team199.wpiws.devices.SimDeviceSim;
 
 public class MockedSparkEncoder implements Runnable {
     private String name;
-    private EncoderSim encoder;
+    private SimDeviceSim encoder;
     private PositionSensor webotsEncoder;
     // Default value for a CANEncoder
     private final int countsPerRevolution = 4096;
     private double position;
 
-    public MockedSparkEncoder(String name, int id) {
-        this(name, id + "");
-    }
-
-    public MockedSparkEncoder(String name, String id) {
+    public MockedSparkEncoder(SimDeviceSim sim, String name) {
         this.name = name;
         // Match motor on CAN 0 with channels [0, 1], CAN 1 to channels [2, 3], etc.
         // Probably not the best way to do it but it works
-        encoder = new EncoderSim(id);
+        encoder = sim;
         webotsEncoder = Simulation.getRobot().getMotor(name).getPositionSensor();
         if(webotsEncoder != null) {
             webotsEncoder.enable(BaseSimConfig.getSensorTimestep());
@@ -38,6 +34,7 @@ public class MockedSparkEncoder implements Runnable {
         // getValue() returns radians
         // revoultions = radians * gearing / pi
         double revolutions = (webotsEncoder.getValue() * BaseSimConfig.getMotorGearing(name)) / Math.PI;
-        encoder.setCount((int) Math.floor(revolutions * countsPerRevolution));
+        int count = (int) Math.floor(revolutions * countsPerRevolution);
+        encoder.set("count", "" + count);
     }
 }
