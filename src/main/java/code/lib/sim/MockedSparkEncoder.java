@@ -12,12 +12,12 @@ public class MockedSparkEncoder implements Runnable {
     private final int countsPerRevolution = 4096;
     private double position;
 
-    public MockedSparkEncoder(String name) {
+    public MockedSparkEncoder(SimDeviceSim sim, String name) {
         this.name = name;
         // Match motor on CAN 0 with channels [0, 1], CAN 1 to channels [2, 3], etc.
         // Probably not the best way to do it but it works
-        encoder = new SimDeviceSim(name);
-        webotsEncoder = Simulation.getRobot().getMotor(name.substring(11)).getPositionSensor();
+        encoder = sim;
+        webotsEncoder = Simulation.getRobot().getMotor(name).getPositionSensor();
         if(webotsEncoder != null) {
             webotsEncoder.enable(BaseSimConfig.getSensorTimestep());
             Simulation.registerPeriodicMethod(this);

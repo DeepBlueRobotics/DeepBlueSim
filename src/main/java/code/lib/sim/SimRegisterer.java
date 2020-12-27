@@ -50,7 +50,8 @@ public class SimRegisterer {
             MockGyro.linkGyro();
         }
         if(deviceName.startsWith("CANEncoder_")) {
-            new MockedSparkEncoder(deviceName);
+            //deviceName should be CANEncoder_<motorName>
+            new MockedSparkEncoder(new SimDeviceSim(deviceName), deviceName.substring(11));
         }
     }
 
@@ -61,7 +62,7 @@ public class SimRegisterer {
             // Register a speed callback on this device
             CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
                 // Call a motor forwarder for a callback
-                new WebotsMotorForwarder(Simulation.getRobot(), "PWM_" + port),
+                new WebotsMotorForwarder(Simulation.getRobot(), "PWM[" + port + "]"),
                 // Initalize with current speed
                 true));
         }
