@@ -1,3 +1,4 @@
+import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.cyberbotics.webots.controller.Robot;
@@ -22,7 +23,14 @@ public class WPILibWebSocketsToWebots {
         
         SimConfig.initConfig();
         Simulation.init(robot, basicTimeStep);
-        WSConnection.startHALSimServer();
+        try {
+            WSConnection.connectHALSim(true);
+        } catch(URISyntaxException e) {
+            System.err.println("Error occured connecting to server:");
+            e.printStackTrace(System.err);
+            System.exit(1);
+            return;
+        }
 
         while(robot.step(basicTimeStep) != -1) {
             queuedMessages.forEach(Runnable::run);
