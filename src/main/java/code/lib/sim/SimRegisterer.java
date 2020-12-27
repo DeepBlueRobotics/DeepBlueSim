@@ -2,6 +2,7 @@ package code.lib.sim;
 
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.UniqueArrayList;
+import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
 
@@ -15,6 +16,12 @@ public class SimRegisterer {
     static {
         // Register Initalized Callbacks for Misc Devices
         CALLBACKS.add(SimDeviceSim.registerDeviceCreatedCallback("", MISC_DEVICE_CALLBACK, true));
+        // Register Initalized Callbacks for PWM Devices
+        CALLBACKS.add(PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
+            if(isInitialized) {
+                callback("PWM", name, 0);
+            }
+        }, true));
     }
 
     // Initalize SimRegisterer. This method exists to ensure that the static block is called
@@ -44,6 +51,19 @@ public class SimRegisterer {
         }
         if(deviceName.startsWith("EncoderSim")) {
             new MockedSparkEncoder(deviceName);
+        }
+    }
+
+    // Callback for when a known device type is registered on a Non-Can port
+    private static void callback(String type, String port, int storePos) {
+        if(type.equals("PWM")) {
+            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
+            // Register a speed callback on this device
+            CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
+                // Call a motor forwarder for a callback
+                new WebotsMotorForwarder(Simulation.getRobot(), "PWM_" + port),
+                // Initalize with current speed
+                true));
         }
     }
 
