@@ -4,32 +4,13 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "java",
-            "name": "CodeLens (Launch) - Main",
+            "name": "WPILibWebSocketsToWebots",
             "request": "launch",
-            "mainClass": "code.Main",
-            "projectName": "WebotsWebSocketsImpl"
-        },
-        {
-            "type": "java",
-            "name": "CodeLens (Launch) - Main",
-            "request": "launch",
-            "mainClass": "code.Main",
-            "projectName": "WebotsWebsocketsImpl"
-        },
-        {
-            "type": "java",
-            "name": "Debug (Launch) - Current File",
-            "request": "launch",
-            "mainClass": "${file}"
-        },
-        {
-            "type": "java",
-            "name": "Debug (Launch)-Main<WPIWebSocketsImpl>",
-            "request": "launch",
-            "mainClass": "code.Main",
-            "projectName": "WPIWebSocketsImpl"
+            "mainClass": "WPILibWebSocketsToWebots",
+            "projectName": "WPILibWebSocketsToWebots"
         }
     ]
 }
