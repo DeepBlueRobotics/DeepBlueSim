@@ -2,6 +2,7 @@ package code.lib.sim;
 
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.UniqueArrayList;
+import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
@@ -20,6 +21,12 @@ public class SimRegisterer {
         CALLBACKS.add(PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
                 callback("PWM", name, 0);
+            }
+        }, true));
+        // Register Initalized Callbacks for Encoder Devices
+        CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
+            if(isInitialized) {
+                callback("Encoder", name, 0);
             }
         }, true));
     }
@@ -65,6 +72,12 @@ public class SimRegisterer {
                 new WebotsMotorForwarder(Simulation.getRobot(), "PWM[" + port + "]"),
                 // Initalize with current speed
                 true));
+        }
+        else if(type.equals("Encoder")) {
+            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
+            // Register a speed callback on this device
+            EncoderSim sim = new EncoderSim(port);
+            new MockedEncoder(CALLBACKS, sim, port);
         }
     }
 
