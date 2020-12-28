@@ -38,10 +38,3 @@ shadowJar {
     // Remove anything that was required by something that was excluded
     minimize()
 }
-
-task copyWebotsNativeLibs(type: Copy) {
-    from webots.nativeLibs.getFiles()
-    into "."
-}
-
-build.dependsOn(copyWebotsNativeLibs)
