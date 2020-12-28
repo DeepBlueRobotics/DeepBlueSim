@@ -1,20 +1,38 @@
+// Add repositories containing build plugins
+buildscript {
+  repositories {
+    jcenter()
+    google()
+  }
+}
+
+// Apply other plugins
 plugins {
-    // Builds a fat jar containing needed dependencies
+    // Treat this project as a java application
+    id "java"
+    id "application"
+
+    // Support building a fat jar (aka shadowJar) containing needed dependencies
     id 'com.github.johnrengelman.shadow' version '6.1.0'
 
-    id "java"
+    // Support finding the local webots installation and adding it as a dependency
     id "org.carlmontrobotics.webots" version "0.8"
-    id "application"
+
+    // Support creating a license report of all dependencies
+    id 'com.jaredsburrows.license' version '0.8.80'
 }
 
 
-mainClassName = 'code.Main'
+// The name of the main class in the application jar.
+mainClassName = 'WPILibWebSocketsToWebots'
 
+// Add repositories containing project dependencies
 repositories {
     mavenCentral()
     jcenter()
 }
 
+// Add dependencies
 dependencies {
     implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
     testImplementation 'junit:junit:4.13'
@@ -22,6 +40,9 @@ dependencies {
 
 // Configure the building of the fat jar 
 shadowJar {
+    // Make sure the licenseReport task runs first
+    dependsOn "licenseReport"
+    
     // Don't add "-all" to the jar filename.
     archiveClassifier.set('')
 
@@ -29,13 +50,10 @@ shadowJar {
     // launching the controller, so don't include them.
     exclude 'com/cyberbotics/**/*'
 
-    // Something in the dependency hierarchy depends on junit unnecessarily.
-    // Make sure it, and Hamcrest, which it depends on, don't get included.
-    dependencies {
-        exclude(dependency('junit:junit:.*'))
-        exclude(dependency('org.hamcrest:hamcrest-core:.*'))
-    }
-
     // Remove anything that was required by something that was excluded
     minimize()
+
+    // Include our license and the (renamed) license report
+    from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
+    rename 'licenseReport.html', 'LICENSE-dependencies.html'
 }
