@@ -27,10 +27,10 @@ jobs:
     - name: Install Webots (macos-latest)
       if: matrix.os == 'macos-latest'
       run: |
-        curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a-rev1/webots-R2021a-rev1.dmg
+        curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a.dmg
         mkdir ~/Applications
         mkdir ~/Mount
-        hdiutil attach webots-R2021a-rev1.dmg -mountpoint ~/Mount
+        hdiutil attach webots-R2021a.dmg -mountpoint ~/Mount
         echo "Contents of ~/Mount:"
         ls ~/Mount
         echo "Copying to ~/Applications"
