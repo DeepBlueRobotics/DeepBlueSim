@@ -21,10 +21,8 @@ jobs:
     - name: Install Webots (ubuntu-latest)
       if: matrix.os == 'ubuntu-latest'
       run: |
-        wget -qO- https://cyberbotics.com/Cyberbotics.asc | sudo apt-key add -
-        sudo apt-add-repository 'deb https://cyberbotics.com/debian/ binary-amd64/'
-        sudo apt-get update
-        sudo apt-get install webots
+        curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots_2021a_amd64.deb
+        sudo apt install ./webots_2021a_amd64.deb
 
     - name: Install Webots (macos-latest)
       if: matrix.os == 'macos-latest'
