@@ -43,9 +43,9 @@ jobs:
         echo "Downloading"
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a_setup.exe
         echo "Help:"
-        webots-R2021a_setup.exe /HELP
+        ./webots-R2021a_setup.exe /HELP
         echo "Installing:"
-        webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /LOG="setuplog.txt"
+        ./webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /LOG="setuplog.txt"
         echo "setuplog.txt:"
         type setuplog.txt
 
