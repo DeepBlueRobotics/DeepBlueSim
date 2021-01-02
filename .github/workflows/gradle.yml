@@ -13,7 +13,7 @@ jobs:
   build:
     strategy: 
       matrix:
-        os: [ macos-latest ]
+        os: [ windows-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -36,6 +36,12 @@ jobs:
         cp -r ~/Mount/Webots.app /Applications
         hdiutil detach ~/Mount
         rmdir ~/Mount
+
+    - name: Install Webots (windows-latest)
+      if: matrix.os == 'windows-latest'
+      run: |
+        curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a_setup.exe
+        ./webots-R2021a_setup.exe /SILENT
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
