@@ -41,7 +41,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a_setup.exe
-        ./webots-R2021a_setup.exe /SILENT
+        webots-R2021a_setup.exe /SILENT
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
