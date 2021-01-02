@@ -18,7 +18,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Install Webots
+    - name: Install Webots (ubuntu-latest)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         wget -qO- https://cyberbotics.com/Cyberbotics.asc | sudo apt-key add -
         sudo apt-add-repository 'deb https://cyberbotics.com/debian/ binary-amd64/'
