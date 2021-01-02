@@ -28,6 +28,7 @@ jobs:
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
+      with:
       submodules: true
 
     - name: Set up JDK 11
