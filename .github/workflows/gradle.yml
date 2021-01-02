@@ -13,7 +13,7 @@ jobs:
   build:
     strategy: 
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, macos-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -26,10 +26,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install webots
 
+    - name: Install Webots (macos-latest)
+      if: matrix.os == 'macos-latest'
+      run: |
+        curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a-rev1/webots-R2021a-rev1.dmg
+        open webots-R2021a-rev1.dmg
+        mkdir ~/Applications
+        cp -r /Volumes/Webots/Webots.app ~/Applications
+
     - name: Checkout the code recursively
       uses: actions/checkout@v2
       with:
-      submodules: true
+        submodules: true
 
     - name: Set up JDK 11
       uses: actions/setup-java@v1
