@@ -40,8 +40,14 @@ jobs:
     - name: Install Webots (windows-latest)
       if: matrix.os == 'windows-latest'
       run: |
+        echo "Downloading"
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a_setup.exe
-        webots-R2021a_setup.exe /SILENT
+        echo "Help:"
+        webots-R2021a_setup.exe /HELP
+        echo "Installing:"
+        webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /LOG="setuplog.txt"
+        echo "setuplog.txt:"
+        type setuplog.txt
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
