@@ -13,7 +13,7 @@ jobs:
   build:
     strategy: 
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, macos-latest ]
 
     runs-on: ${{ matrix.os }}
 
@@ -30,7 +30,14 @@ jobs:
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a-rev1/webots-R2021a-rev1.dmg
         open webots-R2021a-rev1.dmg
         mkdir ~/Applications
-        cp -r /Volumes/Webots/Webots.app ~/Applications
+        mkdir ~/Mount
+        hdiutil attach webots-R2021a-rev1.dmg -mountpoint ~/Mount
+        echo "Contents of ~/Mount:"
+        ls ~/Mount
+        echo "Copying to ~/Applications"
+        cp -r ~/Mount/Webots.app ~/Applications
+        hdiutil detach ~/Mount
+        rmdir ~/Mount
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
