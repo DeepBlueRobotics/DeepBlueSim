@@ -45,9 +45,7 @@ jobs:
         echo "Help:"
         ./webots-R2021a_setup.exe /HELP
         echo "Installing:"
-        ./webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /LOG="setuplog.txt"
-        echo "setuplog.txt:"
-        type setuplog.txt
+        ./webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /ALLUSERS
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
