@@ -28,14 +28,16 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a.dmg
-        mkdir ~/Mount
-        hdiutil attach webots-R2021a.dmg -mountpoint ~/Mount
-        echo "Contents of ~/Mount:"
-        ls ~/Mount
-        echo "Copying to /Applications"
-        cp -r ~/Mount/Webots.app /Applications
-        hdiutil detach ~/Mount
-        rmdir ~/Mount
+        open webots-R2021a.dmg
+        cp -r /Volumes/Webots/Webots.app /Applications
+        # mkdir ~/Mount
+        # hdiutil attach webots-R2021a.dmg -mountpoint ~/Mount
+        # echo "Contents of ~/Mount:"
+        # ls ~/Mount
+        # echo "Copying to /Applications"
+        # cp -r ~/Mount/Webots.app /Applications
+        # hdiutil detach ~/Mount
+        # rmdir ~/Mount
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
