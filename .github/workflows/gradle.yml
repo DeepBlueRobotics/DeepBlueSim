@@ -14,7 +14,7 @@ jobs:
     strategy: 
       matrix:
         os: [ windows-latest, macos-latest, ubuntu-latest ]
-        webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
+        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
           - os: windows-latest
             webotsPkg: "webots-R2021a_setup.exe"
