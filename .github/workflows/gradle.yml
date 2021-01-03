@@ -42,10 +42,9 @@ jobs:
       run: |
         echo "Downloading"
         curl -L -O https://github.com/cyberbotics/webots/releases/download/R2021a/webots-R2021a_setup.exe
-        echo "Help:"
-        ./webots-R2021a_setup.exe /HELP
         echo "Installing:"
-        ./webots-R2021a_setup.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /ALLUSERS
+        ./webots-R2021a_setup.exe //VERYSILENT //SP- //SUPPRESSMSGBOXES //CURRENTUSER
+      shell: bash
 
     - name: Checkout the code recursively
       uses: actions/checkout@v2
