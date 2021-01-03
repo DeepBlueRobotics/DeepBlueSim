@@ -34,7 +34,7 @@ jobs:
 
     - name: Download Webots
       if: steps.cache-webots-download.outputs.cache-hit != 'true'
-      run: curl -L -O ${{ format('{0}{1}'', matrix.webotsUrl, matrix.webotsPkg) }}
+      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
     # - name: Install Webots (ubuntu-latest)
     #   if: matrix.os == 'ubuntu-latest'
