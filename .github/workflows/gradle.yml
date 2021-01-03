@@ -39,7 +39,7 @@ jobs:
     - name: Install Webots (ubuntu-latest)
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt install ${{ matrix.webotsPkg }}
+        sudo apt install ./${{ matrix.webotsPkg }}
 
     - name: Install Webots (macos-latest)
       if: matrix.os == 'macos-latest'
