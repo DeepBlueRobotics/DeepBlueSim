@@ -1,0 +1,91 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy: 
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, macos-latest, ubuntu-latest ]
+        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
+        include:
+          - os: windows-latest
+            webotsPkg: "webots-R2021a_setup.exe"
+          - os: macos-latest
+            webotsPkg: "webots-R2021a.dmg"
+          - os: ubuntu-latest
+            webotsPkg: "webots_2021a_amd64.deb"
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Cache Webots download
+      id: cache-webots-download
+      uses: actions/cache@v2
+      with:
+        path: ${{ matrix.webotsPkg }}
+        key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
+
+    - name: Download Webots
+      if: steps.cache-webots-download.outputs.cache-hit != 'true'
+      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
+
+    - name: Install and start Webots (ubuntu-latest)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt install ./${{ matrix.webotsPkg }}
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+        xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
+
+    - name: Install and start Webots (macos-latest)
+      if: matrix.os == 'macos-latest'
+      run: |
+        mkdir ~/Mount
+        mkdir -p ~/Applications
+        hdiutil attach ${{ matrix.webotsPkg }} -mountpoint ~/Mount
+        cp -R ~/Mount/Webots.app ~/Applications
+        hdiutil detach ~/Mount
+        rmdir ~/Mount
+        ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
+        echo "Sleeping for 5 secs"
+        sleep 5
+        echo "Done sleeping"
+
+    - name: Install and start Webots (windows-latest)
+      if: matrix.os == 'windows-latest'
+      run: |
+        ./${{ matrix.webotsPkg }} //VERYSILENT //SP- //SUPPRESSMSGBOXES //CURRENTUSER
+        curl -L -o Mesa.7z https://downloads.fdossena.com/geth.php?r=mesa64-latest
+        7z e -o${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin Mesa.7z
+        export MESA_GL_VERSION_OVERRIDE=3.3
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
+        echo "Sleeping for 5 secs"
+        sleep 5
+        echo "Done sleeping"
+      shell: bash
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Build
+      run: |
+        ./gradlew build --info --stacktrace
+      shell: bash
