@@ -92,7 +92,16 @@ task('systemTestJar', type: Jar) {
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
 }
 
-task('systemTest', type: edu.wpi.first.gradlerio.test.JavaSimulationTask) {
+class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSimulationTask {
+    @Override
+    Process launch(List<String> cmd) {
+        Process p = super.launch(cmd)
+        p.waitFor();
+        return p
+    }
+}
+
+task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'systemTestJar'
 }
 
