@@ -1,10 +1,5 @@
 package frc.robot;
 
-import static org.junit.Assert.assertEquals;
-import org.junit.Test;
-import frc.robot.Robot;
-import frc.robot.Main;
-import edu.wpi.first.hal.HAL;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 
