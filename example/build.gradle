@@ -71,3 +71,28 @@ jar {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
 }
+
+sourceSets {
+    systemTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    systemTestImplementation.extendsFrom testImplementation
+    systemTestRuntimeOnly.extendsFrom runtimeOnly    
+}
+
+task('systemTestJar', type: Jar) {
+    archiveBaseName = 'systemTest'
+    from sourceSets.main.output
+    from sourceSets.systemTest.output
+    from { configurations.systemTestRuntimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
+}
+
+task('systemTest', type: edu.wpi.first.gradlerio.test.JavaSimulationTask) {
+    dependsOn 'systemTestJar'
+}
+
