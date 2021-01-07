@@ -98,7 +98,29 @@ class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSim
         Process p = super.launch(cmd)
         println "Waiting for simulation to finish"
         println "Passing System.err output through"
-        p.errorStream.transferTo System.err
+        // Copy the errorStream asynchronously so that the current thread can be interrupted
+        // (e.g. if the task times out)
+        try {
+            p.errorStream.withStream { errorStream ->
+                def executor = java.util.concurrent.Executors.newFixedThreadPool(1)
+                def copyStreamCallable = new java.util.concurrent.Callable<Integer>() {
+                    def buf = new byte[8192]
+                    @Override
+                    Integer call() {
+                        int length = errorStream.read(buf)
+                        if (length > 0) 
+                            System.err.write(buf, 0, length)
+                        return length
+                    }
+                }
+                while (executor.submit(copyStreamCallable).get() > 0) {
+                }
+            }
+        } catch (InterruptedException) {
+            // This doesn't work because it only kills the script that super.launch() starts,
+            // not the java process started by the script.
+            p.destroy()
+        }
         p.waitFor()
         if (p.exitValue() != 0)
             throw new RuntimeException("Simulation failed with exit code ${p.exitValue()}.")
