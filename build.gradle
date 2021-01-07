@@ -57,3 +57,5 @@ shadowJar {
     from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
     rename 'licenseReport.html', 'LICENSE-dependencies.html'
 }
+
+check.dependsOn gradle.includedBuild('example').task(':check')
