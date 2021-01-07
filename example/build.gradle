@@ -56,7 +56,7 @@ dependencies {
 
     // Enable simulation gui support. Must check the box in vscode to enable support
     // upon debugging
-    simulation wpi.deps.sim.gui(wpi.platforms.desktop, false)
+    // simulation wpi.deps.sim.gui(wpi.platforms.desktop, false)
     simulation wpi.deps.sim.driverstation(wpi.platforms.desktop, false)
 
     // Websocket extensions require additional configuration.
