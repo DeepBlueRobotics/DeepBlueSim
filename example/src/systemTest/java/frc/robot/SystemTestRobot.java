@@ -47,10 +47,7 @@ public class SystemTestRobot extends Robot {
     public void simulationPeriodic() {
         super.simulationPeriodic();
 
-        // NOTE: System.err output will be displayed by gradlew systemTest
-        // but System.out output will be put in a log file. We use System.err
-        // here so we can see what's going on as it happens.
-        System.err.println(count);
+        System.out.println(count);
         count++;
         if (count > 50*10) {
             // Simulate disabling the robot

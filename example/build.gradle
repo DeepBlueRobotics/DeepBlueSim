@@ -72,6 +72,8 @@ jar {
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
 }
 
+// Support a systemTest task that runs a system level functional test in the simulator
+
 sourceSets {
     systemTest {
         compileClasspath += sourceSets.main.output
@@ -92,22 +94,47 @@ task('systemTestJar', type: Jar) {
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
 }
 
+task('systemTest', type: SynchronousJavaSimulationTask) {
+    dependsOn 'systemTestJar'
+    timeout = Duration.ofSeconds(135)
+}
+
+check.dependsOn 'systemTest'
+
 class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSimulationTask {
     @Override
     Process launch(List<String> cmd) {
-        Process p = super.launch(cmd)
-        println "Waiting for simulation to finish"
-        println "Passing System.err output through"
-        // Copy the errorStream asynchronously so that the current thread can be interrupted
+        // Let the base class handle these situations
+        if (scriptOnly || project.hasProperty('headless')) {
+            return super.launch(cmd)
+        }
+        // Remove the extraneous double quotes added by the caller
+        cmd = cmd*.replace('"','')
+        def builder = new ProcessBuilder(cmd)
+        // Incorporate the task's env and the simulation extension's env (e.g. HALSIM_EXTENSIONS)
+        def env = builder.environment()
+        env.putAll environment
+        env.putAll project.extensions.getByType(edu.wpi.first.gradlerio.wpi.simulation.SimulationExtension).environment
+        // Set the working dir if specified
+        if (workingDir != null) {
+            workingDir.mkdirs()
+            builder.directory(workingDir)
+        }
+        // Redirect stderr to stdout
+        builder.redirectErrorStream(true)
+        // Start the process
+        Process p = builder.start()
+        println "Waiting for simulation to finish..."
+        // Copy the output asynchronously so that the current thread can be interrupted
         // (e.g. if the task times out)
         try {
-            p.errorStream.withStream { errorStream ->
+            p.inputStream.withStream { stream ->
                 def executor = java.util.concurrent.Executors.newFixedThreadPool(1)
                 def copyStreamCallable = new java.util.concurrent.Callable<Integer>() {
                     def buf = new byte[8192]
                     @Override
                     Integer call() {
-                        int length = errorStream.read(buf)
+                        int length = stream.read(buf)
                         if (length > 0) 
                             System.err.write(buf, 0, length)
                         return length
@@ -117,8 +144,6 @@ class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSim
                 }
             }
         } catch (InterruptedException) {
-            // This doesn't work because it only kills the script that super.launch() starts,
-            // not the java process started by the script.
             p.destroy()
         }
         p.waitFor()
@@ -126,10 +151,5 @@ class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSim
             throw new RuntimeException("Simulation failed with exit code ${p.exitValue()}.")
         return p
     }
-}
-
-task('systemTest', type: SynchronousJavaSimulationTask) {
-    dependsOn 'systemTestJar'
-    timeout = Duration.ofSeconds(135)
 }
 
