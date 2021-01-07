@@ -22,6 +22,8 @@ plugins {
     id 'com.jaredsburrows.license' version '0.8.80'
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 // The name of the main class in the application jar.
 mainClassName = 'WPILibWebSocketsToWebots'
