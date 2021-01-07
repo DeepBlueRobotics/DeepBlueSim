@@ -47,7 +47,6 @@ public class SystemTestRobot extends Robot {
     public void simulationPeriodic() {
         super.simulationPeriodic();
 
-        System.out.println(count);
         count++;
         if (count > 50*10) {
             // Simulate disabling the robot
