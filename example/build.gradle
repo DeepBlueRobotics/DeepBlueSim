@@ -96,12 +96,18 @@ class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSim
     @Override
     Process launch(List<String> cmd) {
         Process p = super.launch(cmd)
-        p.waitFor();
+        println "Waiting for simulation to finish"
+        println "Passing System.err output through"
+        p.errorStream.transferTo System.err
+        p.waitFor()
+        if (p.exitValue() != 0)
+            throw new RuntimeException("Simulation failed with exit code ${p.exitValue()}.")
         return p
     }
 }
 
 task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'systemTestJar'
+    timeout = Duration.ofSeconds(135)
 }
 
