@@ -45,7 +45,7 @@ Robot {
           ]
           endPoint Solid {
             translation -0.167 0 -0.232
-            rotation 1 4.666358835743882e-10 4.666341695282275e-10 1.5708
+            rotation 1 4.833061556931681e-10 4.833043804137914e-10 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -76,7 +76,7 @@ Robot {
           ]
           endPoint Solid {
             translation 0.167 0 -0.232
-            rotation 1 4.667228060965001e-10 4.66721091731056e-10 1.5708
+            rotation 1 4.833957821850251e-10 4.833940065764325e-10 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -94,7 +94,7 @@ Robot {
         HingeJoint {
           jointParameters HingeJointParameters {
             position -1.6676778847781958e-11
-            axis 0 0 1
+            axis 0 0 -1
             anchor -0.167 0 0.232
           }
           device [
@@ -108,7 +108,7 @@ Robot {
           ]
           endPoint Solid {
             translation -0.167 0 0.232
-            rotation 1 -2.3351562043725234e-10 -2.335147626880587e-10 1.5708
+            rotation 1 -2.168388415894704e-10 -2.1683804509739343e-10 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -126,7 +126,7 @@ Robot {
         HingeJoint {
           jointParameters HingeJointParameters {
             position -1.6676110401423026e-11
-            axis 0 0 1
+            axis 0 0 -1
             anchor 0.167 0 0.232
           }
           device [
@@ -136,7 +136,7 @@ Robot {
           ]
           endPoint Solid {
             translation 0.167 0 0.232
-            rotation 1 -2.335067581123215e-10 -2.3350590039568116e-10 1.5708
+            rotation 1 -2.1683064771089854e-10 -2.168298512489195e-10 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -174,6 +174,6 @@ Robot {
     density -1
     mass 10
   }
-  controller "<extern>"
+  controller "WPILibWebSocketsToWebots"
   supervisor TRUE
 }
