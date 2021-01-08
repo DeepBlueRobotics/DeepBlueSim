@@ -1,9 +1,15 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
+
+import java.util.concurrent.CompletableFuture;
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.hal.HALValue;
+import edu.wpi.first.hal.SimDevice;
+import edu.wpi.first.hal.simulation.SimDeviceCallback;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 
 public class SystemTestRobot extends Robot {
 
@@ -33,6 +39,21 @@ public class SystemTestRobot extends Robot {
 
     @Override
     public void simulationInit() {
+        SimDevice webotsSupervisor = SimDevice.create("WebotsSupervisor");
+        webotsSupervisor.createValue("ready", SimDevice.Direction.kInput, HALValue.makeUnassigned());
+
+        // Wait for the Webots supervisor to be ready
+        final var future = new CompletableFuture<Boolean>();
+        final var callback = SimDeviceSim.registerDeviceCreatedCallback("WebotsSupervisor", new SimDeviceCallback() {
+            public void callback(String name, int handle) {
+                System.out.println("WebotsSupervisor created");
+                future.complete(true);
+            }
+        }, true);
+        System.out.println("Waiting for WebotsSupervisor to be created");
+        future.join();
+        callback.close();
+
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
         DriverStationSim.setEnabled(true);

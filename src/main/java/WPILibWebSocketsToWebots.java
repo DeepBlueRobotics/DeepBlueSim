@@ -5,6 +5,7 @@ import com.cyberbotics.webots.controller.Robot;
 
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.WSConnection;
+import org.team199.wpiws.devices.SimDeviceSim;
 
 import code.SimConfig;
 import code.lib.sim.Simulation;
@@ -23,6 +24,14 @@ public class WPILibWebSocketsToWebots {
         
         SimConfig.initConfig();
         Simulation.init(robot, basicTimeStep);
+
+        // Whenever a new connection is established to the robot code, tell it
+        // that we're ready.
+        ConnectionProcessor.addOpenListener(() -> {
+            System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
+            SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
+            webotsSupervisorSim.set("ready", "true");
+        });
         try {
             WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
