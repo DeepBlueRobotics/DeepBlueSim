@@ -67,13 +67,17 @@ task copyJarToExample(type: Copy) {
 }
 
 assemble {
-    dependsOn copyJarToExample
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':build')
 }
 
 check {
+    mustRunAfter copyJarToExample
+    dependsOn copyJarToExample
     dependsOn gradle.includedBuild('example').task(':check')
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':check')
 }
 
 clean {
     dependsOn gradle.includedBuild('example').task(':clean')
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':clean')
 }
