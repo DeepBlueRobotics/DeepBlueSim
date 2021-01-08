@@ -81,14 +81,14 @@ jobs:
       run: |
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+        xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots.log &
 
     - name: Start Webots (macos-latest)
       if: matrix.os == 'macos-latest'
       run: |
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+        ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots.log &
         echo "Sleeping for 5 secs"
         sleep 5
         echo "Done sleeping"
@@ -99,11 +99,17 @@ jobs:
         export MESA_GL_VERSION_OVERRIDE=3.3
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots.log &
         echo "Sleeping for 5 secs"
         sleep 5
         echo "Done sleeping"
       shell: bash
+
+    - name: Archive Webots log
+      uses: actions/upload-artifact@v2
+      with:
+        name: Webots log
+        path: webots.log
 
     - name: Do the system test
       run: |
