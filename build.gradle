@@ -22,6 +22,8 @@ plugins {
     id 'com.jaredsburrows.license' version '0.8.80'
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 // The name of the main class in the application jar.
 mainClassName = 'WPILibWebSocketsToWebots'
@@ -56,4 +58,21 @@ shadowJar {
     // Include our license and the (renamed) license report
     from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
     rename 'licenseReport.html', 'LICENSE-dependencies.html'
+}
+
+task copyJarToExample(type: Copy) {
+    from shadowJar.outputs
+    into "example/Webots/controllers/${shadowJar.archiveBaseName.get()}"
+}
+
+assemble {
+    dependsOn copyJarToExample
+}
+
+check {
+    dependsOn gradle.includedBuild('example').task(':check')
+}
+
+clean {
+    dependsOn gradle.includedBuild('example').task(':clean')
 }
