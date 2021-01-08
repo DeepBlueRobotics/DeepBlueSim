@@ -30,7 +30,7 @@ public class WPILibWebSocketsToWebots {
         ConnectionProcessor.addOpenListener(() -> {
             System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
             SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
-            webotsSupervisorSim.set("ready", "true");
+            webotsSupervisorSim.set("ready", true);
         });
         try {
             WSConnection.connectHALSim(true);

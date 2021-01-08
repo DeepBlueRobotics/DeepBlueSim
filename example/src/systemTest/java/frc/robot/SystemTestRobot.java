@@ -6,10 +6,12 @@ import java.util.concurrent.CompletableFuture;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
-import edu.wpi.first.hal.simulation.SimDeviceCallback;
+import edu.wpi.first.hal.SimValue;
+import edu.wpi.first.hal.simulation.SimValueCallback;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
+import edu.wpi.first.wpilibj.simulation.SimHooks;
 
 public class SystemTestRobot extends Robot {
 
@@ -40,19 +42,26 @@ public class SystemTestRobot extends Robot {
     @Override
     public void simulationInit() {
         SimDevice webotsSupervisor = SimDevice.create("WebotsSupervisor");
-        webotsSupervisor.createValue("ready", SimDevice.Direction.kInput, HALValue.makeUnassigned());
-
+        SimValue isReadySim = webotsSupervisor.createValue("ready", SimDevice.Direction.kInput, HALValue.makeBoolean(false));
+        SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
+        
         // Wait for the Webots supervisor to be ready
         final var future = new CompletableFuture<Boolean>();
-        final var callback = SimDeviceSim.registerDeviceCreatedCallback("WebotsSupervisor", new SimDeviceCallback() {
-            public void callback(String name, int handle) {
-                System.out.println("WebotsSupervisor created");
-                future.complete(true);
+        try (var callback = webotsSupervisorSim.registerValueChangedCallback(isReadySim, new SimValueCallback() {
+            public void callback(String name, int handle, boolean readonly, HALValue value) {
+                if (value.getBoolean()) {
+                    System.out.println("WebotsSupervisor is ready");
+                    future.complete(true);
+                }
             }
-        }, true);
-        System.out.println("Waiting for WebotsSupervisor to be created");
-        future.join();
-        callback.close();
+        }, true)) {
+            System.out.println("Waiting for WebotsSupervisor to be ready");
+            future.join();
+        }
+        // Reset the clock. Without this, *Periodic calls that should have 
+        // occurred while we waited, will be considered behind schedule and
+        // will all happen at once.
+        SimHooks.restartTiming();
 
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
