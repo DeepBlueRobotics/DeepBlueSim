@@ -86,6 +86,8 @@ jobs:
     - name: Start Webots (macos-latest)
       if: matrix.os == 'macos-latest'
       run: |
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
         ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
         echo "Sleeping for 5 secs"
         sleep 5
