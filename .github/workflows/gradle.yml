@@ -43,15 +43,12 @@ jobs:
       if: steps.cache-webots-download.outputs.cache-hit != 'true'
       run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
-    - name: Install and start Webots (ubuntu-latest)
+    - name: Install Webots (ubuntu-latest)
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install ./${{ matrix.webotsPkg }}
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
 
-    - name: Install and start Webots (macos-latest)
+    - name: Install Webots (macos-latest)
       if: matrix.os == 'macos-latest'
       run: |
         mkdir ~/Mount
@@ -60,24 +57,13 @@ jobs:
         cp -R ~/Mount/Webots.app ~/Applications
         hdiutil detach ~/Mount
         rmdir ~/Mount
-        ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
-        echo "Sleeping for 5 secs"
-        sleep 5
-        echo "Done sleeping"
 
-    - name: Install and start Webots (windows-latest)
+    - name: Install Webots (windows-latest)
       if: matrix.os == 'windows-latest'
       run: |
         ./${{ matrix.webotsPkg }} //VERYSILENT //SP- //SUPPRESSMSGBOXES //CURRENTUSER
         curl -L -o Mesa.7z https://downloads.fdossena.com/geth.php?r=mesa64-latest
         7z e -o${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin Mesa.7z
-        export MESA_GL_VERSION_OVERRIDE=3.3
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./app/Webots/worlds/Empty.wbt &
-        echo "Sleeping for 5 secs"
-        sleep 5
-        echo "Done sleeping"
       shell: bash
 
     - name: Set up JDK 11
@@ -85,7 +71,39 @@ jobs:
       with:
         java-version: 11
 
-    - name: Build
+    - name: Assemble the controller and copy it to the example
+      run: |
+        ./gradlew copyJarToExample --info --stacktrace
+      shell: bash
+
+    - name: Start Webots (ubuntu-latest)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+        xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+
+    - name: Start Webots (macos-latest)
+      if: matrix.os == 'macos-latest'
+      run: |
+        ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+        echo "Sleeping for 5 secs"
+        sleep 5
+        echo "Done sleeping"
+
+    - name: Start Webots (windows-latest)
+      if: matrix.os == 'windows-latest'
+      run: |
+        export MESA_GL_VERSION_OVERRIDE=3.3
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &
+        echo "Sleeping for 5 secs"
+        sleep 5
+        echo "Done sleeping"
+      shell: bash
+
+    - name: Do the system test
       run: |
         ./gradlew build --info --stacktrace
       shell: bash
