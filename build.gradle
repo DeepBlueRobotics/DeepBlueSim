@@ -44,6 +44,7 @@ dependencies {
 shadowJar {
     // Make sure the licenseReport task runs first
     dependsOn "licenseReport"
+    dependsOn jar
     
     // Don't add "-all" to the jar filename.
     archiveClassifier.set('')
