@@ -105,13 +105,14 @@ jobs:
         echo "Done sleeping"
       shell: bash
 
+    - name: Do the system test
+      run: |
+        ./gradlew build --info --stacktrace
+      shell: bash
+
     - name: Archive Webots log
       uses: actions/upload-artifact@v2
       with:
         name: Webots log
         path: webots.log
 
-    - name: Do the system test
-      run: |
-        ./gradlew build --info --stacktrace
-      shell: bash
