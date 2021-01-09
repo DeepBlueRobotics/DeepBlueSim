@@ -45,7 +45,9 @@ public class WPILibWebSocketsToWebots {
                 @Override
                 public void callback(String name, String value) {
                     System.out.println("areYouReady=" + value); System.out.flush();
-                    future.complete(true);
+                    if (Boolean.parseBoolean(value)) {
+                        future.complete(true);
+                    }
                 }
             }, true)) {
                 String areYouReady = webotsSupervisorSim.get("areYouReady");
