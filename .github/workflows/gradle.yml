@@ -47,7 +47,7 @@ jobs:
     #     nc -zvw3 127.0.0.1 3300
     #   shell: bash
 
-      - name: Cache Webots download
+    - name: Cache Webots download
       id: cache-webots-download
       uses: actions/cache@v2
       with:
