@@ -1,11 +1,16 @@
 import java.net.URISyntaxException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.cyberbotics.webots.controller.Robot;
 
+import org.team199.wpiws.Pair;
+import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
+import org.team199.wpiws.interfaces.SimDeviceCallback;
+import org.team199.wpiws.interfaces.StringCallback;
 
 import code.SimConfig;
 import code.lib.sim.Simulation;
@@ -30,6 +35,27 @@ public class WPILibWebSocketsToWebots {
         ConnectionProcessor.addOpenListener(() -> {
             System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
             SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
+
+            // Wait for robot to ask if we're ready
+            final CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
+            try (ScopedObject<Pair<String, StringCallback>> callback = webotsSupervisorSim.registerValueChangedCallback("areYouReady", new StringCallback() {
+                @Override
+                public void callback(String name, String value) {
+                    System.out.println("areYouReady=" + value);
+                    future.complete(true);
+                }
+            }, true)) {
+                String areYouReady = webotsSupervisorSim.get("areYouReady");
+                System.out.println("Initially, areYouReady=" + areYouReady);
+                if (Boolean.parseBoolean(areYouReady)) {
+                    future.complete(true);
+                } else {
+                    System.out.println("Waiting for robot to ask if we're ready");
+                }
+                future.join();
+            }
+
+            System.out.println("Telling the robot we're ready");
             webotsSupervisorSim.set("ready", true);
         });
         try {
