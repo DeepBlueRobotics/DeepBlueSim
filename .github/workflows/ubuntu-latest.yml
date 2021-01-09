@@ -21,6 +21,7 @@ jobs:
             webotsPkg: "webots_2021a_amd64.deb"
     runs-on: ${{ matrix.os }}
 
+    steps:
     - name: Checkout source
       uses: actions/checkout@v2
       with:
