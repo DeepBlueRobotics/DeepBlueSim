@@ -18,8 +18,10 @@ jobs:
         webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
           - os: ubuntu-latest
-            webotsPkg: "webots_2021a_amd64.deb"
+            webotsPkg: "webots-R2021a-x86-64_ubuntu-18.04.tar.bz2"
     runs-on: ${{ matrix.os }}
+    env:
+      WEBOTS_HOME: ${{ github.workspace }}/webots
 
     steps:
     - name: Checkout source
@@ -33,24 +35,21 @@ jobs:
       with:
         java-version: 11
 
-    # - name: Cache Webots download
-    #   id: cache-webots-download
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: ${{ matrix.webotsPkg }}
-    #     key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
+    - name: Cache Webots download
+      id: cache-webots-download
+      uses: actions/cache@v2
+      with:
+        path: ${{ matrix.webotsPkg }}
+        key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
 
-    # - name: Download Webots
-    #   if: steps.cache-webots-download.outputs.cache-hit != 'true'
-    #   run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
+    - name: Download Webots
+      if: steps.cache-webots-download.outputs.cache-hit != 'true'
+      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
     - name: Install Webots (ubuntu-latest)
       if: matrix.os == 'ubuntu-latest'
       run: |
-        wget -qO- https://cyberbotics.com/Cyberbotics.asc | sudo apt-key add -
-        sudo apt-add-repository 'deb https://cyberbotics.com/debian/ binary-amd64/'
-        sudo apt-get update
-        sudo apt-get install webots
+        tar xjf ${{ matrix.webotsPkg }}
 
     - name: Assemble the controller and copy it to the example
       run: |
