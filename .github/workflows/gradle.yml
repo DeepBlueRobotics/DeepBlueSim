@@ -99,7 +99,12 @@ jobs:
         name: example
         path: example/
 
-    # - name: Start Webots (ubuntu-latest)
+    - name: Run the controller directly
+      run: |
+        java -jar example/Webots/controllers/WPILibWebSocketsToWebots/WPILibWebSocketsToWebots.jar
+      shell: bash
+
+      # - name: Start Webots (ubuntu-latest)
     #   if: matrix.os == 'ubuntu-latest'
     #   run: |
     #     export LIBGL_ALWAYS_SOFTWARE=true
