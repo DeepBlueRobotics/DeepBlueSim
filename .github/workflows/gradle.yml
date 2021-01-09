@@ -14,7 +14,8 @@ jobs:
     strategy: 
       fail-fast: false
       matrix:
-        os: [ windows-latest, macos-latest, ubuntu-latest ]
+        os: [ macos-latest ]
+        # os: [ windows-latest, macos-latest, ubuntu-latest ]
         webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
           - os: windows-latest
@@ -91,62 +92,69 @@ jobs:
         ./gradlew copyJarToExample --info --stacktrace
       shell: bash
 
-    - name: Start Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        export HALSIMWS_HOST=127.0.0.1
-        sudo rm /var/cache/fontconfig/*
-        rm -rf ~/.cache/fontconfig/*
-        fc-cache -r
-        export QT_DEBUG_PLUGINS=1
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 15 secs"
-        sleep 15
-        echo "Done sleeping"
-        jobs
-
-    - name: Start Webots (macos-latest)
-      if: matrix.os == 'macos-latest'
-      run: |
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        export HALSIMWS_HOST=127.0.0.1
-        export QT_DEBUG_PLUGINS=1
-        ~/Applications/Webots.app/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 5 secs"
-        sleep 5
-        echo "Done sleeping"
-        jobs
-
-    - name: Start Webots (windows-latest)
-      if: matrix.os == 'windows-latest'
-      run: |
-        export MESA_GL_VERSION_OVERRIDE=3.3
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 5 secs"
-        sleep 5
-        echo "Done sleeping"
-      shell: bash
-
-    - name: Do the system test
-      run: |
-        ./gradlew build --info --stacktrace
-      shell: bash
-
-    - name: Archive Webots log
+    - name: Archive the jar
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: Webots log for ${{ matrix.os }}
-        path: webots-${{ matrix.os }}.log
+        name: Controller jar
+        path: example/Webots/controllers/*.jar
 
-    - name: xvfb-run log
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: xvfb-run log for ${{ matrix.os }}
-        path: xvfb-run-${{ matrix.os }}.log
+    # - name: Start Webots (ubuntu-latest)
+    #   if: matrix.os == 'ubuntu-latest'
+    #   run: |
+    #     export LIBGL_ALWAYS_SOFTWARE=true
+    #     export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+    #     export HALSIMWS_HOST=127.0.0.1
+    #     sudo rm /var/cache/fontconfig/*
+    #     rm -rf ~/.cache/fontconfig/*
+    #     fc-cache -r
+    #     export QT_DEBUG_PLUGINS=1
+    #     xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+    #     echo "Sleeping for 15 secs"
+    #     sleep 15
+    #     echo "Done sleeping"
+    #     jobs
+
+    # - name: Start Webots (macos-latest)
+    #   if: matrix.os == 'macos-latest'
+    #   run: |
+    #     export LIBGL_ALWAYS_SOFTWARE=true
+    #     export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+    #     export HALSIMWS_HOST=127.0.0.1
+    #     export QT_DEBUG_PLUGINS=1
+    #     ~/Applications/Webots.app/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+    #     echo "Sleeping for 5 secs"
+    #     sleep 5
+    #     echo "Done sleeping"
+    #     jobs
+
+    # - name: Start Webots (windows-latest)
+    #   if: matrix.os == 'windows-latest'
+    #   run: |
+    #     export MESA_GL_VERSION_OVERRIDE=3.3
+    #     export LIBGL_ALWAYS_SOFTWARE=true
+    #     export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+    #     ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+    #     echo "Sleeping for 5 secs"
+    #     sleep 5
+    #     echo "Done sleeping"
+    #   shell: bash
+
+    # - name: Do the system test
+    #   run: |
+    #     ./gradlew build --info --stacktrace
+    #   shell: bash
+
+    # - name: Archive Webots log
+    #   uses: actions/upload-artifact@v2
+    #   if: always()
+    #   with:
+    #     name: Webots log for ${{ matrix.os }}
+    #     path: webots-${{ matrix.os }}.log
+
+    # - name: xvfb-run log
+    #   uses: actions/upload-artifact@v2
+    #   if: always()
+    #   with:
+    #     name: xvfb-run log for ${{ matrix.os }}
+    #     path: xvfb-run-${{ matrix.os }}.log
