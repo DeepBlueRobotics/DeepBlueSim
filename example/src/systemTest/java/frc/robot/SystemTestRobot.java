@@ -39,8 +39,7 @@ public class SystemTestRobot extends Robot {
         }      
     }
 
-    @Override
-    public void simulationInit() {
+    static {
         SimDevice webotsSupervisor = SimDevice.create("WebotsSupervisor");
         SimValue isReadySim = webotsSupervisor.createValue("ready", SimDevice.Direction.kInput, HALValue.makeBoolean(false));
         SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
@@ -58,11 +57,15 @@ public class SystemTestRobot extends Robot {
             System.out.println("Waiting for WebotsSupervisor to be ready");
             future.join();
         }
+        
         // Reset the clock. Without this, *Periodic calls that should have 
         // occurred while we waited, will be considered behind schedule and
         // will all happen at once.
         SimHooks.restartTiming();
+    }
 
+    @Override
+    public void simulationInit() {
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
         DriverStationSim.setEnabled(true);
