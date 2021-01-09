@@ -49,6 +49,8 @@ jobs:
     - name: Install Webots (ubuntu-latest)
       if: matrix.os == 'ubuntu-latest'
       run: |
+        apt update
+        apt install --yes lsb-release g++ make libavcodec-extra libglu1-mesa libxkbcommon-x11-dev execstack libusb-dev libxcb-keysyms1 libxcb-image0 libxcb-icccm4 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcomposite-dev libxtst6 libnss3
         tar xjf ${{ matrix.webotsPkg }}
 
     - name: Assemble the controller and copy it to the example
@@ -73,7 +75,7 @@ jobs:
         rm -rf ~/.cache/fontconfig/*
         fc-cache -r
         export QT_DEBUG_PLUGINS=1
-        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/bin/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
         xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt
         echo "Sleeping for 15 secs"
         sleep 15
