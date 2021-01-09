@@ -18,12 +18,12 @@ jobs:
         # os: [ windows-latest, macos-latest, ubuntu-latest ]
         webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
-          - os: windows-latest
-            webotsPkg: "webots-R2021a_setup.exe"
+          # - os: windows-latest
+          #   webotsPkg: "webots-R2021a_setup.exe"
           - os: macos-latest
             webotsPkg: "webots-R2021a.dmg"
-          - os: ubuntu-latest
-            webotsPkg: "webots_2021a_amd64.deb"
+          # - os: ubuntu-latest
+          #   webotsPkg: "webots_2021a_amd64.deb"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -92,12 +92,12 @@ jobs:
         ./gradlew copyJarToExample --info --stacktrace
       shell: bash
 
-    - name: Archive the jar
+    - name: Archive the example folder
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: Controller jar
-        path: example/Webots/controllers/*.jar
+        name: example
+        path: example/
 
     # - name: Start Webots (ubuntu-latest)
     #   if: matrix.os == 'ubuntu-latest'
