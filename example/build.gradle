@@ -99,7 +99,7 @@ task('systemTestJar', type: Jar) {
 task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'systemTestJar'
     dependsOn 'extractTestJNI'
-    timeout = Duration.ofSeconds(135)
+    timeout = Duration.ofSeconds(15)
 }
 
 check.dependsOn 'systemTest'
