@@ -95,6 +95,7 @@ jobs:
         sudo rm /var/cache/fontconfig/*
         rm -rf ~/.cache/fontconfig/*
         fc-cache -r
+        export QT_DEBUG_PLUGINS=1
         xvfb-run -a webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
 
     - name: Start Webots (macos-latest)
@@ -103,6 +104,7 @@ jobs:
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
         export HALSIMWS_HOST=127.0.0.1
+        export QT_DEBUG_PLUGINS=1
         ~/Applications/Webots.app/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
         echo "Sleeping for 5 secs"
         sleep 5
