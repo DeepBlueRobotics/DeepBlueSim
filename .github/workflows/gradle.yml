@@ -32,6 +32,17 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Test whether connection is possible
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cd example
+        ./gradlew assemble --info --stacktrace
+        ./gradlew build --info --stacktrace &
+        sleep 10
+        echo "Trying to connect"
+        nc -zvw3 localhost 3300
+      shell: bash
+
     - name: Cache Webots download
       id: cache-webots-download
       uses: actions/cache@v2
