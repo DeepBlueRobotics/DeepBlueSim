@@ -75,8 +75,9 @@ jobs:
         rm -rf ~/.cache/fontconfig/*
         fc-cache -r
         export QT_DEBUG_PLUGINS=1
-        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt
+        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --sysinfo --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast
+        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt
         echo "Sleeping for 15 secs"
         sleep 15
         echo "Done sleeping"
