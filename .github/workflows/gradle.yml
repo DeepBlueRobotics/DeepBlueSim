@@ -69,8 +69,16 @@ jobs:
       run: |
         sudo snap install webots
 
-    - name: Install Webots (macos-latest)
+    - name: Cache Webots install
+      id: cache-webots-install
       if: matrix.os == 'macos-latest'
+      uses: actions/cache@v2
+      with:
+        path: ~/Applications
+        key: webots-v2021a-install-${{ matrix.webotsPkg }}
+
+    - name: Install Webots (macos-latest)
+      if: matrix.os == 'macos-latest' && steps.cache-webots-install.outputs.cache-hit != 'true'
       run: |
         mkdir ~/Mount
         mkdir -p ~/Applications
