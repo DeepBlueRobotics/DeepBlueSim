@@ -1,0 +1,99 @@
+# This workflow will build a Java project with Gradle
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy: 
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
+        include:
+          - os: ubuntu-latest
+            webotsPkg: "webots_2021a_amd64.deb"
+    runs-on: ${{ matrix.os }}
+
+    - name: Checkout source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Cache Webots download
+      id: cache-webots-download
+      uses: actions/cache@v2
+      with:
+        path: ${{ matrix.webotsPkg }}
+        key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
+
+    - name: Download Webots
+      if: steps.cache-webots-download.outputs.cache-hit != 'true'
+      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
+
+    - name: Install Webots (ubuntu-latest)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt install ./${{ matrix.webotsPkg }}
+
+
+    - name: Assemble the controller and copy it to the example
+      run: |
+        ./gradlew copyJarToExample --info --stacktrace
+      shell: bash
+
+    - name: Archive the example folder
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: example
+        path: example/
+
+    - name: Start Webots (ubuntu-latest)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        export LIBGL_ALWAYS_SOFTWARE=true
+        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
+        export HALSIMWS_HOST=127.0.0.1
+        sudo rm /var/cache/fontconfig/*
+        rm -rf ~/.cache/fontconfig/*
+        fc-cache -r
+        export QT_DEBUG_PLUGINS=1
+        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt
+        echo "Sleeping for 15 secs"
+        sleep 15
+        echo "Done sleeping"
+        jobs
+
+
+    - name: Do the system test
+      run: |
+        ./gradlew build --info --stacktrace
+      shell: bash
+
+    - name: Archive Webots log
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: Webots log for ${{ matrix.os }}
+        path: webots-${{ matrix.os }}.log
+
+    - name: xvfb-run log
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: xvfb-run log for ${{ matrix.os }}
+        path: xvfb-run-${{ matrix.os }}.log
