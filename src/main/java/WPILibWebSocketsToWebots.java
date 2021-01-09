@@ -33,7 +33,7 @@ public class WPILibWebSocketsToWebots {
         // Whenever a new connection is established to the robot code, tell it
         // that we're ready.
         ConnectionProcessor.addOpenListener(() -> {
-            System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
+            System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") "); System.out.flush();
             SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
 
             // Wait for robot to ask if we're ready
@@ -41,21 +41,21 @@ public class WPILibWebSocketsToWebots {
             try (ScopedObject<Pair<String, StringCallback>> callback = webotsSupervisorSim.registerValueChangedCallback("areYouReady", new StringCallback() {
                 @Override
                 public void callback(String name, String value) {
-                    System.out.println("areYouReady=" + value);
+                    System.out.println("areYouReady=" + value); System.out.flush();
                     future.complete(true);
                 }
             }, true)) {
                 String areYouReady = webotsSupervisorSim.get("areYouReady");
-                System.out.println("Initially, areYouReady=" + areYouReady);
+                System.out.println("Initially, areYouReady=" + areYouReady); System.out.flush();
                 if (Boolean.parseBoolean(areYouReady)) {
                     future.complete(true);
                 } else {
-                    System.out.println("Waiting for robot to ask if we're ready");
+                    System.out.println("Waiting for robot to ask if we're ready"); System.out.flush();
                 }
                 future.join();
             }
 
-            System.out.println("Telling the robot we're ready");
+            System.out.println("Telling the robot we're ready"); System.out.flush();
             webotsSupervisorSim.set("ready", true);
         });
         try {
