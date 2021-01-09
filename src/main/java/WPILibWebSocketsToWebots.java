@@ -22,8 +22,11 @@ public class WPILibWebSocketsToWebots {
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
     
     public static void main(String[] args) {
+        System.out.println("Setting up thread executor"); System.out.flush();
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
+        System.out.println("new Robot()"); System.out.flush();
         Robot robot = new Robot();
+        System.out.println("addShutdownHook"); System.out.flush();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
         int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
         
@@ -59,10 +62,12 @@ public class WPILibWebSocketsToWebots {
             webotsSupervisorSim.set("ready", true);
         });
         try {
+            System.out.println("Trying to connect to robot..."); System.out.flush();
             WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
             System.err.println("Error occured connecting to server:");
             e.printStackTrace(System.err);
+            System.err.flush();
             System.exit(1);
             return;
         }
