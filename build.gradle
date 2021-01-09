@@ -40,6 +40,10 @@ dependencies {
     testImplementation 'junit:junit:4.13'
 }
 
+jar {
+    archiveBaseName = "nonshadow"
+}
+
 // Configure the building of the fat jar 
 shadowJar {
     // Make sure the licenseReport task runs first
