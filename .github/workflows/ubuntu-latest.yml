@@ -14,10 +14,10 @@ jobs:
     strategy: 
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-16.04 ]
         webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-16.04
             webotsPkg: "webots_2021a_amd64.deb"
     runs-on: ${{ matrix.os }}
 
@@ -45,7 +45,6 @@ jobs:
       run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
     - name: Install Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install ./${{ matrix.webotsPkg }}
 
@@ -63,7 +62,6 @@ jobs:
         path: example/
 
     - name: Start Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
       run: |
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
