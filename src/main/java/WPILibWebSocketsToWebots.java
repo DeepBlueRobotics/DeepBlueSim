@@ -1,7 +1,8 @@
 import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import com.cyberbotics.webots.controller.Robot;
+import com.cyberbotics.webots.controller.Node;
+import com.cyberbotics.webots.controller.Supervisor;
 
 import org.team199.wpiws.Pair;
 import org.team199.wpiws.ScopedObject;
@@ -24,7 +25,7 @@ public class WPILibWebSocketsToWebots {
         System.out.println("Setting up thread executor"); System.out.flush();
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
         System.out.println("new Robot()"); System.out.flush();
-        Robot robot = new Robot();
+        final Supervisor robot = new Supervisor();
         System.out.println("addShutdownHook"); System.out.flush();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
         int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
@@ -45,6 +46,20 @@ public class WPILibWebSocketsToWebots {
 				}
 
         }, true);
+
+        if (robot.getSupervisor()) {
+            Simulation.registerPeriodicMethod(new Runnable() {
+                public void run() {
+                    Node self = robot.getSelf();
+                    double[] pos = self.getPosition();
+                    webotsSupervisorSim.set("self.position.x", pos[0]);
+                    webotsSupervisorSim.set("self.position.y", pos[1]);
+                    webotsSupervisorSim.set("self.position.z", pos[2]);
+                }
+            });
+        } else {
+            System.err.println("The robot does not have supervisor=true. Reporting is limited.");
+        }
 
         // If the robot code started before we did, then it might have already tried to tell
         // us it was ready and we would have missed it. So, we tell it we're ready when we 

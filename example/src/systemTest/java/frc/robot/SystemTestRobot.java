@@ -2,6 +2,8 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.concurrent.CompletableFuture;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.HALValue;
@@ -12,6 +14,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
+import edu.wpi.first.wpiutil.math.Vector;
+import edu.wpi.first.wpiutil.math.numbers.N3;
 
 public class SystemTestRobot extends Robot {
 
@@ -39,10 +43,15 @@ public class SystemTestRobot extends Robot {
         }      
     }
 
+    SimDevice webotsSupervisor = null;
+    SimDouble positionX = null, positionY = null, positionZ = null;
     @Override
     public void simulationInit() {
-        SimDevice webotsSupervisor = SimDevice.create("WebotsSupervisor");
+        webotsSupervisor = SimDevice.create("WebotsSupervisor");
         SimDouble simStartMs = webotsSupervisor.createDouble("simStartMs", SimDevice.Direction.kInput, 0.0);
+        positionX = webotsSupervisor.createDouble("self.position.x", SimDevice.Direction.kInput, 0.0);
+        positionY = webotsSupervisor.createDouble("self.position.y", SimDevice.Direction.kInput, 0.0);
+        positionZ = webotsSupervisor.createDouble("self.position.z", SimDevice.Direction.kInput, 0.0);
         SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
 
         // Wait for the Webots supervisor to be ready
@@ -89,6 +98,25 @@ public class SystemTestRobot extends Robot {
             // Simulate disabling the robot
             DriverStationSim.setEnabled(false);
             DriverStationSim.notifyNewData();
+
+            Vector<N3> expectedPos = new Vector<>(N3.instance);
+            expectedPos.set(0, 0, -2.6);
+            expectedPos.set(1, 0, 0.0);
+            expectedPos.set(2, 0, 0.0);
+
+            System.out.println("self.position.x =" + positionX.get());
+            System.out.println("self.position.y =" + positionY.get());
+            System.out.println("self.position.z =" + positionZ.get());
+
+            Vector<N3> actualPos = new Vector<>(N3.instance);
+            actualPos.set(0, 0, positionX.get());
+            actualPos.set(1, 0, positionY.get());
+            actualPos.set(2, 0, positionZ.get());
+
+            var diff = new Vector<N3>(expectedPos.minus(actualPos));
+            var distance = diff.elementTimes(diff).elementSum();
+
+            assertEquals("Robot close to target position", 0.0, distance, 0.1);
 
             // Call endCompetition() to end the test and report success.
             // NOTE: throwing an exception will end the test and report failure.
