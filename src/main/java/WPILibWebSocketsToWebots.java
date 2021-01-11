@@ -22,31 +22,17 @@ public class WPILibWebSocketsToWebots {
 
     private static ScopedObject<Pair<String, StringCallback>> callbackStore = null;
     public static void main(String[] args) {
-        System.out.println("Setting up thread executor"); System.out.flush();
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
-        System.out.println("new Robot()"); System.out.flush();
         final Supervisor robot = new Supervisor();
-        System.out.println("addShutdownHook"); System.out.flush();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
         int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
         
         SimConfig.initConfig();
         Simulation.init(robot, basicTimeStep);
 
-        System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
+        // Use a SimDeviceSim to coordinate with robot code tests
         final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
-
-        // When the robot code starts, we expect it to tell us it's ready, and we respond
-        // that we're ready.
-        callbackStore = webotsSupervisorSim.registerValueChangedCallback("robotStartMs", new StringCallback() {
-				@Override
-				public void callback(String name, String value) {
-                    System.out.println("Telling the robot we're ready");
-                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());                            
-				}
-
-        }, true);
-
+        // Regular report the simulated robot's position
         if (robot.getSupervisor()) {
             Simulation.registerPeriodicMethod(new Runnable() {
                 public void run() {
@@ -61,7 +47,19 @@ public class WPILibWebSocketsToWebots {
             System.err.println("The robot does not have supervisor=true. Reporting is limited.");
         }
 
-        // If the robot code started before we did, then it might have already tried to tell
+
+        // If the robot code starts after us, we expect it to tell us it's ready, and we respond
+        // that we're ready.
+        callbackStore = webotsSupervisorSim.registerValueChangedCallback("robotStartMs", new StringCallback() {
+				@Override
+				public void callback(String name, String value) {
+                    System.out.println("Telling the robot we're ready");
+                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());                            
+				}
+
+        }, true);
+
+        // If the robot code starts before we us, then it might have already tried to tell
         // us it was ready and we would have missed it. So, we tell it we're ready when we 
         // connect to it.
         ConnectionProcessor.addOpenListener(() -> {
