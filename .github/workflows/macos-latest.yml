@@ -14,24 +14,14 @@ jobs:
     strategy: 
       fail-fast: false
       matrix:
-        os: [ macos-latest ]
-        # os: [ windows-latest, macos-latest, ubuntu-latest ]
-        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
-          # - os: windows-latest
-          #   webotsPkg: "webots-R2021a_setup.exe"
           - os: macos-latest
             webotsPkg: "webots-R2021a.dmg"
-          # - os: ubuntu-latest
-          #   webotsPkg: "webots_2021a_amd64.deb"
+            webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
+
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Test xvfb-run
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        xvfb-run -a xdpyinfo
-
     - name: Checkout source
       uses: actions/checkout@v2
       with:
@@ -43,32 +33,6 @@ jobs:
       with:
         java-version: 11
 
-    # - name: Test whether connection is possible
-    #   run: |
-    #     cd example
-    #     ./gradlew assemble --info --stacktrace
-    #     ./gradlew build --info --stacktrace &
-    #     sleep 10
-    #     echo "Trying to connect"
-    #     nc -zvw3 127.0.0.1 3300
-    #   shell: bash
-
-    - name: Cache Webots download
-      id: cache-webots-download
-      uses: actions/cache@v2
-      with:
-        path: ${{ matrix.webotsPkg }}
-        key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
-
-    - name: Download Webots
-      if: steps.cache-webots-download.outputs.cache-hit != 'true'
-      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
-
-    - name: Install Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo snap install webots
-
     - name: Cache Webots install
       id: cache-webots-install
       if: matrix.os == 'macos-latest'
@@ -77,9 +41,10 @@ jobs:
         path: ~/Applications
         key: webots-v2021a-install-${{ matrix.webotsPkg }}
 
-    - name: Install Webots (macos-latest)
-      if: matrix.os == 'macos-latest' && steps.cache-webots-install.outputs.cache-hit != 'true'
+    - name: Download and Install Webots
+      if: steps.cache-webots-install.outputs.cache-hit != 'true'
       run: |
+        curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
         mkdir ~/Mount
         mkdir -p ~/Applications
         hdiutil attach ${{ matrix.webotsPkg }} -mountpoint ~/Mount
@@ -87,72 +52,28 @@ jobs:
         hdiutil detach ~/Mount
         rmdir ~/Mount
 
-    - name: Install Webots (windows-latest)
-      if: matrix.os == 'windows-latest'
-      run: |
-        ./${{ matrix.webotsPkg }} //VERYSILENT //SP- //SUPPRESSMSGBOXES //CURRENTUSER
-        curl -L -o Mesa.7z https://downloads.fdossena.com/geth.php?r=mesa64-latest
-        7z e -o${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin Mesa.7z
-      shell: bash
-
     - name: Assemble the controller and copy it to the example
       run: |
         ./gradlew copyJarToExample --info --stacktrace
       shell: bash
 
-    - name: Archive the example folder
+    - name: Archive the example folder for diagnositic purposes
       uses: actions/upload-artifact@v2
       if: always()
       with:
         name: example
         path: example/
 
-    # - name: Run the controller directly
-    #   run: |
-    #     java -jar example/Webots/controllers/WPILibWebSocketsToWebots/WPILibWebSocketsToWebots.jar
-    #   shell: bash
-
-    - name: Start Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Start Webots
       run: |
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
         export HALSIMWS_HOST=127.0.0.1
-        sudo rm /var/cache/fontconfig/*
-        rm -rf ~/.cache/fontconfig/*
-        fc-cache -r
-        export QT_DEBUG_PLUGINS=1
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 15 secs"
-        sleep 15
-        echo "Done sleeping"
-        jobs
-
-    - name: Start Webots (macos-latest)
-      if: matrix.os == 'macos-latest'
-      run: |
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        export HALSIMWS_HOST=127.0.0.1
-        # export QT_DEBUG_PLUGINS=1
         ~/Applications/Webots.app/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        # ~/Applications/Webots.app/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt
-        echo "Sleeping for 10 minutes waiting for webots to start"
+        echo "Sleeping for 10 minutes(!) waiting for webots to start"
         sleep 600
         echo "Done sleeping"
         jobs
-
-    - name: Start Webots (windows-latest)
-      if: matrix.os == 'windows-latest'
-      run: |
-        export MESA_GL_VERSION_OVERRIDE=3.3
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        ${LOCALAPPDATA}/Programs/Webots/msys64/mingw64/bin/webots --no-rendering --stdout --stderr --minimize --batch --mode=fast ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 5 secs"
-        sleep 5
-        echo "Done sleeping"
-      shell: bash
 
     - name: Do the system test
       run: |
@@ -165,10 +86,3 @@ jobs:
       with:
         name: Webots log for ${{ matrix.os }}
         path: webots-${{ matrix.os }}.log
-
-    - name: xvfb-run log
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: xvfb-run log for ${{ matrix.os }}
-        path: xvfb-run-${{ matrix.os }}.log
