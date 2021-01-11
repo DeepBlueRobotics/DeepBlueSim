@@ -114,7 +114,7 @@ public class SystemTestRobot extends Robot {
             actualPos.set(2, 0, positionZ.get());
 
             var diff = new Vector<N3>(expectedPos.minus(actualPos));
-            var distance = diff.elementTimes(diff).elementSum();
+            var distance = Math.sqrt(diff.elementTimes(diff).elementSum());
 
             assertEquals("Robot close to target position", 0.0, distance, 0.1);
 
