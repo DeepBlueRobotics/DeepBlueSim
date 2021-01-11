@@ -14,16 +14,10 @@ jobs:
     strategy: 
       fail-fast: false
       matrix:
-        os: [ windows-latest ]
-        # os: [ windows-latest, macos-latest, ubuntu-latest ]
-        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
           - os: windows-latest
             webotsPkg: "webots-R2021a_setup.exe"
-          # - os: macos-latest
-          #   webotsPkg: "webots-R2021a.dmg"
-          # - os: ubuntu-latest
-          #   webotsPkg: "webots_2021a_amd64.deb"
+            webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -49,8 +43,7 @@ jobs:
       if: steps.cache-webots-download.outputs.cache-hit != 'true'
       run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
-    - name: Install Webots (windows-latest)
-      if: matrix.os == 'windows-latest'
+    - name: Install Webots
       run: |
         ./${{ matrix.webotsPkg }} //VERYSILENT //SP- //SUPPRESSMSGBOXES //CURRENTUSER
         curl -L -o Mesa.7z https://downloads.fdossena.com/geth.php?r=mesa64-latest
@@ -70,8 +63,7 @@ jobs:
         path: example/
 
 
-    - name: Start Webots (windows-latest)
-      if: matrix.os == 'windows-latest'
+    - name: Start Webots
       run: |
         export MESA_GL_VERSION_OVERRIDE=3.3
         export LIBGL_ALWAYS_SOFTWARE=true
