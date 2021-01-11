@@ -74,10 +74,14 @@ assemble {
     dependsOn gradle.includedBuild('WPIWebSockets').task(':build')
 }
 
-check {
+task checkExample(type: DefaultTask) {
     mustRunAfter copyJarToExample
-    dependsOn copyJarToExample
     dependsOn gradle.includedBuild('example').task(':check')
+}
+
+check {
+    dependsOn copyJarToExample
+    dependsOn checkExample
     dependsOn gradle.includedBuild('WPIWebSockets').task(':check')
 }
 
