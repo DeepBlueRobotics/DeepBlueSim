@@ -116,7 +116,7 @@ public class SystemTestRobot extends Robot {
             var diff = new Vector<N3>(expectedPos.minus(actualPos));
             var distance = Math.sqrt(diff.elementTimes(diff).elementSum());
 
-            assertEquals("Robot close to target position", 0.0, distance, 0.1);
+            assertEquals("Robot close to target position", 0.0, distance, 0.2);
 
             // Call endCompetition() to end the test and report success.
             // NOTE: throwing an exception will end the test and report failure.
