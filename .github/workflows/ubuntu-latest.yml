@@ -14,11 +14,10 @@ jobs:
     strategy: 
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest ]
-        webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
         include:
           - os: ubuntu-latest
             webotsPkg: "webots-R2021a-x86-64_ubuntu-18.04.tar.bz2"
+            webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
     runs-on: ${{ matrix.os }}
     env:
       WEBOTS_HOME: ${{ github.workspace }}/webots
@@ -46,8 +45,7 @@ jobs:
       if: steps.cache-webots-download.outputs.cache-hit != 'true'
       run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
-    - name: Install Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Install Webots
       run: |
         sudo apt update
         sudo apt install --yes lsb-release g++ make libavcodec-extra libglu1-mesa libxkbcommon-x11-dev execstack libusb-dev libxcb-keysyms1 libxcb-image0 libxcb-icccm4 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcomposite-dev libxtst6 libnss3
@@ -65,8 +63,7 @@ jobs:
         name: example
         path: example/
 
-    - name: Start Webots (ubuntu-latest)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Start Webots
       run: |
         export LIBGL_ALWAYS_SOFTWARE=true
         export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
@@ -75,9 +72,7 @@ jobs:
         rm -rf ~/.cache/fontconfig/*
         fc-cache -r
         export QT_DEBUG_PLUGINS=1
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --sysinfo --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime
         xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        # xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt
         echo "Sleeping for 15 secs"
         sleep 15
         echo "Done sleeping"
@@ -95,10 +90,3 @@ jobs:
       with:
         name: Webots log for ${{ matrix.os }}
         path: webots-${{ matrix.os }}.log
-
-    - name: xvfb-run log
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: xvfb-run log for ${{ matrix.os }}
-        path: xvfb-run-${{ matrix.os }}.log
