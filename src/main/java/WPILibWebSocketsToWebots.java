@@ -1,5 +1,4 @@
 import java.net.URISyntaxException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.cyberbotics.webots.controller.Robot;
@@ -9,7 +8,6 @@ import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.SimDeviceCallback;
 import org.team199.wpiws.interfaces.StringCallback;
 
 import code.SimConfig;
@@ -20,7 +18,8 @@ import code.lib.sim.Simulation;
 public class WPILibWebSocketsToWebots {
 
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
-    
+
+    private static ScopedObject<Pair<String, StringCallback>> callbackStore = null;
     public static void main(String[] args) {
         System.out.println("Setting up thread executor"); System.out.flush();
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
@@ -33,38 +32,29 @@ public class WPILibWebSocketsToWebots {
         SimConfig.initConfig();
         Simulation.init(robot, basicTimeStep);
 
-        // Whenever a new connection is established to the robot code, tell it
+        System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") ");
+        final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
+
+        // When the robot code starts, we expect it to tell us it's ready, and we respond
         // that we're ready.
+        callbackStore = webotsSupervisorSim.registerValueChangedCallback("robotStartMs", new StringCallback() {
+				@Override
+				public void callback(String name, String value) {
+                    System.out.println("Telling the robot we're ready");
+                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());                            
+				}
+
+        }, true);
+
+        // If the robot code started before we did, then it might have already tried to tell
+        // us it was ready and we would have missed it. So, we tell it we're ready when we 
+        // connect to it.
         ConnectionProcessor.addOpenListener(() -> {
-            System.out.println("Creating a new SimDeviceSim(\"WebotsSupervisor\") "); System.out.flush();
-            SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
-
-            // Wait for robot to ask if we're ready
-            final CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
-            try (ScopedObject<Pair<String, StringCallback>> callback = webotsSupervisorSim.registerValueChangedCallback("areYouReady", new StringCallback() {
-                @Override
-                public void callback(String name, String value) {
-                    System.out.println("areYouReady=" + value); System.out.flush();
-                    if (Boolean.parseBoolean(value)) {
-                        future.complete(true);
-                    }
-                }
-            }, true)) {
-                String areYouReady = webotsSupervisorSim.get("areYouReady");
-                System.out.println("Initially, areYouReady=" + areYouReady); System.out.flush();
-                if (Boolean.parseBoolean(areYouReady)) {
-                    future.complete(true);
-                } else {
-                    System.out.println("Waiting for robot to ask if we're ready"); System.out.flush();
-                }
-                future.join();
-            }
-
-            System.out.println("Telling the robot we're ready"); System.out.flush();
-            webotsSupervisorSim.set("ready", true);
+            System.out.println("Telling the robot we're ready");
+            webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
         });
         try {
-            System.out.println("Trying to connect to robot..."); System.out.flush();
+            System.out.println("Trying to connect to robot...");
             WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
             System.err.println("Error occured connecting to server:");
@@ -80,5 +70,5 @@ public class WPILibWebSocketsToWebots {
             Simulation.runPeriodicMethods();
         }
     }
-    
+
 }

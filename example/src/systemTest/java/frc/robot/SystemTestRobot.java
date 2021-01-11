@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
-import edu.wpi.first.hal.SimValue;
+import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimValueCallback;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
@@ -42,26 +42,30 @@ public class SystemTestRobot extends Robot {
     @Override
     public void simulationInit() {
         SimDevice webotsSupervisor = SimDevice.create("WebotsSupervisor");
-        SimValue isReadySim = webotsSupervisor.createValue("ready", SimDevice.Direction.kInput, HALValue.makeBoolean(false));
-        SimValue areYouReadySim = webotsSupervisor.createValue("areYouReady", SimDevice.Direction.kOutput, HALValue.makeBoolean(false));
+        SimDouble simStartMs = webotsSupervisor.createDouble("simStartMs", SimDevice.Direction.kInput, 0.0);
         SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
-        
+
         // Wait for the Webots supervisor to be ready
         final var future = new CompletableFuture<Boolean>();
-        try (var callback = webotsSupervisorSim.registerValueChangedCallback(isReadySim, new SimValueCallback() {
+        try (var callback = webotsSupervisorSim.registerValueChangedCallback(simStartMs, new SimValueCallback() {
             public void callback(String name, int handle, boolean readonly, HALValue value) {
-                if (value.getBoolean()) {
+                if (value.getDouble() > 0.0) {
                     System.out.println("WebotsSupervisor is ready");
                     future.complete(true);
                 }
             }
         }, true)) {
-            System.out.println("Asking if WebotsSupervisor is ready");
-            areYouReadySim.setValue(HALValue.makeBoolean(true));
+            System.out.println("Telling WebotsSupervisor that we're ready");
+            SimDouble robotStartMs = webotsSupervisor.createDouble("robotStartMs", SimDevice.Direction.kOutput, 0.0);
+            robotStartMs.set(System.currentTimeMillis());
+            if (simStartMs.get() > 0.0) {
+                System.out.println("WebotsSupervisor is ready");
+                future.complete(true);
+            }
             System.out.println("Waiting for WebotsSupervisor to be ready");
             future.join();
         }
-        
+
         // Reset the clock. Without this, *Periodic calls that should have 
         // occurred while we waited, will be considered behind schedule and
         // will all happen at once.
