@@ -17,7 +17,7 @@ jobs:
         include:
           - os: macos-latest
             webotsPkg: "webots-R2021a.dmg"
-            webotsUrl: [ "https://github.com/cyberbotics/webots/releases/download/R2021a/" ]
+            webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
 
     runs-on: ${{ matrix.os }}
 
