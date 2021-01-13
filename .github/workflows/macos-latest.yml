@@ -46,8 +46,6 @@ jobs:
 
     - name: Do the system test
       uses: ./.github/actions/run-system-test
-      with:
-        webotsWaitSecs: 600
 
     - name: Archive the example folder
       uses: actions/upload-artifact@v2

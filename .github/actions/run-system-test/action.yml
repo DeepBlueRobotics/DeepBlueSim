@@ -4,7 +4,7 @@ inputs:
   webotsWaitSecs:
     description: "How many seconds to wait for Webots to start before starting the robot code"
     required: false
-    default: 5
+    default: 0
 runs:
   using: 'composite'
   steps:
