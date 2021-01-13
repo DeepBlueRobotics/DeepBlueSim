@@ -1,6 +1,3 @@
-# This workflow will build a Java project with Gradle
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
-
 name: CI on Ubuntu
 
 on:
@@ -16,8 +13,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            webotsPkg: "webots_2021a_amd64.deb"
-            webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -32,26 +27,26 @@ jobs:
       with:
         java-version: 11
 
-    - name: Cache Webots download
-      id: cache-webots-download
+    steps:
+    - name: Get Webots cache path
+      id: getWebotsCachePath
+      uses: DeepBlueRobotics/setup-webots@v1
+      with:
+        install: false
+    
+    - name: Cache Webots
       uses: actions/cache@v2
       with:
-        path: ${{ matrix.webotsPkg }}
-        key: ${{ matrix.os }}-webots-v2021a-${{ matrix.webotsPkg }}
+        path: ${{ steps.getWebotsCachePath.outputs.cachePath }}
+        key: webots-v2021a-install-${{ runner.os }}
 
-    - name: Download Webots
-      if: steps.cache-webots-download.outputs.cache-hit != 'true'
-      run: curl -L -O ${{ format('{0}{1}', matrix.webotsUrl, matrix.webotsPkg) }}
 
-    - name: Install Webots
-      run: |
-        sudo apt update
-        sudo apt install --yes ./${{ matrix.webotsPkg }} 
+    - name: Setup Webots
+      id: setupWebots
+      uses: DeepBlueRobotics/setup-webots@v1
 
-    - name: Assemble the controller and copy it to the example
-      run: |
-        ./gradlew copyJarToExample --info --stacktrace
-      shell: bash
+    - name: Do the system test
+      uses: ./github/actions/run-system-test
 
     - name: Archive the example folder
       uses: actions/upload-artifact@v2
@@ -60,30 +55,9 @@ jobs:
         name: example
         path: example/
 
-    - name: Start Webots
-      run: |
-        export LIBGL_ALWAYS_SOFTWARE=true
-        export WEBOTS_DISABLE_SAVE_SCREEN_PERSPECTIVE_ON_CLOSE=true
-        export HALSIMWS_HOST=127.0.0.1
-        sudo rm /var/cache/fontconfig/*
-        rm -rf ~/.cache/fontconfig/*
-        fc-cache -r
-        export QT_DEBUG_PLUGINS=1
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
-        echo "Sleeping for 15 secs"
-        sleep 15
-        echo "Done sleeping"
-        jobs
-
-
-    - name: Do the system test
-      run: |
-        ./gradlew build --info --stacktrace
-      shell: bash
-
     - name: Archive Webots log
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: Webots log for ${{ matrix.os }}
-        path: webots-${{ matrix.os }}.log
+        name: Webots log for ${{ runner.os }}
+        path: webots-${{ runner.os }}.log
