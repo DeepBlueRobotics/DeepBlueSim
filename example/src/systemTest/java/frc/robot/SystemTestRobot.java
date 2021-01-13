@@ -3,8 +3,13 @@ package frc.robot;
 import edu.wpi.first.wpilibj.RobotBase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
@@ -36,15 +41,15 @@ public class SystemTestRobot extends Robot {
             if (cause != null) {
                 throwable = cause;
             }
-            DriverStation.reportError("Unhandled exception: " + throwable.toString(),
-                throwable.getStackTrace());
+            DriverStation.reportError("Unhandled exception: " + throwable.toString(), throwable.getStackTrace());
             HAL.shutdown();
             System.exit(-1);
-        }      
+        }
     }
 
     SimDevice webotsSupervisor = null;
     SimDouble positionX = null, positionY = null, positionZ = null;
+
     @Override
     public void simulationInit() {
         webotsSupervisor = SimDevice.create("WebotsSupervisor");
@@ -71,8 +76,20 @@ public class SystemTestRobot extends Robot {
                 System.out.println("WebotsSupervisor is ready");
                 future.complete(true);
             }
-            System.out.println("Waiting for WebotsSupervisor to be ready");
-            future.join();
+            // Wait up to 10 minutes for Webots to respond. On GitHub's MacOS Continuous
+            // Integration servers, it can take over 8 minutes for Webots to start.
+            var startedWaitingTimeMs = System.currentTimeMillis();
+            var isReady = false;
+            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 600000) {
+                try {
+                    isReady = future.get(1, TimeUnit.SECONDS);
+                } catch (TimeoutException ex) {
+                    System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/Test.wbt in Webots.");
+                } catch (InterruptedException|ExecutionException e) {
+                    throw new RuntimeException("Error while waiting for WebotsSupervisor to be ready", e);
+                }
+            }
+            assertTrue("Webots ready in time", isReady);
         }
 
         // Reset the clock. Without this, *Periodic calls that should have 

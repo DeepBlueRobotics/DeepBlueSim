@@ -99,7 +99,6 @@ task('systemTestJar', type: Jar) {
 task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'systemTestJar'
     dependsOn 'extractTestJNI'
-    timeout = Duration.ofSeconds(135)
 }
 
 check.dependsOn 'systemTest'
@@ -139,7 +138,7 @@ class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSim
                     Integer call() {
                         int length = stream.read(buf)
                         if (length > 0) 
-                            System.err.write(buf, 0, length)
+                            System.out.write(buf, 0, length)
                         return length
                     }
                 }
