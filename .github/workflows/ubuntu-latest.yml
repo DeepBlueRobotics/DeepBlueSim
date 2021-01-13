@@ -51,7 +51,7 @@ jobs:
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: example
+        name: Resulting example project for ${{ runner.os }}
         path: example/
 
     - name: Archive Webots log
