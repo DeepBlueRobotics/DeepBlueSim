@@ -1,3 +1,4 @@
 rootProject.name = 'WPILibWebSocketsToWebots'
 includeBuild 'WPIWebSockets'
+includeBuild 'plugin'
 includeBuild 'example'
