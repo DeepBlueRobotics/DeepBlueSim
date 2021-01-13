@@ -7,7 +7,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master, add-system-test-support ]
+    branches: [ master ]
 
 jobs:
   build:
