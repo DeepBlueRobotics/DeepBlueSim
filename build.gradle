@@ -40,6 +40,10 @@ dependencies {
     testImplementation 'junit:junit:4.13'
 }
 
+jar {
+    archiveBaseName = "nonshadow"
+}
+
 // Configure the building of the fat jar 
 shadowJar {
     // Make sure the licenseReport task runs first
@@ -67,13 +71,21 @@ task copyJarToExample(type: Copy) {
 }
 
 assemble {
-    dependsOn copyJarToExample
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':build')
+}
+
+task checkExample(type: DefaultTask) {
+    mustRunAfter copyJarToExample
+    dependsOn gradle.includedBuild('example').task(':check')
 }
 
 check {
-    dependsOn gradle.includedBuild('example').task(':check')
+    dependsOn copyJarToExample
+    dependsOn checkExample
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':check')
 }
 
 clean {
     dependsOn gradle.includedBuild('example').task(':clean')
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':clean')
 }
