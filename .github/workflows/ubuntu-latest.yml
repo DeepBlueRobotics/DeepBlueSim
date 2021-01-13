@@ -45,7 +45,7 @@ jobs:
       uses: DeepBlueRobotics/setup-webots@v1
 
     - name: Do the system test
-      uses: ./github/actions/run-system-test
+      uses: ./.github/actions/run-system-test
 
     - name: Archive the example folder
       uses: actions/upload-artifact@v2
