@@ -79,6 +79,10 @@ task checkExample(type: DefaultTask) {
     dependsOn gradle.includedBuild('example').task(':check')
 }
 
+task greeting(type: DefaultTask) {
+    dependsOn gradle.includedBuild('example').task(':greeting')
+}
+
 check {
     dependsOn copyJarToExample
     dependsOn checkExample
