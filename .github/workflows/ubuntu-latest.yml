@@ -7,7 +7,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, add-system-test-support ]
 
 jobs:
   build:
@@ -16,11 +16,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            webotsPkg: "webots-R2021a-x86-64_ubuntu-18.04.tar.bz2"
+            webotsPkg: "webots_2021a_amd64.deb"
             webotsUrl: "https://github.com/cyberbotics/webots/releases/download/R2021a/"
     runs-on: ${{ matrix.os }}
-    env:
-      WEBOTS_HOME: ${{ github.workspace }}/webots
 
     steps:
     - name: Checkout source
@@ -48,8 +46,7 @@ jobs:
     - name: Install Webots
       run: |
         sudo apt update
-        sudo apt install --yes lsb-release g++ make libavcodec-extra libglu1-mesa libxkbcommon-x11-dev execstack libusb-dev libxcb-keysyms1 libxcb-image0 libxcb-icccm4 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcomposite-dev libxtst6 libnss3
-        tar xjf ${{ matrix.webotsPkg }}
+        sudo apt install --yes ./${{ matrix.webotsPkg }} 
 
     - name: Assemble the controller and copy it to the example
       run: |
@@ -72,7 +69,7 @@ jobs:
         rm -rf ~/.cache/fontconfig/*
         fc-cache -r
         export QT_DEBUG_PLUGINS=1
-        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log $WEBOTS_HOME/webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
+        xvfb-run -w 10 -n 99 -e xvfb-run-${{ matrix.os }}.log webots --no-sandbox --no-rendering --stdout --stderr --minimize --batch --mode=realtime ./example/Webots/worlds/Test.wbt &> webots-${{ matrix.os }}.log &
         echo "Sleeping for 15 secs"
         sleep 15
         echo "Done sleeping"
