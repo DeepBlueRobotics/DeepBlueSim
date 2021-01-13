@@ -27,7 +27,6 @@ jobs:
       with:
         java-version: 11
 
-    steps:
     - name: Get Webots cache path
       id: getWebotsCachePath
       uses: DeepBlueRobotics/setup-webots@v1
