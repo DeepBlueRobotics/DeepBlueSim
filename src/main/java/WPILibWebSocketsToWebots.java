@@ -66,6 +66,12 @@ public class WPILibWebSocketsToWebots {
             System.out.println("Telling the robot we're ready");
             webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
         });
+
+        // Wait until one timestep has completed to ensure that the Webots simulator is 
+        // not still starting up.
+        if (robot.step(basicTimeStep) == -1) {
+            throw new RuntimeException("Couldn't even do one timestep!");
+        }
         try {
             System.out.println("Trying to connect to robot...");
             WSConnection.connectHALSim(true);
