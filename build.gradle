@@ -12,6 +12,10 @@ plugins {
     id "java"
     id "application"
 
+    // Support creating a distribution zip/tar file and publishing it via maven
+    id 'distribution'
+    id 'maven-publish'
+
     // Support building a fat jar (aka shadowJar) containing needed dependencies
     id 'com.github.johnrengelman.shadow' version '6.1.0'
 
@@ -21,6 +25,8 @@ plugins {
     // Support creating a license report of all dependencies
     id 'com.jaredsburrows.license' version '0.8.80'
 }
+
+group 'org.team199'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -63,6 +69,15 @@ shadowJar {
     // Include our license and the (renamed) license report
     from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
     rename 'licenseReport.html', 'LICENSE-dependencies.html'
+}
+
+distributions {
+    main {
+        // distributionBaseName = 'someName'
+        contents {
+            from shadowJar.outputs
+        }
+    }
 }
 
 task copyJarToExample(type: Copy) {
