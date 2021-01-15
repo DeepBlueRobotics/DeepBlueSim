@@ -5,7 +5,9 @@ runs:
   steps:
     - name: Install DeepBlueSim
       run: |
-        ./gradlew :example:installDeepBlueSim --info --stacktrace
+        # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
+        # tasks is executed.
+        ./gradlew :example:externalSimulate --info --stacktrace
       shell: bash
 
     - name: Start Webots

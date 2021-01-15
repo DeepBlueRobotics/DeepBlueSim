@@ -33,9 +33,6 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
 
  1. In VSCode run the `WPILib: Create a new project` command and create the example project.
  1. Add the DeepBlueSim Gradle plugin to the `build.gradle` as described above.
- 1. Run the `installDeepBlueSim` Gradle task. This will create a `Webots` folder at the
- top-level of your project.
- 
  1. In VSCode run the `WPILib: Simulate Robot Code on Desktop` command and select both
  `libhalsim_gui` and `libhalsim_ws_server` as the extensions to use.
  1. Start Webots and open *your_example_project*`/Webots/worlds/DBSExample.wbt`

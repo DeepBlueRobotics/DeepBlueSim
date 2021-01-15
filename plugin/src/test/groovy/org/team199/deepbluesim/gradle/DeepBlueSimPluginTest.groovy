@@ -21,4 +21,16 @@ class DeepBlueSimPluginTest extends Specification {
         then:
         project.tasks.findByName("installDeepBlueSim") != null
     }
+
+    def "plugin makes simulation tasks depend on DeepBlueSim"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+
+        when:
+        project.plugins.apply("org.team199.deepbluesim") 
+        project.plugins.apply("edu.wpi.first.GradleRIO")
+
+        then:
+        project.tasks.findByName('externalSimulate').taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim"))
+    }
 }
