@@ -1,7 +1,9 @@
-package code.lib.sim;
+package org.team199.deepbluesim.mediators;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 
+import org.team199.deepbluesim.BaseSimConfig;
+import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.devices.SimDeviceSim;
 
 public class MockedSparkEncoder implements Runnable {

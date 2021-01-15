@@ -1,8 +1,9 @@
-package code.lib.sim;
+package org.team199.deepbluesim.mediators;
 
 import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Robot;
 
+import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.interfaces.DoubleCallback;
 import org.team199.wpiws.interfaces.StringCallback;
 

@@ -1,4 +1,6 @@
-package code.lib.sim;
+package org.team199.deepbluesim;
+
+import org.team199.deepbluesim.mediators.*;
 
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.UniqueArrayList;

@@ -1,4 +1,4 @@
-package code.lib.sim;
+package org.team199.deepbluesim;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 

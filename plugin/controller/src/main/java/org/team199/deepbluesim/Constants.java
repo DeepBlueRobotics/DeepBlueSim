@@ -5,7 +5,7 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package code;
+package org.team199.deepbluesim;
 
 public final class Constants {
     public static final double motorGearing = 6.8;
