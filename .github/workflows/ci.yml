@@ -67,6 +67,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout source
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
     - name: Compute next semantic version
       id: version
       uses: paulhatch/semantic-version@v3.2
