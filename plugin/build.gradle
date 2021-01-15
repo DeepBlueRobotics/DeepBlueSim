@@ -78,8 +78,8 @@ configurations {
 }
 
 dependencies {
-    // include the Webots.zip artifact produced by the controller's controllersAndProtos configuration
-    extraFiles project(path: ':controller', configuration: 'controllersAndProtos')
+    // include the Webots.zip artifact produced by the controller's webotsFolder configuration
+    extraFiles project(path: ':controller', configuration: 'webotsFolder')
 }
 
 // Copy the extra files (namely Webots.zip) into the the jar

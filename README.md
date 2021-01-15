@@ -20,20 +20,26 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
 
 ## Quick Start
 
- 1. Add the Gradle plugin to your `build.gradle` by adding the following line
+### Installation
+
+ 1. Install Webots if you don't already have it installed.
+ 1. Add the DeepBlueSim Gradle plugin to your `build.gradle` by adding the following line
  in your `plugins` section:
  ```
-     id "org.team199.deepbluesim" version "0.0.1"
+     id "org.team199.deepbluesim" version "0.1.0"
  ```
- 2. Run the `installDeepBlueSim` Gradle task. This will create a `Webots` folder at the
+
+### Demo
+
+ 1. In VSCode run the `WPILib: Create a new project` command and create the example project.
+ 1. Add the DeepBlueSim Gradle plugin to the `build.gradle` as described above.
+ 1. Run the `installDeepBlueSim` Gradle task. This will create a `Webots` folder at the
  top-level of your project.
- 3. Copy the [`./example/Webots/worlds/Test.wbt`](https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/example/Webots/worlds/Test.wbt)
-file to *your_project*`/Webots/worlds/Test.wbt`.
- 4. Install Webots if you don't already have it installed.
- 5. Start Webots and open *your_project*`/Webots/worlds/Test.wbt`
- 6. Within VSCode run the `WPILib: Simulate Robot Code on Desktop` command and select both
- `libhasim_gui` and `libhalsim_ws_server` as the extensions to use.
- 7. In the HALSim GUI, select `Autonomous` to see the robot drive forward for 2 seconds, or
+ 
+ 1. In VSCode run the `WPILib: Simulate Robot Code on Desktop` command and select both
+ `libhalsim_gui` and `libhalsim_ws_server` as the extensions to use.
+ 1. Start Webots and open *your_example_project*`/Webots/worlds/DBSExample.wbt`
+ 1. In the HALSim GUI, select `Autonomous` to see the robot drive forward for 2 seconds, or
  select `Teleop` and use the keyboard on joystick to drive the robot around.
 
 

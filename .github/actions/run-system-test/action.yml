@@ -10,7 +10,7 @@ runs:
 
     - name: Start Webots
       run: |
-        $RUN_WEBOTS ./example/Webots/worlds/Test.wbt &> webots-${{ runner.os }}.log &
+        $RUN_WEBOTS ./example/Webots/worlds/DBSExample.wbt &> webots-${{ runner.os }}.log &
       shell: bash
 
     - name: Do the system test (and any other tests)

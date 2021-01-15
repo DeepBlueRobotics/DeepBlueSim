@@ -1,0 +1,179 @@
+#VRML_SIM R2021a utf8
+WorldInfo {
+  coordinateSystem "NUE"
+}
+Viewpoint {
+  orientation 0.12546424055832162 0.9850338938784661 0.11818186092523109 4.589543198443866
+  position -11.848186436085022 3.5024799881936275 -1.1587423512414836
+}
+DEF Field Group {
+  children [
+    RectangleArena {
+      translation 0 0.01 0
+      name "rectangle arena(1)"
+      floorSize 20 20
+      floorTileSize 20 20
+    }
+  ]
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Robot {
+  translation -2.1693054077308728e-12 0.06929473891189548 1.4597477115552345e-08
+  rotation 0.9999999976797347 6.81173179794535e-05 7.495205389129735e-07 1.55812926143542e-08
+  children [
+    Solid {
+      children [
+        Gyro {
+        }
+        HingeJoint {
+          jointParameters HingeJointParameters {
+            position 1.667027211877997e-11
+            axis 0 0 1
+            anchor -0.167 0 -0.232
+          }
+          device [
+            PositionSensor {
+              name "Back Left Encoder"
+            }
+            RotationalMotor {
+              name "PWM[0]"
+              maxVelocity 87.4102
+            }
+          ]
+          endPoint Solid {
+            translation -0.167 0 -0.232
+            rotation 1 4.833061556931681e-10 4.833043804137914e-10 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry DEF Wheel Cylinder {
+                  height 0.0125
+                  radius 0.0635
+                }
+              }
+            ]
+            name "BL"
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+        }
+        HingeJoint {
+          jointParameters HingeJointParameters {
+            position 1.6672976088524906e-11
+            axis 0 0 1
+            anchor 0.167 0 -0.232
+          }
+          device [
+            PositionSensor {
+              name "Front Left Encoder"
+            }
+          ]
+          endPoint Solid {
+            translation 0.167 0 -0.232
+            rotation 1 4.833957821850251e-10 4.833940065764325e-10 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry USE Wheel
+              }
+            ]
+            name "FL"
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+        }
+        HingeJoint {
+          jointParameters HingeJointParameters {
+            position -1.6676778847781958e-11
+            axis 0 0 -1
+            anchor -0.167 0 0.232
+          }
+          device [
+            PositionSensor {
+              name "Back Right Encoder"
+            }
+            RotationalMotor {
+              name "PWM[1]"
+              maxVelocity 87.4102
+            }
+          ]
+          endPoint Solid {
+            translation -0.167 0 0.232
+            rotation 1 -2.168388415894704e-10 -2.1683804509739343e-10 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry USE Wheel
+              }
+            ]
+            name "BR"
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+        }
+        HingeJoint {
+          jointParameters HingeJointParameters {
+            position -1.6676110401423026e-11
+            axis 0 0 -1
+            anchor 0.167 0 0.232
+          }
+          device [
+            PositionSensor {
+              name "Front Right Encoder"
+            }
+          ]
+          endPoint Solid {
+            translation 0.167 0 0.232
+            rotation 1 -2.1683064771089854e-10 -2.168298512489195e-10 1.5708
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry USE Wheel
+              }
+            ]
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+        }
+        Shape {
+          appearance PBRAppearance {
+          }
+          geometry DEF Base Box {
+            size 0.46101 0.05 0.45085
+          }
+        }
+      ]
+      boundingObject USE Base
+      physics Physics {
+      }
+    }
+    Pen {
+      translation 0 0.001 0
+      inkColor 1 0 0
+      inkDensity 1
+      leadSize 0.1
+    }
+  ]
+  boundingObject USE Base
+  physics Physics {
+    density -1
+    mass 10
+  }
+  controller "DeepBlueSim"
+  supervisor TRUE
+}
