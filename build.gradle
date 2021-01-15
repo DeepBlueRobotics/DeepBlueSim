@@ -8,103 +8,26 @@ buildscript {
 
 // Apply other plugins
 plugins {
-    // Treat this project as a java application
-    id "java"
-    id "application"
-
-    // Support creating a distribution zip/tar file and publishing it via maven
-    id 'distribution'
-    id 'maven-publish'
-
-    // Support building a fat jar (aka shadowJar) containing needed dependencies
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
-
-    // Support finding the local webots installation and adding it as a dependency
-    id "org.carlmontrobotics.webots" version "0.13.0"
-
-    // Support creating a license report of all dependencies
-    id 'com.jaredsburrows.license' version '0.8.80'
+    id 'base'
 }
 
 group 'org.team199'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-// The name of the main class in the application jar.
-mainClassName = 'WPILibWebSocketsToWebots'
-
-// Add repositories containing project dependencies
-repositories {
-    mavenCentral()
-    jcenter()
-}
-
-// Add dependencies
-dependencies {
-    implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
-    testImplementation 'junit:junit:4.13'
-}
-
-jar {
-    archiveBaseName = "nonshadow"
-}
-
-// Configure the building of the fat jar 
-shadowJar {
-    // Make sure the licenseReport task runs first
-    dependsOn "licenseReport"
-    dependsOn jar
-    
-    // Don't add "-all" to the jar filename.
-    archiveClassifier.set('')
-
-    // Webots puts the correct version of its libs on the classpath before 
-    // launching the controller, so don't include them.
-    exclude 'com/cyberbotics/**/*'
-
-    // Remove anything that was required by something that was excluded
-    minimize()
-
-    // Include our license and the (renamed) license report
-    from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
-    rename 'licenseReport.html', 'LICENSE-dependencies.html'
-}
-
-distributions {
-    main {
-        // distributionBaseName = 'someName'
-        contents {
-            from shadowJar.outputs
-        }
-    }
-}
-
-task copyJarToExample(type: Copy) {
-    from shadowJar.outputs
-    into "example/Webots/controllers/${shadowJar.archiveBaseName.get()}"
-}
 
 assemble {
-    dependsOn gradle.includedBuild('WPIWebSockets').task(':build')
-}
-
-task checkExample(type: DefaultTask) {
-    mustRunAfter copyJarToExample
-    dependsOn gradle.includedBuild('example').task(':check')
-}
-
-task greeting(type: DefaultTask) {
-    dependsOn gradle.includedBuild('example').task(':greeting')
+    dependsOn gradle.includedBuild('WPIWebSockets').task(':assemble')
+    dependsOn gradle.includedBuild('plugin').task(':assemble')
+    dependsOn gradle.includedBuild('example').task(':assemble')
 }
 
 check {
-    dependsOn copyJarToExample
-    dependsOn checkExample
     dependsOn gradle.includedBuild('WPIWebSockets').task(':check')
+    dependsOn gradle.includedBuild('plugin').task(':check')
+    dependsOn gradle.includedBuild('example').task(':check')
 }
 
 clean {
-    dependsOn gradle.includedBuild('example').task(':clean')
     dependsOn gradle.includedBuild('WPIWebSockets').task(':clean')
+    dependsOn gradle.includedBuild('plugin').task(':clean')
+    dependsOn gradle.includedBuild('example').task(':clean')
 }

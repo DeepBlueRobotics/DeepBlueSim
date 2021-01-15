@@ -11,7 +11,7 @@ import spock.lang.Specification
  * A simple unit test for the 'org.team199.deepbluesim' plugin.
  */
 class DeepBlueSimPluginTest extends Specification {
-    def "plugin registers task"() {
+    def "plugin registers greeting task"() {
         given:
         def project = ProjectBuilder.builder().build()
 
@@ -20,5 +20,16 @@ class DeepBlueSimPluginTest extends Specification {
 
         then:
         project.tasks.findByName("greeting") != null
+    }
+
+    def "plugin registers installControllersAndProtos task"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+
+        when:
+        project.plugins.apply("org.team199.deepbluesim")
+
+        then:
+        project.tasks.findByName("installControllersAndProtos") != null
     }
 }
