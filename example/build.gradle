@@ -102,6 +102,8 @@ task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'extractTestJNI'
 }
 
+assemble.dependsOn installDeepBlueSim
+
 check.dependsOn 'systemTest'
 
 class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSimulationTask {

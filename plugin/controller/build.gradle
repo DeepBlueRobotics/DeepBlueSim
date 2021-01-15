@@ -31,7 +31,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 // The name of the main class in the application jar.
-mainClassName = 'WPILibWebSocketsToWebots'
+mainClassName = 'DeepBlueSim'
 
 // Add repositories containing project dependencies
 repositories {

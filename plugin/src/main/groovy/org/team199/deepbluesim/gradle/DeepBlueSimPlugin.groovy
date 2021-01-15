@@ -14,25 +14,17 @@ import org.apache.commons.io.IOUtils
  */
 class DeepBlueSimPlugin implements Plugin<Project> {
     void apply(Project project) {
-        // Register a task
-        project.tasks.register("greeting") {
-            doLast {
-                println("Hello from plugin 'org.team199.deepbluesim'")
-            }
-        }
-        // project.task installControllersAndProtos(type: Copy) {
-        //     from shadowJar.outputs
-        //     into "example/Webots/controllers/${shadowJar.archiveBaseName.get()}"
-        // }
-
-        project.tasks.register("installControllersAndProtos") {
+        project.tasks.register("installDeepBlueSim") {
             doLast {
                 def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
                 if (resourceStream == null) throw new RuntimeException("resourceStream is null")
                 def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
                 dbsDir.mkdirs()
                 FileUtils.copyInputStreamToFile(resourceStream, new File(dbsDir,"Webots.zip"))
-
+                project.copy {
+                    from project.zipTree(new File(dbsDir,"Webots.zip"))
+                    into project.projectDir
+                }
             }
         }
     }

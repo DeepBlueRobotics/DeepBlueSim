@@ -13,31 +13,7 @@ import org.apache.commons.io.FileUtils
  * A simple functional test for the 'org.team199.deepbluesim' plugin.
  */
 class DeepBlueSimPluginFunctionalTest extends Specification {
-    def "can run greeting task"() {
-        given:
-        def projectDir = new File("build/functionalTest/greeting")
-        FileUtils.deleteDirectory(projectDir)
-        projectDir.mkdirs()
-        new File(projectDir, "settings.gradle") << ""
-        new File(projectDir, "build.gradle") << """
-            plugins {
-                id('org.team199.deepbluesim')
-            }
-        """
-
-        when:
-        def runner = GradleRunner.create()
-        runner.forwardOutput()
-        runner.withPluginClasspath()
-        runner.withArguments("greeting")
-        runner.withProjectDir(projectDir)
-        def result = runner.build()
-
-        then:
-        result.output.contains("Hello from plugin 'org.team199.deepbluesim'")
-    }
-
-    def "installControllersAndProtos task works"() {
+    def "installDeepBlueSim task works"() {
         given:
         def projectDir = new File("build/functionalTest/installControllersAndProtos")
         FileUtils.deleteDirectory(projectDir)
@@ -56,7 +32,7 @@ class DeepBlueSimPluginFunctionalTest extends Specification {
         def runner = GradleRunner.create()
         runner.forwardOutput()
         runner.withPluginClasspath()
-        runner.withArguments("installControllersAndProtos")
+        runner.withArguments("installDeepBlueSim")
         runner.withProjectDir(projectDir)
         def result = runner.build()
 
