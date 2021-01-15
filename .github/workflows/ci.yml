@@ -73,6 +73,27 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Get Webots cache path
+      id: getWebotsCachePath
+      uses: DeepBlueRobotics/setup-webots@v1
+      with:
+        install: false
+    
+    - name: Cache Webots
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.getWebotsCachePath.outputs.cachePath }}
+        key: webots-v2021a-install-${{ runner.os }}
+
+    - name: Setup Webots
+      id: setupWebots
+      uses: DeepBlueRobotics/setup-webots@v1
+
     - name: Compute next semantic version
       id: version
       uses: paulhatch/semantic-version@v3.2
