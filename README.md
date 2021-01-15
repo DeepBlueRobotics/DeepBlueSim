@@ -5,10 +5,11 @@ in the [Webots](https://cyberbotics.com/) robot simulator.
 
 ## Status
 
-We (Team 199, Deep Blue) are actively developing it. It is working for us,
-but **the implementation is still changing rapidly**.
+We ([Team 199, Deep Blue](http://www.carlmontrobotics.org)) are actively developing it. 
+It is working for us, but **the implementation is still changing rapidly**.
 
-See the issues for likely changes in the near future.
+See the [issues](https://github.com/DeepBlueRobotics/DeepBlueSim/issues) for likely changes 
+in the near future.
 
 Works on Windows, MacOS, and Linux.
 
@@ -24,9 +25,10 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
  ```
  2. Run the `installDeepBlueSim` Gradle task. This will create a `Webots` folder at the
  top-level of your project.
- 3. Copy the `./example/Webots/worlds/Test.wbt` file to `*your_project*/Webots/worlds/Test.wbt`
+ 3. Copy the [`./example/Webots/worlds/Test.wbt`](https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/example/Webots/worlds/Test.wbt)
+file to *your_project*`/Webots/worlds/Test.wbt`.
  4. Install Webots if you don't already have it installed.
- 5. Start Webots and open `*your_project*/Webots/worlds/Test.wbt`
+ 5. Start Webots and open *your_project*`/Webots/worlds/Test.wbt`
  6. Within VSCode run the `WPILib: Simulate Robot Code on Desktop` command and select both
  `libhasim_gui` and `libhalsim_ws_server` as the extensions to use.
  7. In the HALSim GUI, select `Autonomous` to see the robot drive forward for 2 seconds, or
