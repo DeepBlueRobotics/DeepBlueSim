@@ -3,12 +3,17 @@ description: 'Runs the system test'
 runs:
   using: 'composite'
   steps:
+    - name: Install DeepBlueSim
+      run: |
+        ./gradlew :example:installDeepBlueSim --info --stacktrace
+      shell: bash
+
     - name: Start Webots
       run: |
         $RUN_WEBOTS ./example/Webots/worlds/Test.wbt &> webots-${{ runner.os }}.log &
       shell: bash
 
-    - name: Do the system test
+    - name: Do the system test (and any other tests)
       run: |
         ./gradlew build --info --stacktrace
       shell: bash

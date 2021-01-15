@@ -98,7 +98,6 @@ task('systemTestJar', type: Jar) {
 }
 
 task('systemTest', type: SynchronousJavaSimulationTask) {
-    dependsOn installDeepBlueSim
     dependsOn 'systemTestJar'
     dependsOn 'extractTestJNI'
 }
