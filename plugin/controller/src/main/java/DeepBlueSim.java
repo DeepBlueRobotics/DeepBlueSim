@@ -16,7 +16,7 @@ import code.lib.sim.Simulation;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
 // the name of the jar.
-public class WPILibWebSocketsToWebots {
+public class DeepBlueSim {
 
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
 

@@ -1,3 +1,4 @@
-rootProject.name = 'WPILibWebSocketsToWebots'
+rootProject.name = 'DeepBlueSim'
 includeBuild 'WPIWebSockets'
+includeBuild 'plugin'
 includeBuild 'example'

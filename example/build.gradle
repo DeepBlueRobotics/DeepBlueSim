@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "edu.wpi.first.GradleRIO" version "2021.1.2"
+    id "org.team199.deepbluesim"
 }
 
 sourceCompatibility = JavaVersion.VERSION_11
@@ -100,6 +101,8 @@ task('systemTest', type: SynchronousJavaSimulationTask) {
     dependsOn 'systemTestJar'
     dependsOn 'extractTestJNI'
 }
+
+assemble.dependsOn installDeepBlueSim
 
 check.dependsOn 'systemTest'
 

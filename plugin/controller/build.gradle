@@ -1,0 +1,91 @@
+// Add repositories containing build plugins
+buildscript {
+  repositories {
+    jcenter()
+    google()
+  }
+}
+
+// Apply other plugins
+plugins {
+    // Treat this project as a java application
+    id "java"
+    id "application"
+
+    // Support creating distributions archives
+    id 'distribution'
+
+    // Support building a fat jar (aka shadowJar) containing needed dependencies
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+
+    // Support finding the local webots installation and adding it as a dependency
+    id "org.carlmontrobotics.webots" version "0.13.0"
+
+    // Support creating a license report of all dependencies
+    id 'com.jaredsburrows.license' version '0.8.80'
+}
+
+group 'org.team199'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+// The name of the main class in the application jar.
+mainClassName = 'DeepBlueSim'
+
+// Add repositories containing project dependencies
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+// Add dependencies
+dependencies {
+    implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
+    testImplementation 'junit:junit:4.13'
+}
+
+// Configure the building of the fat jar 
+shadowJar {
+    archiveBaseName = "DeepBlueSim"
+
+    // Make sure the licenseReport task runs first
+    dependsOn "licenseReport"
+    // dependsOn jar
+    
+    // Don't add "-all" to the jar filename.
+    archiveClassifier.set('')
+
+    // Webots puts the correct version of its libs on the classpath before 
+    // launching the controller, so don't include them.
+    exclude 'com/cyberbotics/**/*'
+
+    // Remove anything that was required by something that was excluded
+    minimize()
+
+    // Include our license and the (renamed) license report
+    from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
+    rename 'licenseReport.html', 'LICENSE-dependencies.html'
+}
+
+configurations {
+    controllersAndProtos {
+        canBeConsumed = true
+        canBeResolved = false
+    }
+}
+
+distributions {
+    controllersAndProtos {
+        distributionBaseName = "Webots"
+        contents {
+            from(shadowJar) {
+              into 'controllers/DeepBlueSim'
+            }
+        }
+    }
+}
+
+artifacts {
+    controllersAndProtos(controllersAndProtosDistZip)
+}
