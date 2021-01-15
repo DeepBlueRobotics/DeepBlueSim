@@ -5,6 +5,8 @@ in the [Webots](https://cyberbotics.com/) robot simulator.
 
 ## Status
 
+![CI](https://github.com/DeepBlueRobotics/DeepBlueSim/workflows/CI/badge.svg)
+
 We ([Team 199, Deep Blue](http://www.carlmontrobotics.org)) are actively developing it. 
 It is working for us, but **the implementation is still changing rapidly**.
 
