@@ -10,6 +10,12 @@ plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     id 'java-gradle-plugin'
 
+    // Support generating Maven metadata for publishing
+    id 'maven-publish'
+
+    // Support publishing to the Gradle Plugin Portal
+    id 'com.gradle.plugin-publish' version '0.12.0'
+
     // Apply the Groovy plugin to add support for Groovy
     id 'groovy'
 }
@@ -37,6 +43,13 @@ gradlePlugin {
             implementationClass = 'org.team199.deepbluesim.gradle.DeepBlueSimPlugin'
         }
     }
+}
+
+// Info for publishing to the Gradle Plugin Portal
+pluginBundle {
+    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
+    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
+    tags = ['FRC', 'WPILib', 'Webots']     
 }
 
 // Add a source set for the functional test suite
