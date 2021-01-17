@@ -1,4 +1,4 @@
-package code.lib.sim;
+package org.team199.deepbluesim;
 
 import java.util.HashMap;
 
@@ -23,7 +23,7 @@ public class BaseSimConfig {
      * Retrieves the sampling period to be used when enabling Webots sensors
      * @see #setSensorTimestep(int)
      */
-    protected static int getSensorTimestep() {
+    public static int getSensorTimestep() {
         return sensorTimestep;
     }
 

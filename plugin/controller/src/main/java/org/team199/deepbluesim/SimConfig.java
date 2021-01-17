@@ -1,6 +1,4 @@
-package code;
-
-import code.lib.sim.BaseSimConfig;
+package org.team199.deepbluesim;
 
 public class SimConfig extends BaseSimConfig {
 

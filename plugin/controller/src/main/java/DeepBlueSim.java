@@ -11,8 +11,8 @@ import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.StringCallback;
 
-import code.SimConfig;
-import code.lib.sim.Simulation;
+import org.team199.deepbluesim.SimConfig;
+import org.team199.deepbluesim.Simulation;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
 // the name of the jar.
