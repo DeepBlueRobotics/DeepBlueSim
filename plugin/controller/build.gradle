@@ -69,14 +69,14 @@ shadowJar {
 }
 
 configurations {
-    controllersAndProtos {
+    webotsFolder {
         canBeConsumed = true
         canBeResolved = false
     }
 }
 
 distributions {
-    controllersAndProtos {
+    webotsFolder {
         distributionBaseName = "Webots"
         contents {
             from(shadowJar) {
@@ -87,5 +87,5 @@ distributions {
 }
 
 artifacts {
-    controllersAndProtos(controllersAndProtosDistZip)
+    webotsFolder(webotsFolderDistZip)
 }

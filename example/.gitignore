@@ -159,3 +159,7 @@ imgui.ini
 
 
 # End of https://www.gitignore.io/api/c++,java,linux,macos,gradle,windows,visualstudiocode
+
+# For testing purposes, we want to ensure that this project starts without DeepBlueSim installed.
+Webots/controllers/DeepBlueSim.jar
+Webots/*/DBS*

@@ -15,7 +15,7 @@ import org.apache.commons.io.FileUtils
 class DeepBlueSimPluginFunctionalTest extends Specification {
     def "installDeepBlueSim task works"() {
         given:
-        def projectDir = new File("build/functionalTest/installControllersAndProtos")
+        def projectDir = new File("build/functionalTest/installwebotsFolder")
         FileUtils.deleteDirectory(projectDir)
         projectDir.mkdirs()
         new File(projectDir, "settings.gradle") << ""

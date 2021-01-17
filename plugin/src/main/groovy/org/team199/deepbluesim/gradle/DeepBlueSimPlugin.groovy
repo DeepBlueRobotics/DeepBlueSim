@@ -14,7 +14,7 @@ import org.apache.commons.io.IOUtils
  */
 class DeepBlueSimPlugin implements Plugin<Project> {
     void apply(Project project) {
-        project.tasks.register("installDeepBlueSim") {
+        def installDeepBlueSim = project.tasks.register("installDeepBlueSim") {
             doLast {
                 def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
                 if (resourceStream == null) throw new RuntimeException("resourceStream is null")
@@ -26,6 +26,11 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                     into project.projectDir
                 }
             }
+        }
+        project.tasks.matching({ task -> 
+            (task.name.toLowerCase().contains("simulate"))
+        }).all { GroovyObject t -> 
+            t.dependsOn(installDeepBlueSim)
         }
     }
 }
