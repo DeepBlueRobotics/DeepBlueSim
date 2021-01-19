@@ -24,10 +24,11 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                 void connect() throws IOException {
                     }
                 }
-                // def resourceURLString = getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm();
-                // System.out.println("resourceURLString = " + resourceURLString);
+                def resourceURLString = getClass().getProtectionDomain().getCodeSource().getLocation().toExternalForm();
+                System.out.println("resourceURLString = " + resourceURLString);
+                def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("/Webots.zip")
                 // def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream(resourceURLString+"/org/team199/deepbluesim/gradle/Webots.zip")
-                def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
+                // def resourceStream = DeepBlueSimPlugin.classLoader.getResourceAsStream("/org/team199/deepbluesim/gradle/Webots.zip")
                 if (resourceStream == null) throw new RuntimeException("resourceStream is null")
                 def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
                 dbsDir.mkdirs()

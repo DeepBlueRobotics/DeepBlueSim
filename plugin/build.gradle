@@ -88,7 +88,5 @@ dependencies {
 
 // Copy the extra files (namely Webots.zip) into the the jar
 processResources {
-    into('org/team199/deepbluesim/gradle') {
-        from configurations.extraFiles
-    }
+    from configurations.extraFiles
 }
