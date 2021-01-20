@@ -18,7 +18,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v2
       with:
-        submodules: true
+        submodules: "recursive"
         fetch-depth: 0
 
     - name: Set up JDK 11
@@ -91,7 +91,7 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v2
       with:
-        submodules: true
+        submodules: "recursive"
         fetch-depth: 0
 
     - name: Compute next semantic version
