@@ -86,6 +86,11 @@ distributions {
     }
 }
 
+webotsFolderDistZip {
+    // Force name, so it doesn't contain the version number.
+    archiveName = "Webots.zip"
+}
+
 artifacts {
     webotsFolder(webotsFolderDistZip)
 }
