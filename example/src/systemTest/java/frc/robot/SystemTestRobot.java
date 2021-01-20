@@ -84,7 +84,7 @@ public class SystemTestRobot extends Robot {
                 try {
                     isReady = future.get(1, TimeUnit.SECONDS);
                 } catch (TimeoutException ex) {
-                    System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/Test.wbt in Webots.");
+                    System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
                 } catch (InterruptedException|ExecutionException e) {
                     throw new RuntimeException("Error while waiting for WebotsSupervisor to be ready", e);
                 }
