@@ -101,7 +101,7 @@ jobs:
         branch: "master"
 
     - name: Test with explicit version
-      run: ./gradlew :plugin:build -Pversion=${{ steps.version.outputs.version }}
+      run: ./gradlew :plugin:build -Pversion=${{ steps.version.outputs.version }} --info --stacktrace
 
     - name: Publish to Gradle Plugin Portal
       run: ./gradlew :plugin:publishPlugins -Pversion=${{ steps.version.outputs.version }} -Pgradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }} -Pgradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
