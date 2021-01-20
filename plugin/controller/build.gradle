@@ -47,7 +47,8 @@ dependencies {
 
 // Configure the building of the fat jar 
 shadowJar {
-    archiveBaseName = "DeepBlueSim"
+    // Force name, so it doesn't contain the version number.
+    archiveName = "DeepBlueSim.jar"
 
     // Make sure the licenseReport task runs first
     dependsOn "licenseReport"
