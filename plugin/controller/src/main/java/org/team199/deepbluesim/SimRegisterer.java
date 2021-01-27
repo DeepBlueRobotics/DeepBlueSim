@@ -62,6 +62,9 @@ public class SimRegisterer {
             //deviceName should be CANEncoder_<motorName>
             new MockedSparkEncoder(new SimDeviceSim(deviceName), deviceName.substring(11));
         }
+        if (deviceName.startsWith("PhoenixSensor")) {
+            new MockedPhoenixSensor(new SimDeviceSim(deviceName), deviceName.substring(13));
+        }
     }
 
     // Callback for when a known device type is registered on a Non-Can port
