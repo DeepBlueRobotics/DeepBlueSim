@@ -26,7 +26,7 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
  1. Add the DeepBlueSim Gradle plugin to your `build.gradle` by adding the following line
  in your `plugins` section:
  ```
-     id "org.team199.deepbluesim" version "0.1.0"
+     id "org.team199.deepbluesim" version "0.0.12"
  ```
 
 ### Demo
