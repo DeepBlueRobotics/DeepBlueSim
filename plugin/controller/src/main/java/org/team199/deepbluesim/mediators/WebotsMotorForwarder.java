@@ -1,7 +1,6 @@
 package org.team199.deepbluesim.mediators;
 
 import com.cyberbotics.webots.controller.Motor;
-import com.cyberbotics.webots.controller.Robot;
 
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.interfaces.DoubleCallback;
@@ -20,8 +19,8 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
      * @param robot the Webots robot
      * @param motorName the name of the Webots motor to which to connect
      */
-    public WebotsMotorForwarder(Robot robot, String motorName) {
-        motor = robot.getMotor(motorName);
+    public WebotsMotorForwarder(String motorName) {
+        motor = Simulation.getRobot().getMotor(motorName);
         currentOutput = 0;
         // Make sure that the motor can rotate any number of times
         motor.setPosition(Double.POSITIVE_INFINITY);

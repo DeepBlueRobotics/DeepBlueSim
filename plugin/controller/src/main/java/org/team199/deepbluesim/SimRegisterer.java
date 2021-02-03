@@ -43,27 +43,14 @@ public class SimRegisterer {
 
     // Callback for when a Miscellaneous Device is registered
     private static void callback(String deviceName) {
-        if(deviceName.startsWith("Talon") || deviceName.startsWith("Victor") || deviceName.startsWith("SparkMax")) {
-            // If a new Talon or Victor has been initalized, attempt to link it to a Webots Motor
-            // Create a WebotsMotorForwarder for this motor
-            final WebotsMotorForwarder fwdr = new WebotsMotorForwarder(Simulation.getRobot(), deviceName);
-            // Register a callback for when the Motor Output changes
-            CALLBACKS.add(new SimDeviceSim(deviceName).registerValueChangedCallback("Motor Output",
-                // Call the callback function
-                fwdr,
-                // Initalize with current speed
-                true));
-        }
         if(deviceName.startsWith("navX")) {
             // If a navX is registered, try to link its SimDevice to the Webots robot
             MockGyro.linkGyro();
         }
-        if(deviceName.startsWith("CANEncoder_")) {
-            //deviceName should be CANEncoder_<motorName>
-            new MockedSparkEncoder(new SimDeviceSim(deviceName), deviceName.substring(11));
-        }
-        if (deviceName.startsWith("PhoenixSensor")) {
-            new MockedPhoenixSensor(new SimDeviceSim(deviceName), deviceName.substring(13));
+        // The check for forward slash is to only get the talon/victor sim device corresponding to the motor instead of
+        // for the QuadEncoder, Analog In, Fwd Limit, and Rev Limit.
+        else if (((deviceName.startsWith("Talon") || deviceName.startsWith("Victor")) && !deviceName.contains("/")) || deviceName.startsWith("SPARK")) {
+            MockCANMotor.linkMotor(deviceName);
         }
     }
 
@@ -74,7 +61,7 @@ public class SimRegisterer {
             // Register a speed callback on this device
             CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
                 // Call a motor forwarder for a callback
-                new WebotsMotorForwarder(Simulation.getRobot(), "PWM[" + port + "]"),
+                new WebotsMotorForwarder("PWM[" + port + "]"),
                 // Initalize with current speed
                 true));
         }
