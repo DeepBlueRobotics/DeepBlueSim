@@ -8,7 +8,16 @@ import java.util.HashMap;
 public class BaseSimConfig {
     private static int sensorTimestep = 20;
     private static double defaultMotorGearing = 1;
+    // "motorGearings" contains gear reductions
     private static HashMap<String, Double> motorGearings = new HashMap<>();
+    
+    private static int defaultEPR = 4096;
+    // "edgesPerRevolutions" contains the edgesPerRevolution for each quadrature encoder
+    private static HashMap<String, Integer> edgesPerRevolution = new HashMap<>();
+
+    // The default maximum voltage for analog encoders
+    private static double defaultMaxEncVoltage = 3.3;
+    private static HashMap<String, Double> maxEncVoltages = new HashMap<>();
 
     /**
      * Sets the sampling period to be used when enabling Webots sensors
@@ -57,5 +66,29 @@ public class BaseSimConfig {
      */
     public static double getMotorGearing(String motor) {
         return motorGearings.containsKey(motor) ? motorGearings.get(motor) : defaultMotorGearing;
+    }
+
+    protected static void setDefaultEPR(int epr) {
+        defaultEPR = epr;
+    }
+
+    protected static void setMotorEPR(String motor, int epr) {
+        edgesPerRevolution.put(motor, epr);
+    }
+
+    public static double getEdgesPerRevolution(String motor) {
+        return edgesPerRevolution.containsKey(motor) ? edgesPerRevolution.get(motor) : defaultEPR;
+    }
+
+    protected static void setDefaultMaxEncVoltage(double maxVoltage) {
+        defaultMaxEncVoltage = maxVoltage;
+    }
+
+    protected static void setMotorMaxEncVoltage(String motor, double maxVoltage) {
+        maxEncVoltages.put(motor, maxVoltage);
+    }
+
+    public static double getMotorMaxEncVoltage(String motor) {
+        return maxEncVoltages.containsKey(motor) ? maxEncVoltages.get(motor) : defaultMaxEncVoltage;
     }
 }

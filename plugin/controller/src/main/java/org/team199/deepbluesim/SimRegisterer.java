@@ -49,8 +49,11 @@ public class SimRegisterer {
         }
         // The check for forward slash is to only get the talon/victor sim device corresponding to the motor instead of
         // for the QuadEncoder, Analog In, Fwd Limit, and Rev Limit.
-        else if (((deviceName.startsWith("Talon") || deviceName.startsWith("Victor")) && !deviceName.contains("/")) || deviceName.startsWith("SPARK")) {
-            MockCANMotor.linkMotor(deviceName);
+        else if ((deviceName.startsWith("Talon") || deviceName.startsWith("Victor")) && !deviceName.contains("/")) {
+            MockPhoenixMotor.linkMotor(deviceName);
+        }
+        else if (deviceName.startsWith("SPARK")) {
+            MockSparkMotor.linkMotor(deviceName);
         }
     }
 
