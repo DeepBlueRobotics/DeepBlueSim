@@ -35,7 +35,7 @@ public class MockedSparkEncoder implements Runnable {
         // Get the position of the Webots encoders and set the position of the WPIlib encoders 
         // getValue() returns radians
         // revoultions = radians * gearing / pi
-        double revolutions = (webotsEncoder.getValue() * BaseSimConfig.getMotorGearing(name)) / 2*Math.PI;
+        double revolutions = (webotsEncoder.getValue() * BaseSimConfig.getMotorGearing(name)) / (2*Math.PI);
         int count = (int) Math.floor(revolutions * countsPerRevolution);
         encoder.set("count", "" + count);
     }
