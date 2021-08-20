@@ -38,7 +38,7 @@ public final class Simulation {
         }
         Simulation.robot = robot;
         timeStepMillis = basicTimeStepMillis;
-        timeStep = (double)basicTimeStepMillis / 1000;
+        timeStep = basicTimeStepMillis / 1000D;
         init = true;
     }
 
@@ -54,7 +54,7 @@ public final class Simulation {
         return robot;
     }
 
-    public static int getBasicTimeStep() {
+    public static double getBasicTimeStep() {
         return timeStep;
     }
 

@@ -25,7 +25,7 @@ public class DeepBlueSim {
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
         final Supervisor robot = new Supervisor();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
-        int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
+        double basicTimeStep = (robot.getBasicTimeStep());
         
         SimConfig.initConfig();
         Simulation.init(robot, basicTimeStep);
