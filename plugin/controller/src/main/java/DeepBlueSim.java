@@ -25,10 +25,10 @@ public class DeepBlueSim {
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
         final Supervisor robot = new Supervisor();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
-        double basicTimeStep = (robot.getBasicTimeStep());
+        int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
         
         SimConfig.initConfig();
-        Simulation.init(robot, basicTimeStep);
+        Simulation.init(robot, robot.basicTimeStep);
 
         // Use a SimDeviceSim to coordinate with robot code tests
         final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
