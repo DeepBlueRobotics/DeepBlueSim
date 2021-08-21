@@ -18,7 +18,7 @@ public final class Simulation {
      * The value of the basicTimeStep field of the WorldInfo node of the Webots robot
      * @see Robot#getBasicTimeStep()
      */
-    private static int timeStep;
+    private static double timeStep;
     /**
      * {@link #timeStep} converted into milliseconds. This is equivalent to <code>timeStep * 1000</code>
      */
@@ -32,13 +32,13 @@ public final class Simulation {
         SimRegisterer.init();
     }
 
-    public static synchronized void init(Robot robot, int basicTimeStep) {
+    public static synchronized void init(Robot robot, double basicTimeStepMillis) {
         if(init) {
             return;
         }
         Simulation.robot = robot;
-        timeStep = basicTimeStep;
-        timeStepMillis = (double)basicTimeStep / 1000D;
+        timeStepMillis = basicTimeStepMillis;
+        timeStep = basicTimeStepMillis / 1000D;
         init = true;
     }
 
@@ -54,7 +54,7 @@ public final class Simulation {
         return robot;
     }
 
-    public static int getBasicTimeStep() {
+    public static double getBasicTimeStep() {
         return timeStep;
     }
 
