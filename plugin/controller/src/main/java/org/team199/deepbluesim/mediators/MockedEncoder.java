@@ -2,7 +2,7 @@ package org.team199.deepbluesim.mediators;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 
-import org.team199.deepbluesim.BaseSimConfig;
+import org.team199.deepbluesim.Constants;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.UniqueArrayList;
@@ -54,7 +54,7 @@ public class MockedEncoder implements Runnable {
         webotsEncoder = Simulation.getRobot().getPositionSensor(newName);
         if(webotsEncoder != null) {
             name = newName;
-            webotsEncoder.enable(BaseSimConfig.getSensorTimestep());
+            webotsEncoder.enable(Constants.sensorTimestep);
             Simulation.registerPeriodicMethod(this);
         }
     }
