@@ -24,16 +24,19 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
         motor = robot.getMotor(motorName);
         currentOutput = 0;
         // Make sure that the motor can rotate any number of times
-        motor.setPosition(Double.POSITIVE_INFINITY);
-        motor.setVelocity(0);
-        Simulation.registerPeriodicMethod(this);
+        if(motor != null) {
+            motor.setPosition(Double.POSITIVE_INFINITY);
+            motor.setVelocity(0);
+            Simulation.registerPeriodicMethod(this);
+        }
     }
 
     @Override
     public void callback(String name, String value) {
+        if(value == null) return; // Value has not yet been set
         try {
             callback(name, Double.parseDouble(value));
-        } catch(NullPointerException | NumberFormatException e) {}
+        } catch(NumberFormatException e) {}
     }
 
     @Override

@@ -1,3 +1,4 @@
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -7,11 +8,11 @@ import com.cyberbotics.webots.controller.Supervisor;
 import org.team199.wpiws.Pair;
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.connection.ConnectionProcessor;
+import org.team199.wpiws.connection.RunningObject;
 import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.StringCallback;
-
-import org.team199.deepbluesim.SimConfig;
+import org.java_websocket.client.WebSocketClient;
 import org.team199.deepbluesim.Simulation;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
@@ -21,13 +22,25 @@ public class DeepBlueSim {
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
 
     private static ScopedObject<Pair<String, StringCallback>> callbackStore = null;
+    private static RunningObject<WebSocketClient> wsConnection = null;
+
     public static void main(String[] args) {
+        UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread arg0, Throwable arg1) {
+                arg1.printStackTrace(System.err);
+                System.err.flush();
+                System.exit(1);
+            }
+        };
+        Thread.setDefaultUncaughtExceptionHandler(eh);
+        Thread.currentThread().setUncaughtExceptionHandler(eh);
+
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
         final Supervisor robot = new Supervisor();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
         int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
-        
-        SimConfig.initConfig();
+
         Simulation.init(robot, robot.getBasicTimeStep());
 
         // Use a SimDeviceSim to coordinate with robot code tests
@@ -54,7 +67,7 @@ public class DeepBlueSim {
 				@Override
 				public void callback(String name, String value) {
                     System.out.println("Telling the robot we're ready");
-                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());                            
+                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
 				}
 
         }, true);
@@ -74,7 +87,7 @@ public class DeepBlueSim {
         }
         try {
             System.out.println("Trying to connect to robot...");
-            WSConnection.connectHALSim(true);
+            wsConnection = WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
             System.err.println("Error occured connecting to server:");
             e.printStackTrace(System.err);
@@ -83,11 +96,22 @@ public class DeepBlueSim {
             return;
         }
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                wsConnection.object.closeBlocking();
+            } catch(InterruptedException e) {}
+        }));
+
         while(robot.step(basicTimeStep) != -1) {
             queuedMessages.forEach(Runnable::run);
             queuedMessages.clear();
             Simulation.runPeriodicMethods();
         }
+
+        System.out.println("Shutting down DeepBlueSim...");
+        System.out.flush();
+
+        System.exit(0);
     }
 
 }

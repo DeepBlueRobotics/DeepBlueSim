@@ -2,7 +2,7 @@ package org.team199.deepbluesim.mediators;
 
 import com.cyberbotics.webots.controller.Gyro;
 
-import org.team199.deepbluesim.BaseSimConfig;
+import org.team199.deepbluesim.Constants;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.devices.SimDeviceSim;
 
@@ -28,17 +28,19 @@ public final class MockGyro implements Runnable {
         // Create Sims
         gyroSim = new SimDeviceSim("navX-Sensor[0]");
         webotsGyro = Simulation.getRobot().getGyro("gyro");
-        webotsGyro.enable(BaseSimConfig.getSensorTimestep());
-        Simulation.registerPeriodicMethod(new MockGyro());
+        if(webotsGyro != null) {
+            webotsGyro.enable(Constants.sensorTimestep);
+            Simulation.registerPeriodicMethod(new MockGyro());
+        }
     }
 
     @Override
     public void run() {
         /* getValues() returns angular speeds about each axis (x, y, z).
-           reading represents the change in angular position about the y axis.
-           getValues()[1] is negated to convert from Webot's coordinate system (counter-clockwise = positive) to WPIlib's coordinate system (counter-clockwise = negative).
+           reading represents the change in angular position about the z axis.
+           getValues()[2] is negated to convert from Webot's coordinate system (counter-clockwise = positive) to WPIlib's coordinate system (counter-clockwise = negative).
         */
-        double reading = -webotsGyro.getValues()[1] * Simulation.getBasicTimeStep();
+        double reading = -webotsGyro.getValues()[2] * Simulation.getBasicTimeStep();
         // In testing, reading was sometimes NAN in the first second of the simulation.
         // Also convert from radians to degrees
         angle += Double.isNaN(reading) ? 0 : (180 * reading / Math.PI);
