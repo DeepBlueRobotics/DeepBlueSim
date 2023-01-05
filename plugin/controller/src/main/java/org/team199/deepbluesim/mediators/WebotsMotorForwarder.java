@@ -31,6 +31,7 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
         if(motor != null) {
             motor.setPosition(Double.POSITIVE_INFINITY);
             motor.setVelocity(0);
+            jointParameters = Supervisor.getSupervisorInstance().getFromDevice(motor).getParentNode();
             Simulation.registerPeriodicMethod(this);
         }
     }
