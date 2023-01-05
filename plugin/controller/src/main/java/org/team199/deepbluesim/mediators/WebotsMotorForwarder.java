@@ -1,7 +1,10 @@
 package org.team199.deepbluesim.mediators;
 
+import com.cyberbotics.webots.controller.Field;
 import com.cyberbotics.webots.controller.Motor;
+import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Robot;
+import com.cyberbotics.webots.controller.Supervisor;
 
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.interfaces.DoubleCallback;
@@ -12,8 +15,10 @@ import org.team199.wpiws.interfaces.StringCallback;
  */
 public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCallback {
 
-    private double currentOutput;
+    private double currentOutput, pos, timer;
     private Motor motor;
+    private Node jointParameters;
+    private Field position;
 
     /**
      * Creates a new WebotsMotorForwarder
@@ -27,6 +32,7 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
         if(motor != null) {
             motor.setPosition(Double.POSITIVE_INFINITY);
             motor.setVelocity(0);
+            position = (jointParameters = Supervisor.getSupervisorInstance().getFromDevice(motor).getParentNode()).getField("jointParameters").getSFNode().getField("position");
             Simulation.registerPeriodicMethod(this);
         }
     }
@@ -46,7 +52,18 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
 
     @Override
     public void run() {
-        motor.setVelocity(motor.getMaxVelocity() * currentOutput);
+        if(timer == 0) {
+            timer = System.currentTimeMillis();
+            return;
+        }
+
+        double velocity = motor.getMaxVelocity() * currentOutput;
+        pos += velocity * (System.currentTimeMillis() - timer) / 1000;
+
+        if(motor.getPositionSensor().getName().contains("CANCoder")) jointParameters.setJointPosition(pos, 1);
+        else motor.setVelocity(velocity);
+
+        timer = System.currentTimeMillis();
     }
 
 }
