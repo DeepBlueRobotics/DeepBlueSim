@@ -18,7 +18,6 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
     private double currentOutput, pos, timer;
     private Motor motor;
     private Node jointParameters;
-    private Field position;
 
     /**
      * Creates a new WebotsMotorForwarder
@@ -32,7 +31,6 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
         if(motor != null) {
             motor.setPosition(Double.POSITIVE_INFINITY);
             motor.setVelocity(0);
-            position = (jointParameters = Supervisor.getSupervisorInstance().getFromDevice(motor).getParentNode()).getField("jointParameters").getSFNode().getField("position");
             Simulation.registerPeriodicMethod(this);
         }
     }
