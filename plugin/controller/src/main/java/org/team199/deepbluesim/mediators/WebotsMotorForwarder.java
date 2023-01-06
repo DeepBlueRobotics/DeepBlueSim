@@ -1,6 +1,5 @@
 package org.team199.deepbluesim.mediators;
 
-import com.cyberbotics.webots.controller.Field;
 import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Robot;
