@@ -56,6 +56,7 @@ public class WebotsMotorForwarder implements DoubleCallback, Runnable, StringCal
         }
 
         double velocity = motor.getMaxVelocity() * currentOutput;
+        if(motor.getPositionSensor().getName().contains("CANCoder")) velocity *= motor.getMultiplier();
         pos += velocity * (System.currentTimeMillis() - timer) / 1000;
 
         if(motor.getPositionSensor().getName().contains("CANCoder")) jointParameters.setJointPosition(pos, 1);
