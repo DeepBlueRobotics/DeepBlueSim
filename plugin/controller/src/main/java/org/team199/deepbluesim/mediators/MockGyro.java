@@ -45,7 +45,7 @@ public final class MockGyro implements Runnable {
         // Also convert from radians to degrees
         angle += Double.isNaN(reading) ? 0 : (180 * reading / Math.PI);
         // Make sure angle is between 0 and 359 inclusive
-        angle = Math.copySign(Math.abs(angle) % 360, angle);
+        // angle = Math.copySign(Math.abs(angle) % 360, angle);
         // Update the WPIlib gyro
         gyroSim.set("Yaw", angle + "");
     }
