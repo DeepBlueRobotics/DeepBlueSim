@@ -12,18 +12,17 @@ public class MockedSparkEncoder implements Runnable {
     private PositionSensor webotsEncoder;
     // Default value for a CANEncoder
     private final int countsPerRevolution = 4096;
-    private double position;
-    private double distancePerPulse;
+    private double gearing;
 
     public MockedSparkEncoder(SimDeviceSim sim, String name) {
         this.name = name;
         encoder = sim;
         webotsEncoder = Simulation.getRobot().getPositionSensor(name);
-        distancePerPulse = 1;
-        sim.registerValueChangedCallback("distancePerPulse", (valueName, value) -> {
+        gearing = 1;
+        sim.registerValueChangedCallback("gearing", (valueName, value) -> {
             if(value == null) return; // Value has not yet been set
             try {
-                distancePerPulse = Double.parseDouble(value);
+                gearing = Double.parseDouble(value);
             } catch(NumberFormatException e) {}
         }, true);
         if(webotsEncoder != null) {
@@ -32,16 +31,12 @@ public class MockedSparkEncoder implements Runnable {
         }
     }
 
-    public double getPosition() {
-        return position;
-    }
-
     @Override
     public void run() {
-        // Get the position of the Webots encoders and set the position of the WPIlib encoders 
+        // Get the position of the Webots encoders and set the position of the WPILib encoders
         // getValue() returns radians
-        // revoultions = radians * gearing / 2pi
-        double revolutions = (webotsEncoder.getValue() * distancePerPulse) / (2*Math.PI);
+        // revolutions = radians * gearing / 2pi
+        double revolutions = (webotsEncoder.getValue() * gearing) / (2*Math.PI);
         int count = (int) Math.floor(revolutions * countsPerRevolution);
         encoder.set("count", "" + count);
     }
