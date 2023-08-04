@@ -14,30 +14,25 @@ plugins {
     id 'maven-publish'
 
     // Support publishing to the Gradle Plugin Portal
-    id 'com.gradle.plugin-publish' version '0.12.0'
+    id 'com.gradle.plugin-publish' version '1.1.0'
 
     // Apply the Groovy plugin to add support for Groovy
     id 'groovy'
 }
 
 repositories {
-    // Use JCenter for resolving dependencies.
-    jcenter()
+    mavenCentral()
     maven {
       url "https://plugins.gradle.org/m2/"
     }
 }
 
-dependencies {
-    // Use the awesome Spock testing and specification framework
-    testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
-    testImplementation 'edu.wpi.first:GradleRIO:2021.1.2'
-    implementation 'commons-io:commons-io:2.8.0'
-}
-
 group 'org.team199'
 
+// Info for publishing to the Gradle Plugin Portal
 gradlePlugin {
+    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim'
+    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git'
     // Define the plugin
     plugins {
         deepbluesim {
@@ -45,15 +40,9 @@ gradlePlugin {
             displayName = 'DeepBlueSim Plugin'
             description = 'A plugin that simplifies developing WPILib projects that use Webots for simulation.'
             implementationClass = 'org.team199.deepbluesim.gradle.DeepBlueSimPlugin'
+            tags.set(['FRC', 'WPILib', 'Webots'])
         }
     }
-}
-
-// Info for publishing to the Gradle Plugin Portal
-pluginBundle {
-    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
-    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
-    tags = ['FRC', 'WPILib', 'Webots']     
 }
 
 // Add a source set for the functional test suite
@@ -82,6 +71,10 @@ configurations {
 }
 
 dependencies {
+    // Use the awesome Spock testing and specification framework
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
+    testImplementation 'edu.wpi.first:GradleRIO:2021.1.2'
+    implementation 'commons-io:commons-io:2.8.0'
     // include the Webots.zip artifact produced by the controller's webotsFolder configuration
     extraFiles project(path: ':controller', configuration: 'webotsFolder')
 }
