@@ -132,7 +132,7 @@ task('systemTest', type: JavaExec) {
         File ldPath = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get()
         def simExtension = project.extensions.getByType(edu.wpi.first.gradlerio.wpi.WPIExtension).getSim()
         def halsimExtensions = simExtension.getHalSimLocations(List.of(ldPath), false)
-        environment 'HALSIM_EXTENSIONS', halsimExtensions.stream().map { it.libName }.reduce { a, b -> a + pathSeparator + b }.get()
+        environment 'HALSIM_EXTENSIONS', halsimExtensions.stream().map { it.libName }.reduce("", { a, b -> a + pathSeparator + b })
     }
 }
 
