@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2022.4.1"
+    id "edu.wpi.first.GradleRIO" version "2023.4.3"
     id "org.team199.deepbluesim" version "0.0.12"
 }
 
@@ -93,7 +93,7 @@ sourceSets {
 
 configurations {
     systemTestImplementation.extendsFrom testImplementation
-    systemTestRuntimeOnly.extendsFrom runtimeOnly    
+    systemTestRuntimeOnly.extendsFrom runtimeOnly
 }
 
 task('systemTestJar', type: Jar) {
@@ -147,7 +147,7 @@ assemble.dependsOn installDeepBlueSim
 //                     @Override
 //                     Integer call() {
 //                         int length = stream.read(buf)
-//                         if (length > 0) 
+//                         if (length > 0)
 //                             System.out.write(buf, 0, length)
 //                         return length
 //                     }
@@ -164,4 +164,3 @@ assemble.dependsOn installDeepBlueSim
 //         return p
 //     }
 // }
-

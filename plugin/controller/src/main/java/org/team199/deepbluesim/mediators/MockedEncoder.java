@@ -5,7 +5,7 @@ import com.cyberbotics.webots.controller.PositionSensor;
 import org.team199.deepbluesim.Constants;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.ScopedObject;
-import org.team199.wpiws.UniqueArrayList;
+import java.util.Set;
 import org.team199.wpiws.devices.EncoderSim;
 
 public class MockedEncoder implements Runnable {
@@ -16,7 +16,7 @@ public class MockedEncoder implements Runnable {
     private int countsPerRevolution = 256;
     private int channelA = -1, channelB = -1;
 
-    public MockedEncoder(UniqueArrayList<ScopedObject<?>> callbacks, EncoderSim sim, String wpiLibId) {
+    public MockedEncoder(Set<ScopedObject<?>> callbacks, EncoderSim sim, String wpiLibId) {
         encoder = sim;
         this.wpiLibId = wpiLibId;
         callbacks.add(sim.registerChannelACallback( (id, channel) -> {

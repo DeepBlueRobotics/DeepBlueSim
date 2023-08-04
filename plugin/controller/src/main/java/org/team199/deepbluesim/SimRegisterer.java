@@ -3,18 +3,20 @@ package org.team199.deepbluesim;
 import org.team199.deepbluesim.mediators.*;
 
 import org.team199.wpiws.ScopedObject;
-import org.team199.wpiws.UniqueArrayList;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.SimDeviceCallback;
 
+import java.util.Set;
+import java.util.HashSet;
+
 // Performs automatic registration of callbacks detecting both the initalization of new devices as well as data callbacks for devices such as Motors, Gyros, etc.
 // This allows us to automatically link these devices to Webots, reducing the amount of code we would have to change from a standard robot project
 public class SimRegisterer {
-    
+
     private static final SimDeviceCallback MISC_DEVICE_CALLBACK = SimRegisterer::callback;
-    private static final UniqueArrayList<ScopedObject<?>> CALLBACKS = new UniqueArrayList<>();
+    private static final Set<ScopedObject<?>> CALLBACKS = new HashSet<>();
 
     static {
         // Register Initalized Callbacks for Misc Devices
