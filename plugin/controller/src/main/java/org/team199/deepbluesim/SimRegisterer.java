@@ -24,13 +24,13 @@ public class SimRegisterer {
         // Register Initalized Callbacks for PWM Devices
         CALLBACKS.add(PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
-                callback("PWM", name, 0);
+                callback("PWM", name);
             }
         }, true));
         // Register Initalized Callbacks for Encoder Devices
         CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
             if(isInitialized) {
-                callback("Encoder", name, 0);
+                callback("Encoder", name);
             }
         }, true));
     }
@@ -69,9 +69,9 @@ public class SimRegisterer {
     }
 
     // Callback for when a known device type is registered on a Non-Can port
-    private static void callback(String type, String port, int storePos) {
+    private static void callback(String type, String port) {
         if(type.equals("PWM")) {
-            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
+            // If a new PWM device has been initalized, attempt to link it to a Webots motor
             // Register a speed callback on this device
             CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
                 // Call a motor forwarder for a callback
@@ -80,7 +80,7 @@ public class SimRegisterer {
                 true));
         }
         else if(type.equals("Encoder")) {
-            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
+            // If a new Encoder device has been initalized, attempt to link it to a Webots encoder
             // Register a speed callback on this device
             EncoderSim sim = new EncoderSim(port);
             new MockedEncoder(CALLBACKS, sim, port);
