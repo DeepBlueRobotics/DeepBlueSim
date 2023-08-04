@@ -23,7 +23,7 @@ public final class Simulation {
      * {@link #timeStep} converted into milliseconds. This is equivalent to <code>timeStep * 1000</code>
      */
     private static double timeStepMillis;
-    // Use a CopyOnWriteArrayList to prevent syncronization errors
+    // Use a CopyOnWriteArrayList to prevent synchronization errors
     private static final CopyOnWriteArrayList<Runnable> periodicMethods;
 
     static {
