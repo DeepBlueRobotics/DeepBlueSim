@@ -1,9 +1,6 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.RobotBase;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -15,12 +12,13 @@ import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimValueCallback;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
-import edu.wpi.first.wpiutil.math.Vector;
-import edu.wpi.first.wpiutil.math.numbers.N3;
 
 public class SystemTestRobot extends Robot {
 
@@ -62,7 +60,8 @@ public class SystemTestRobot extends Robot {
         // Wait for the Webots supervisor to be ready
         final var future = new CompletableFuture<Boolean>();
         try (var callback = webotsSupervisorSim.registerValueChangedCallback(simStartMs, new SimValueCallback() {
-            public void callback(String name, int handle, boolean readonly, HALValue value) {
+            @Override
+            public void callback(String name, int handle, int direction, HALValue value) {
                 if (value.getDouble() > 0.0) {
                     System.out.println("WebotsSupervisor is ready");
                     future.complete(true);
