@@ -41,30 +41,6 @@ deploy {
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
 
-// repositories {
-//     mavenLocal()
-//     gradlePluginPortal()
-//     String frcYear = '2023'
-//     File frcHome
-//     if (OperatingSystem.current().isWindows()) {
-//         String publicFolder = System.getenv('PUBLIC')
-//         if (publicFolder == null) {
-//             publicFolder = "C:\\Users\\Public"
-//         }
-//         def homeRoot = new File(publicFolder, "wpilib")
-//         frcHome = new File(homeRoot, frcYear)
-//     } else {
-//         def userFolder = System.getProperty("user.home")
-//         def homeRoot = new File(userFolder, "wpilib")
-//         frcHome = new File(homeRoot, frcYear)
-//     }
-//     def frcHomeMaven = new File(frcHome, 'maven')
-//     maven {
-//         name 'frcHome'
-//         url frcHomeMaven
-//     }
-// }
-
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {
@@ -130,12 +106,10 @@ task('systemTestJar', type: Jar) {
 }
 
 import org.gradle.internal.os.OperatingSystem
-task('systemTest', type: JavaExec) { //edu.wpi.first.gradlerio.simulation.JavaExternalSimulationTask
+task('systemTest', type: JavaExec) {
     // Run the jar file
     dependsOn 'systemTestJar'
-    // dependsOn 'simulateExternalJavaRelease'
     classpath = files(tasks.systemTestJar)
-    // println(tasks.simulateExternalJavaRelease.getSimulationFile().getAsFile().get().getAbsolutePath())
 
     String pathSeparator = File.pathSeparator
 
