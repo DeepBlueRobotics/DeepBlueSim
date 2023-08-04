@@ -38,7 +38,7 @@ public final class MockGyro implements Runnable {
     public void run() {
         /* getValues() returns angular speeds about each axis (x, y, z).
            reading represents the change in angular position about the z axis.
-           getValues()[2] is negated to convert from Webot's coordinate system (counter-clockwise = positive) to WPIlib's coordinate system (counter-clockwise = negative).
+           getValues()[2] is negated to convert from Webots's coordinate system (counter-clockwise = positive) to WPILib's coordinate system (counter-clockwise = negative).
         */
         double reading = -webotsGyro.getValues()[2] * Simulation.getBasicTimeStep();
         // In testing, reading was sometimes NAN in the first second of the simulation.

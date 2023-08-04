@@ -42,7 +42,7 @@ public class MockedEncoder implements Runnable {
             return;
         String newName = "Encoder[" + channelA + "," + channelB + "]";
         if (webotsEncoder != null && !newName.equals(name)) {
-            System.out.println("WARNING: Ignoring attempt to change PositionSensor of id " 
+            System.out.println("WARNING: Ignoring attempt to change PositionSensor of id "
                 + wpiLibId + " from " + name + " to " + newName);
             return;
         }
@@ -65,17 +65,17 @@ public class MockedEncoder implements Runnable {
 
     @Override
     public void run() {
-        // Get the position of the Webots encoders and set the position of the WPIlib encoders 
+        // Get the position of the Webots encoders and set the position of the WPILib encoders
         // getValue() returns radians
         double revolutions = (webotsEncoder.getValue()) / (2*Math.PI);
         int count = (int) Math.floor(revolutions * countsPerRevolution);
         encoder.setCount(count);
 
         // Compute the period of time since the previous tick. This is a bit more complicated than it would
-        // seem at first glance because we need to handle both the case where multiple ticks have 
-        // occured since we last checked, the case where no ticks have occurred across multiple
-        // checks, and the case where only one tick has occured since we last checked.
-        // For simplicity, we assume that if any number of ticks have occured, then the most recent one
+        // seem at first glance because we need to handle both the case where multiple ticks have
+        // occurred since we last checked, the case where no ticks have occurred across multiple
+        // checks, and the case where only one tick has occurred since we last checked.
+        // For simplicity, we assume that if any number of ticks have occurred, then the most recent one
         // happened now.
         double curTimeSecs = Simulation.getRobot().getTime();
         // If no ticks have happened since we last checked, then we know when the the previous tick happened.

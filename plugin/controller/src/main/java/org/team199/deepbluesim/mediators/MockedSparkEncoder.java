@@ -7,7 +7,6 @@ import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.devices.SimDeviceSim;
 
 public class MockedSparkEncoder implements Runnable {
-    private String name;
     private SimDeviceSim encoder;
     private PositionSensor webotsEncoder;
     // Default value for a CANEncoder
@@ -15,7 +14,6 @@ public class MockedSparkEncoder implements Runnable {
     private double gearing;
 
     public MockedSparkEncoder(SimDeviceSim sim, String name) {
-        this.name = name;
         encoder = sim;
         webotsEncoder = Simulation.getRobot().getPositionSensor(name);
         gearing = 1;

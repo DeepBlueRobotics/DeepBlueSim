@@ -35,9 +35,9 @@ public class MockedCANCoder implements Runnable, StringCallback {
     @Override
     public void run() {
         if(webotsEncoder == null) return;
-        // Get the position of the Webots encoders and set the position of the WPIlib encoders 
+        // Get the position of the Webots encoders and set the position of the WPILib encoders
         // getValue() returns radians
-        // revoultions = radians * gearing / 2pi
+        // revolutions = radians * gearing / 2pi
         double revolutions = (webotsEncoder.getValue() * gearing) / (2*Math.PI);
         device.set("count", revolutions);
     }

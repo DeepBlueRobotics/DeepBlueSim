@@ -21,6 +21,7 @@ public class DeepBlueSim {
 
     private static final ConcurrentLinkedDeque<Runnable> queuedMessages = new ConcurrentLinkedDeque<>();
 
+    @SuppressWarnings("unused")
     private static ScopedObject<Pair<String, StringCallback>> callbackStore = null;
     private static RunningObject<WebSocketClient> wsConnection = null;
 
@@ -73,14 +74,14 @@ public class DeepBlueSim {
         }, true);
 
         // If the robot code starts before we us, then it might have already tried to tell
-        // us it was ready and we would have missed it. So, we tell it we're ready when we 
+        // us it was ready and we would have missed it. So, we tell it we're ready when we
         // connect to it.
         ConnectionProcessor.addOpenListener(() -> {
             System.out.println("Telling the robot we're ready");
             webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
         });
 
-        // Wait until one timestep has completed to ensure that the Webots simulator is 
+        // Wait until one timestep has completed to ensure that the Webots simulator is
         // not still starting up.
         if (robot.step(basicTimeStep) == -1) {
             throw new RuntimeException("Couldn't even do one timestep!");
@@ -89,7 +90,7 @@ public class DeepBlueSim {
             System.out.println("Trying to connect to robot...");
             wsConnection = WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
-            System.err.println("Error occured connecting to server:");
+            System.err.println("Error occurred connecting to server:");
             e.printStackTrace(System.err);
             System.err.flush();
             System.exit(1);
