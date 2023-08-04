@@ -41,6 +41,30 @@ deploy {
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
 
+// repositories {
+//     mavenLocal()
+//     gradlePluginPortal()
+//     String frcYear = '2023'
+//     File frcHome
+//     if (OperatingSystem.current().isWindows()) {
+//         String publicFolder = System.getenv('PUBLIC')
+//         if (publicFolder == null) {
+//             publicFolder = "C:\\Users\\Public"
+//         }
+//         def homeRoot = new File(publicFolder, "wpilib")
+//         frcHome = new File(homeRoot, frcYear)
+//     } else {
+//         def userFolder = System.getProperty("user.home")
+//         def homeRoot = new File(userFolder, "wpilib")
+//         frcHome = new File(homeRoot, frcYear)
+//     }
+//     def frcHomeMaven = new File(frcHome, 'maven')
+//     maven {
+//         name 'frcHome'
+//         url frcHomeMaven
+//     }
+// }
+
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {
@@ -102,65 +126,42 @@ task('systemTestJar', type: Jar) {
     from sourceSets.systemTest.output
     from { configurations.systemTestRuntimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-// task('systemTest', type: SynchronousJavaSimulationTask) {
-//     dependsOn 'systemTestJar'
-//     dependsOn 'extractTestJNI'
-// }
+import org.gradle.internal.os.OperatingSystem
+task('systemTest', type: JavaExec) { //edu.wpi.first.gradlerio.simulation.JavaExternalSimulationTask
+    // Run the jar file
+    dependsOn 'systemTestJar'
+    // dependsOn 'simulateExternalJavaRelease'
+    classpath = files(tasks.systemTestJar)
+    // println(tasks.simulateExternalJavaRelease.getSimulationFile().getAsFile().get().getAbsolutePath())
+
+    String pathSeparator = File.pathSeparator
+
+    // Load native libraries
+    dependsOn 'extractReleaseNative'
+    String nativeDir = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get().getAbsolutePath()
+    String defaultLibraryPath;
+    if(OperatingSystem.current().isWindows()) {
+        defaultLibraryPath = System.getenv('PATH')
+    } else if(OperatingSystem.current().isMacOsX()) {
+        defaultLibraryPath = System.getenv('DYLD_LIBRARY_PATH')
+    } else {
+        defaultLibraryPath = System.getenv('LD_LIBRARY_PATH')
+    }
+    jvmArgs '-Djava.library.path=' + defaultLibraryPath + pathSeparator + nativeDir
+    environment 'PATH', System.getenv('PATH') + pathSeparator + nativeDir
+
+    afterEvaluate { // We have to wait until after the project is evaluated so WPILibPlugin can setup the repositories to load the HALSim extensions from
+        // Load HALSim extensions (See https://github.com/wpilibsuite/GradleRIO/blob/88f3420b1fe554d78b7b682e2adf2080c124ba42/src/main/java/edu/wpi/first/gradlerio/wpi/java/WPIJavaExtension.java#L139)
+        File ldPath = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get()
+        def simExtension = project.extensions.getByType(edu.wpi.first.gradlerio.wpi.WPIExtension).getSim()
+        def halsimExtensions = simExtension.getHalSimLocations(List.of(ldPath), false)
+        environment 'HALSIM_EXTENSIONS', halsimExtensions.stream().map { it.libName }.reduce { a, b -> a + pathSeparator + b }.get()
+    }
+}
 
 assemble.dependsOn installDeepBlueSim
 
-// check.dependsOn 'systemTest'
-
-// class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.simulation.JavaSi mulationTask {
-//     @Override
-//     Process launch(List<String> cmd) {
-//         // Let the base class handle these situations
-//         if (scriptOnly || project.hasProperty('headless')) {
-//             return super.launch(cmd)
-//         }
-//         // Remove the extraneous double quotes added by the caller
-//         cmd = cmd*.replace('"','')
-//         def builder = new ProcessBuilder(cmd)
-//         // Incorporate the task's env and the simulation extension's env (e.g. HALSIM_EXTENSIONS)
-//         def env = builder.environment()
-//         env.putAll environment
-//         env.putAll project.extensions.getByType(edu.wpi.first.gradlerio.wpi.simulation.SimulationExtension).environment
-//         // Set the working dir if specified
-//         if (workingDir != null) {
-//             workingDir.mkdirs()
-//             builder.directory(workingDir)
-//         }
-//         // Redirect stderr to stdout
-//         builder.redirectErrorStream(true)
-//         // Start the process
-//         Process p = builder.start()
-//         println "Waiting for simulation to finish..."
-//         // Copy the output asynchronously so that the current thread can be interrupted
-//         // (e.g. if the task times out)
-//         try {
-//             p.inputStream.withStream { stream ->
-//                 def executor = java.util.concurrent.Executors.newFixedThreadPool(1)
-//                 def copyStreamCallable = new java.util.concurrent.Callable<Integer>() {
-//                     def buf = new byte[8192]
-//                     @Override
-//                     Integer call() {
-//                         int length = stream.read(buf)
-//                         if (length > 0)
-//                             System.out.write(buf, 0, length)
-//                         return length
-//                     }
-//                 }
-//                 while (executor.submit(copyStreamCallable).get() > 0) {
-//                 }
-//             }
-//         } catch (InterruptedException) {
-//             p.destroy()
-//         }
-//         p.waitFor()
-//         if (p.exitValue() != 0)
-//             throw new RuntimeException("Simulation failed with exit code ${p.exitValue()}.")
-//         return p
-//     }
-// }
+check.dependsOn 'systemTest'
