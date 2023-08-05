@@ -25,6 +25,24 @@ plugins {
     id 'com.jaredsburrows.license' version '0.8.80'
 }
 
+pluginManagement {
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.namespace == 'org.carlmontrobotics.webots') {
+                useModule("com.github.DeepBlueRobotics.webots-gradle-plugin:plugin:PR3-SNAPSHOT")
+            }
+        }
+    }
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        jcenter()
+        maven {
+            url 'jitpack.io'
+        }
+    }
+}
+
 group 'org.team199'
 
 sourceCompatibility = 1.8
