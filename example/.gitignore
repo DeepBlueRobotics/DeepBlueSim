@@ -164,3 +164,8 @@ imgui.ini
 Webots/controllers/DeepBlueSim.jar
 Webots/*/DBS*
 Webots/*/.DBS*
+
+# Ignore Simulation GUI settings
+/networktables.json
+/simgui.json
+/simgui-*.json
