@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;
 
 /**
@@ -21,10 +22,10 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;
  * directory.
  */
 public class Robot extends TimedRobot {
-  private final DifferentialDrive m_robotDrive
-      = new DifferentialDrive(new PWMVictorSPX(0), new PWMVictorSPX(1));
+
   private final Joystick m_stick = new Joystick(0);
   private final Timer m_timer = new Timer();
+  private DifferentialDrive m_robotDrive;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -32,6 +33,16 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    MotorControllerGroup leftMotors = new MotorControllerGroup(
+      new PWMVictorSPX(0),
+      new PWMVictorSPX(1)
+    );
+    MotorControllerGroup rightMotors = new MotorControllerGroup(
+      new PWMVictorSPX(2),
+      new PWMVictorSPX(3)
+    );
+    rightMotors.setInverted(true);
+    m_robotDrive = new DifferentialDrive(leftMotors, rightMotors);
   }
 
   /**
