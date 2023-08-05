@@ -8,6 +8,8 @@ runs:
         # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
         # tasks is executed.
         ./gradlew :example:simulateExternalJavaRelease --info --stacktrace
+        echo Library Path (Linux):
+        echo $LD_LIBRARY_PATH
       shell: bash
 
     - name: Start Webots
