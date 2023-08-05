@@ -79,9 +79,13 @@ public class SystemTestRobot extends Robot {
             // Integration servers, it can take over 8 minutes for Webots to start.
             var startedWaitingTimeMs = System.currentTimeMillis();
             var isReady = false;
+            System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
             while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 600000) {
                 try {
-                    isReady = future.get(1, TimeUnit.SECONDS);
+                    long elapsedTime = System.currentTimeMillis() - startedWaitingTimeMs;
+                    long remainingTime = 600000 - elapsedTime;
+                    if(remainingTime > 0) isReady = future.get(remainingTime, TimeUnit.MILLISECONDS);
+                    else isReady = true;
                 } catch (TimeoutException ex) {
                     System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
                 } catch (InterruptedException|ExecutionException e) {
