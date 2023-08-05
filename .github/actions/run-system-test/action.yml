@@ -5,7 +5,7 @@ runs:
   steps:
     - name: Install DeepBlueSim
       run: |
-        echo Library Path (Linux):
+        echo "Library Path (Linux):"
         echo $LD_LIBRARY_PATH
         # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
         # tasks is executed.
