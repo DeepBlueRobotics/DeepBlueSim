@@ -16,32 +16,22 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: "recursive"
         fetch-depth: 0
 
-    - name: Set up JDK 11
-      uses: actions/setup-java@v1
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
       with:
-        java-version: 11
-
-    - name: Get Webots cache path
-      id: getWebotsCachePath
-      uses: DeepBlueRobotics/setup-webots@v1
-      with:
-        install: false
-
-    - name: Cache Webots
-      uses: actions/cache@v2
-      with:
-        path: ${{ steps.getWebotsCachePath.outputs.cachePath }}
-        key: webots-v2021a-install-${{ runner.os }}
-
+        distribution: 'temurin'
+        java-version: 17
 
     - name: Setup Webots
       id: setupWebots
-      uses: DeepBlueRobotics/setup-webots@v1
+      uses: DeepBlueRobotics/setup-webots@versioning-and-caching
+      with:
+        webotsVersion: R2023b
 
     - name: Do the system test
       uses: ./.github/actions/run-system-test
@@ -68,38 +58,29 @@ jobs:
 
     steps:
     - name: Cancel any existing workflow runs
-      uses: fkirc/skip-duplicate-actions@v3.3.0
+      uses: fkirc/skip-duplicate-actions@v5
 
-    - name: Set up JDK 11
-      uses: actions/setup-java@v1
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
       with:
-        java-version: 11
-
-    - name: Get Webots cache path
-      id: getWebotsCachePath
-      uses: DeepBlueRobotics/setup-webots@v1
-      with:
-        install: false
-
-    - name: Cache Webots
-      uses: actions/cache@v2
-      with:
-        path: ${{ steps.getWebotsCachePath.outputs.cachePath }}
-        key: webots-v2021a-install-${{ runner.os }}
+        distribution: 'temurin'
+        java-version: 17
 
     - name: Setup Webots
       id: setupWebots
-      uses: DeepBlueRobotics/setup-webots@v1
+      uses: DeepBlueRobotics/setup-webots@versioning-and-caching
+      with:
+        webotsVersion: R2023b
 
     - name: Checkout source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: "recursive"
         fetch-depth: 0
 
     - name: Compute next semantic version
       id: version
-      uses: paulhatch/semantic-version@v3.3.1
+      uses: paulhatch/semantic-version@v5
       with:
         branch: "master"
 
@@ -113,4 +94,7 @@ jobs:
       run: git push origin ${{ steps.version.outputs.version_tag }}
 
     - name: Publish to Gradle Plugin Portal
-      run: ./gradlew :plugin:publishPlugins -Pversion=${{ steps.version.outputs.version }} -Pgradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }} -Pgradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }} --info --stacktrace
+      env:
+        GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+        GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+      run: ./gradlew :plugin:publishPlugins -Pversion=${{ steps.version.outputs.version }} -Pgradle.publish.key=$GRADLE_PUBLISH_KEY -Pgradle.publish.secret=$GRADLE_PUBLISH_SECRET --info --stacktrace
