@@ -73,7 +73,7 @@ configurations {
 dependencies {
     // Use the awesome Spock testing and specification framework
     testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
-    testImplementation 'edu.wpi.first:GradleRIO:2021.1.2'
+    testImplementation 'edu.wpi.first:GradleRIO:2023.4.3'
     implementation 'commons-io:commons-io:2.8.0'
     // include the Webots.zip artifact produced by the controller's webotsFolder configuration
     extraFiles project(path: ':controller', configuration: 'webotsFolder')
