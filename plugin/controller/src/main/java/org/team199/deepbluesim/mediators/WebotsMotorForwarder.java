@@ -20,6 +20,8 @@ public class WebotsMotorForwarder implements DoubleCallback, StringCallback {
      */
     public WebotsMotorForwarder(Robot robot, String motorName) {
         motor = robot.getMotor(motorName);
+        // Use velocity control
+        motor.setPosition(Double.POSITIVE_INFINITY);
     }
 
     @Override
