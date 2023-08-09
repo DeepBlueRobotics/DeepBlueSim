@@ -1,0 +1,22 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "../protos/WPIEncoderBase.proto"
+
+# A WPIEncoderBase implementation for an absolute encoder for a Spark Max.
+PROTO SparkMaxAbsoluteEncoder [
+    field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
+    field SFFloat absoluteOffsetDeg 0
+    field SFBool inverted FALSE
+    field SFInt32 CPR 4096
+    field SFFloat noiseStdDevRad 0
+]
+{
+    WPIEncoderBase {
+        location IS location
+        absolute TRUE
+        absoluteOffsetDeg IS absoluteOffsetDeg
+        inverted IS inverted
+        CPR IS CPR
+        noiseStdDevRad IS noiseStdDevRad
+    }
+}

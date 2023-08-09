@@ -1,0 +1,28 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+# A RotationalMotor with the properties necessary to construct a WPILib DCMotor
+PROTO WPIMotorBase [
+    unconnectedField SFInt32 port 0
+    unconnectedField SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
+    field SFFloat gearing 1
+    unconnectedField SFBool inverted FALSE
+    unconnectedField SFFloat nominalVoltageVolts 12
+    field SFFloat stallTorqueNewtonMeters 5
+    unconnectedField SFFloat stallCurrentAmps 100
+    unconnectedField SFFloat freeCurrentAmps 1
+    field SFFloat freeSpeedRPM 5000
+    field SFString sound "default"
+]
+{
+    RotationalMotor {
+        maxTorque %<= fields.stallTorqueNewtonMeters.value * fields.gearing.value >%
+        maxVelocity %<= fields.freeSpeedRPM.value / fields.gearing.value >%
+        # The documentation about the multiplier field is unclear as to how it applies differently to differnt fields/functions.
+        # I think it's best just to implement it ourselves for now.
+        # multiplier %<= 1 / fields.gearing.value >%
+        %< if (fields.sound.value !== "default") { >%
+            soundUrl IS sound
+        %< } >%
+    }
+}
