@@ -10,28 +10,21 @@ import org.team199.wpiws.devices.SimDeviceSim;
  * Handles the linking of the simulated AHRS gyro to Webots
  * @see com.kauailabs.navx.frc.AHRS
  */
-public final class MockGyro implements Runnable {
+public class GyroMediator implements Runnable {
 
-    private static boolean gyroCreated = false;
-    private static SimDeviceSim gyroSim;
-    private static Gyro webotsGyro;
-    private static double angle = 0;
+    public final Gyro gyro;
+    public final SimDeviceSim device;
+    private double angle = 0;
 
     /**
-     * Links the simulated AHRS gyro to Webots if it has not been already
+     * Links the simulated AHRS gyro to Webots
+     * @param gyro the Webots gyro to link to
      */
-    public static void linkGyro() {
-        if(gyroCreated) {
-            return;
-        }
-        gyroCreated = true;
-        // Create Sims
-        gyroSim = new SimDeviceSim("navX-Sensor[0]");
-        webotsGyro = Simulation.getRobot().getGyro("gyro");
-        if(webotsGyro != null) {
-            webotsGyro.enable(Constants.sensorTimestep);
-            Simulation.registerPeriodicMethod(new MockGyro());
-        }
+    public GyroMediator(Gyro gyro) {
+        this.gyro = gyro;
+        gyro.enable(Constants.sensorTimestep);
+        device = new SimDeviceSim("navX-Sensor[0]");
+        Simulation.registerPeriodicMethod(this);
     }
 
     @Override
@@ -40,16 +33,14 @@ public final class MockGyro implements Runnable {
            reading represents the change in angular position about the z axis.
            getValues()[2] is negated to convert from Webots's coordinate system (counter-clockwise = positive) to WPILib's coordinate system (counter-clockwise = negative).
         */
-        double reading = -webotsGyro.getValues()[2] * Simulation.getBasicTimeStep();
+        double reading = -gyro.getValues()[2] * Simulation.getBasicTimeStep();
         // In testing, reading was sometimes NAN in the first second of the simulation.
         // Also convert from radians to degrees
         angle += Double.isNaN(reading) ? 0 : (180 * reading / Math.PI);
         // Make sure angle is between 0 and 359 inclusive
         // angle = Math.copySign(Math.abs(angle) % 360, angle);
         // Update the WPIlib gyro
-        gyroSim.set("Yaw", angle + "");
+        device.set("Yaw", angle + "");
     }
-
-    private MockGyro() {}
 
 }

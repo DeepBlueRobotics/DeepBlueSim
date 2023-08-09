@@ -1,0 +1,16 @@
+#VRML_SIM R2023b utf8
+
+# A base proto for robot encoders
+PROTO WPIEncoderBase [
+    unconnectedField SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
+    unconnectedField SFBool absolute FALSE
+    unconnectedField SFFloat absoluteOffsetDeg 0
+    unconnectedField SFBool inverted FALSE
+    unconnectedField SFInt32 CPR 4096
+    field SFFloat noiseStdDevRad 0
+]
+{
+    PositionSensor {
+        noise IS noiseStdDevRad
+    }
+}

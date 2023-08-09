@@ -23,6 +23,10 @@ plugins {
 
     // Support creating a license report of all dependencies
     id 'com.jaredsburrows.license' version '0.8.80'
+
+    // Support WPILib
+    id "edu.wpi.first.GradleRIO" version "2023.4.3"
+    id 'edu.wpi.first.WpilibTools' version '1.1.0'
 }
 
 group 'org.team199'
@@ -32,6 +36,18 @@ targetCompatibility = 1.8
 
 // The name of the main class in the application jar.
 mainClassName = 'DeepBlueSim'
+
+wpilibTools.deps.wpilibVersion = wpi.versions.wpilibVersion.get()
+
+def nativeConfigName = 'wpilibNatives'
+def nativeConfig = configurations.create(nativeConfigName)
+
+def nativeTasks = wpilibTools.createExtractionTasks {
+    configurationName = nativeConfigName
+}
+
+nativeTasks.addToSourceSetResources(sourceSets.main)
+nativeConfig.dependencies.add wpilibTools.deps.wpilib("wpimath")
 
 // Add repositories containing project dependencies
 repositories {
@@ -43,6 +59,14 @@ repositories {
 dependencies {
     implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
     testImplementation 'junit:junit:4.13'
+
+    implementation wpilibTools.deps.wpilibJava("wpimath")
+
+    implementation group: "com.fasterxml.jackson.core", name: "jackson-annotations", version: wpi.versions.jacksonVersion.get()
+    implementation group: "com.fasterxml.jackson.core", name: "jackson-core", version: wpi.versions.jacksonVersion.get()
+    implementation group: "com.fasterxml.jackson.core", name: "jackson-databind", version: wpi.versions.jacksonVersion.get()
+
+    implementation group: "org.ejml", name: "ejml-simple", version: wpi.versions.ejmlVersion.get()
 }
 
 // Configure the building of the fat jar

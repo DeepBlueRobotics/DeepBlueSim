@@ -1,0 +1,22 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "../protos/WPIEncoderBase.proto"
+
+# A WPIEncoderBase implementation for a CANCoder.
+PROTO CANCoder [
+    unconnectedField SFInt32 id 0
+    field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
+    field SFFloat absoluteOffsetDeg 0
+    field SFBool inverted FALSE
+    field SFFloat noiseStdDevRad 0
+]
+{
+    WPIEncoderBase {
+        location IS location
+        absolute TRUE
+        absoluteOffsetDeg IS absoluteOffsetDeg
+        inverted IS inverted
+        CPR 4096
+        noiseStdDevRad IS noiseStdDevRad
+    }
+}
