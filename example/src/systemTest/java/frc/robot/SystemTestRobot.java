@@ -1,9 +1,6 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.RobotBase;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -15,12 +12,13 @@ import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
 import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimValueCallback;
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
-import edu.wpi.first.wpiutil.math.Vector;
-import edu.wpi.first.wpiutil.math.numbers.N3;
 
 public class SystemTestRobot extends Robot {
 
@@ -62,7 +60,8 @@ public class SystemTestRobot extends Robot {
         // Wait for the Webots supervisor to be ready
         final var future = new CompletableFuture<Boolean>();
         try (var callback = webotsSupervisorSim.registerValueChangedCallback(simStartMs, new SimValueCallback() {
-            public void callback(String name, int handle, boolean readonly, HALValue value) {
+            @Override
+            public void callback(String name, int handle, int direction, HALValue value) {
                 if (value.getDouble() > 0.0) {
                     System.out.println("WebotsSupervisor is ready");
                     future.complete(true);
@@ -76,13 +75,17 @@ public class SystemTestRobot extends Robot {
                 System.out.println("WebotsSupervisor is ready");
                 future.complete(true);
             }
-            // Wait up to 10 minutes for Webots to respond. On GitHub's MacOS Continuous
+            // Wait up to 15 minutes for Webots to respond. On GitHub's MacOS Continuous
             // Integration servers, it can take over 8 minutes for Webots to start.
             var startedWaitingTimeMs = System.currentTimeMillis();
             var isReady = false;
-            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 600000) {
+            System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
+            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 900000) {
                 try {
-                    isReady = future.get(1, TimeUnit.SECONDS);
+                    long elapsedTime = System.currentTimeMillis() - startedWaitingTimeMs;
+                    long remainingTime = 900000 - elapsedTime;
+                    if(remainingTime > 0) isReady = future.get(remainingTime, TimeUnit.MILLISECONDS);
+                    else isReady = true;
                 } catch (TimeoutException ex) {
                     System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
                 } catch (InterruptedException|ExecutionException e) {

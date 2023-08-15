@@ -1,0 +1,28 @@
+#VRML_SIM R2023b utf8
+
+# license: WPILib BSD
+# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+
+EXTERNPROTO "../protos/WPIMotorBase.proto"
+
+# A WPIMotorBase with the parameters of a Romi Bultin Motor
+PROTO RomiBuiltinMotor [
+    field SFInt32 port 0
+    field SFFloat gearing 1
+    field SFBool inverted FALSE
+    field SFString sound "default"
+]
+{
+    WPIMotorBase {
+        controllerType "PWM"
+        port IS port
+        gearing IS gearing
+        inverted IS inverted
+        nominalVoltageVolts 4.5
+        stallTorqueNewtonMeters 0.1765
+        stallCurrentAmps 1.25
+        freeCurrentAmps 0.13
+        freeSpeedRPM 150
+        sound IS sound
+    }
+}
