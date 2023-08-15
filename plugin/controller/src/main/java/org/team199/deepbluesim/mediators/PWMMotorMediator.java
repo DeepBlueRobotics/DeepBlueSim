@@ -8,7 +8,6 @@ import org.team199.wpiws.devices.PWMSim;
 import com.cyberbotics.webots.controller.Motor;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.util.Units;
 
 public class PWMMotorMediator {
 
@@ -32,7 +31,7 @@ public class PWMMotorMediator {
         if(motor.getBrake() != null) motor.getBrake().setDampingConstant(0);
 
         callbackStore.add(motorDevice.registerSpeedCallback((deviceName, speed) -> {
-            double velocity = speed * Units.radiansPerSecondToRotationsPerMinute(motorConstants.freeSpeedRadPerSec);
+            double velocity = speed * motorConstants.freeSpeedRadPerSec;
             motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
         }, true));
     }

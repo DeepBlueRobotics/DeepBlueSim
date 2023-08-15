@@ -12,7 +12,6 @@ import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.PositionSensor;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.util.Units;
 
 /**
  * Links WPILib motor controllers to Webots
@@ -91,7 +90,7 @@ public class SimDeviceMotorMediator implements Runnable {
             brake.setDampingConstant(0);
         }
 
-        double velocity = currentOutput * Units.radiansPerSecondToRotationsPerMinute(motorConstants.freeSpeedRadPerSec);
+        double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
         motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
 
         double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);

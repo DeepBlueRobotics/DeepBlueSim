@@ -44,7 +44,7 @@ Robot {
           device [
             MiniCIMMotor {
               controllerType "PWM"
-              gearing 66.8192
+              gearing 6.9973
             }
             PositionSensor {
               name "Back Left Encoder"
@@ -80,7 +80,7 @@ Robot {
             MiniCIMMotor {
               controllerType "PWM"
               port 1
-              gearing 66.8192
+              gearing 6.9973
             }
             PositionSensor {
               name "Front Left Encoder"
@@ -116,7 +116,7 @@ Robot {
             MiniCIMMotor {
               controllerType "PWM"
               port 2
-              gearing 66.8192
+              gearing 6.9973
             }
           ]
           endPoint Solid {
@@ -146,7 +146,7 @@ Robot {
             MiniCIMMotor {
               controllerType "PWM"
               port 3
-              gearing 66.8192
+              gearing 6.9973
             }
             PositionSensor {
               name "Front Right Encoder"
