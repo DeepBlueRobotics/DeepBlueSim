@@ -80,10 +80,10 @@ public class SystemTestRobot extends Robot {
             var startedWaitingTimeMs = System.currentTimeMillis();
             var isReady = false;
             System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
-            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 600000) {
+            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 36000000) {
                 try {
                     long elapsedTime = System.currentTimeMillis() - startedWaitingTimeMs;
-                    long remainingTime = 600000 - elapsedTime;
+                    long remainingTime = 36000000 - elapsedTime;
                     if(remainingTime > 0) isReady = future.get(remainingTime, TimeUnit.MILLISECONDS);
                     else isReady = true;
                 } catch (TimeoutException ex) {
