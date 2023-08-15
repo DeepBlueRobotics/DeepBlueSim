@@ -19,7 +19,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 
     // Support finding the local webots installation and adding it as a dependency
-    id "org.carlmontrobotics.webots" version "0.13.0"
+    id "org.carlmontrobotics.webots" version "1.0.0"
 
     // Support creating a license report of all dependencies
     id 'com.jaredsburrows.license' version '0.8.80'
