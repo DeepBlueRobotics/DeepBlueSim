@@ -18,7 +18,7 @@ PROTO WPIMotorBase [
     RotationalMotor {
         name %<= '"' + ["DBSim_Motor", fields.controllerType.value, fields.port.value, fields.gearing.value, fields.inverted.value, fields.nominalVoltageVolts.value, fields.stallTorqueNewtonMeters.value, fields.stallCurrentAmps.value, fields.freeCurrentAmps.value, fields.freeSpeedRPM.value].join('_') + '"' >%
         maxTorque %<= fields.stallTorqueNewtonMeters.value * fields.gearing.value >%
-        maxVelocity %<= fields.freeSpeedRPM.value / fields.gearing.value >%
+        maxVelocity %<= (2 * Math.PI / 60) * fields.freeSpeedRPM.value / fields.gearing.value >%
         # The documentation about the multiplier field is unclear as to how it applies differently to differnt fields/functions.
         # I think it's best just to implement it ourselves for now.
         # multiplier %<= 1 / fields.gearing.value >%
