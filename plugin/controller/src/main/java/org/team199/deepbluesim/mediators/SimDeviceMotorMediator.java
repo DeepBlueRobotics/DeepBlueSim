@@ -12,11 +12,12 @@ import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.PositionSensor;
 
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 
 /**
  * Links WPILib motor controllers to Webots
  */
-public class MotorMediator implements Runnable {
+public class SimDeviceMotorMediator implements Runnable {
 
     public static final int NEO_BUILTIN_ENCODER_CPR = 42;
 
@@ -38,9 +39,8 @@ public class MotorMediator implements Runnable {
      * @param motorConstants the motor constants to use
      * @param gearing the gear ratio to use
      * @param callbackStore a collection to store callbacks in
-     * @throws IllegalArgumentException if {@code motor} is not a WPIMotorBase
      */
-    public MotorMediator(Motor motor, SimDeviceSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) throws IllegalArgumentException {
+    public SimDeviceMotorMediator(Motor motor, SimDeviceSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) {
         this.motor = motor;
         motorDevice = simDevice;
         this.motorConstants = motorConstants;
@@ -63,6 +63,7 @@ public class MotorMediator implements Runnable {
 
         // Use velocity control
         motor.setPosition(Double.POSITIVE_INFINITY);
+
         brake.setDampingConstant(motorConstants.stallTorqueNewtonMeters * gearing);
 
         callbackStore.add(motorDevice.registerValueChangedCallback("Brake Mode", (name, enabled) -> {
@@ -71,7 +72,7 @@ public class MotorMediator implements Runnable {
         callbackStore.add(motorDevice.registerValueChangedCallback("Neutral Deadband", (name, deadband) -> {
             neutralDeadband = Math.abs(ParseUtils.parseDoubleOrDefault(deadband, neutralDeadband));
         }, true));
-        callbackStore.add(motorDevice.registerValueChangedCallback("Current Speed", (name, speed) -> {
+        callbackStore.add(motorDevice.registerValueChangedCallback("Speed", (name, speed) -> {
             requestedOutput = ParseUtils.parseDoubleOrDefault(speed, requestedOutput);
         }, true));
 
@@ -90,7 +91,7 @@ public class MotorMediator implements Runnable {
             brake.setDampingConstant(0);
         }
 
-        double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
+        double velocity = currentOutput * Units.radiansPerSecondToRotationsPerMinute(motorConstants.freeSpeedRadPerSec);
         motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
 
         double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);

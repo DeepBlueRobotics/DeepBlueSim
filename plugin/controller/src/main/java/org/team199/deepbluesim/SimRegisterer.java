@@ -5,11 +5,13 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.team199.deepbluesim.mediators.GyroMediator;
-import org.team199.deepbluesim.mediators.MotorMediator;
+import org.team199.deepbluesim.mediators.PWMMotorMediator;
+import org.team199.deepbluesim.mediators.SimDeviceMotorMediator;
 import org.team199.deepbluesim.mediators.SimDeviceEncoderMediator;
 import org.team199.deepbluesim.mediators.WPILibEncoderMediator;
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.devices.EncoderSim;
+import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 
 import com.cyberbotics.webots.controller.Device;
@@ -159,10 +161,14 @@ public class SimRegisterer {
         double freeCurrentAmps = Double.parseDouble(nameParts[9]);
         double freeSpeedRPM = Double.parseDouble(nameParts[10]);
 
-        String simDeviceName = controllerType.replaceAll("\\s", "") + "[" + port + "]";
         DCMotor motorConstants = new DCMotor(nominalVoltageVolts, stallTorqueNewtonMeters, stallCurrentAmps, freeCurrentAmps, Units.rotationsPerMinuteToRadiansPerSecond(freeSpeedRPM), 1);
 
-        new MotorMediator(device, new SimDeviceSim(simDeviceName), motorConstants, gearing, inverted, CALLBACKS);
+        if(controllerType.equals("PWM")) {
+            new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted, CALLBACKS);
+        } else {
+            String simDeviceName = controllerType.replaceAll("\\s", "") + "[" + port + "]";
+            new SimDeviceMotorMediator(device, new SimDeviceSim(simDeviceName), motorConstants, gearing, inverted, CALLBACKS);
+        }
     }
 
 }
