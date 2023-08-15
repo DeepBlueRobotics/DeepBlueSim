@@ -114,18 +114,17 @@ task('systemTest', type: JavaExec) {
     String pathSeparator = File.pathSeparator
 
     // Load native libraries
+    // See https://github.com/wpilibsuite/GradleRIO/blob/88f3420b1fe554d78b7b682e2adf2080c124ba42/src/main/java/edu/wpi/first/gradlerio/wpi/java/TestTaskDoFirstAction.java#L28C14-L28C14
     dependsOn 'extractReleaseNative'
     String nativeDir = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get().getAbsolutePath()
-    String defaultLibraryPath;
-    if(OperatingSystem.current().isWindows()) {
-        defaultLibraryPath = System.getenv('PATH')
-    } else if(OperatingSystem.current().isMacOsX()) {
-        defaultLibraryPath = System.getenv('DYLD_LIBRARY_PATH')
-    } else {
-        defaultLibraryPath = System.getenv('LD_LIBRARY_PATH')
+    if(OperatingSystem.current().isUnix() || OperatingSystem.current().isMacOsX() || OperatingSystem.current().isLinux()) {
+        environment "LD_LIBRARY_PATH", nativeDir
+        environment "DYLD_FALLBACK_LIBRARY_PATH", nativeDir
+        environment "DYLD_LIBRARY_PATH", nativeDir
+    } else if(OperatingSystem.current().isWindows()) {
+        environment 'PATH', System.getenv('PATH') + pathSeparator + nativeDir
     }
-    jvmArgs '-Djava.library.path=' + defaultLibraryPath + pathSeparator + nativeDir
-    environment 'PATH', System.getenv('PATH') + pathSeparator + nativeDir
+    systemProperty "java.library.path", systemProperties["java.library.path"] + pathSeparator + nativeDir
 
     afterEvaluate { // We have to wait until after the project is evaluated so WPILibPlugin can setup the repositories to load the HALSim extensions from
         // Load HALSim extensions (See https://github.com/wpilibsuite/GradleRIO/blob/88f3420b1fe554d78b7b682e2adf2080c124ba42/src/main/java/edu/wpi/first/gradlerio/wpi/java/WPIJavaExtension.java#L139)
