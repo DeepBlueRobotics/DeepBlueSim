@@ -94,6 +94,8 @@ public class DeepBlueSim {
             throw new RuntimeException("Couldn't even do one timestep!");
         }
 
+        // SimRegisterer.connectDevices();
+
         // Connect to the robot code
         try {
             System.out.println("Trying to connect to robot...");

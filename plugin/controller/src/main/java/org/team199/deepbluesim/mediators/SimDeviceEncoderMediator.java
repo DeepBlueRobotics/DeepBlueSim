@@ -8,11 +8,6 @@ public class SimDeviceEncoderMediator extends EncoderMediatorBase {
 
     public final SimDeviceSim device;
 
-    public SimDeviceEncoderMediator(PositionSensor encoder, SimDeviceSim device) {
-        super(encoder);
-        this.device = device;
-    }
-
     public SimDeviceEncoderMediator(PositionSensor encoder, SimDeviceSim device, boolean isOnMotorShaft, boolean isAbsolute, double absoluteOffsetDeg, boolean isInverted, int countsPerRevolution, double gearing) {
         super(encoder, isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
         this.device = device;

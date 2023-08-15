@@ -3,8 +3,8 @@
 
 # A RotationalMotor with the properties necessary to construct a WPILib DCMotor
 PROTO WPIMotorBase [
-    unconnectedField SFInt32 port 0
     unconnectedField SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
+    unconnectedField SFInt32 port 0
     field SFFloat gearing 1
     unconnectedField SFBool inverted FALSE
     unconnectedField SFFloat nominalVoltageVolts 12
@@ -16,6 +16,7 @@ PROTO WPIMotorBase [
 ]
 {
     RotationalMotor {
+        name %<= ["DBSim_Motor", controllerType.value, port.value, gearing.value, inverted.value, nominalVoltageVolts.value, stallTorqueNewtonMeters.value, stallCurrentAmps.value, freeCurrentAmps.value, freeSpeedRPM.value].join('_') >%
         maxTorque %<= fields.stallTorqueNewtonMeters.value * fields.gearing.value >%
         maxVelocity %<= fields.freeSpeedRPM.value / fields.gearing.value >%
         # The documentation about the multiplier field is unclear as to how it applies differently to differnt fields/functions.

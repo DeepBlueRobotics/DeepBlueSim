@@ -14,8 +14,8 @@ PROTO NEO550Motor [
 ]
 {
     WPIMotorBase {
-        port IS id
         controllerType "Spark Max"
+        port IS id
         gearing IS gearing
         inverted IS inverted
         nominalVoltageVolts 12
