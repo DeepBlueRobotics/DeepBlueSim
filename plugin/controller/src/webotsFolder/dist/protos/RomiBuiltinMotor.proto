@@ -14,8 +14,8 @@ PROTO RomiBuiltinMotor [
 ]
 {
     WPIMotorBase {
-        port IS port
         controllerType "PWM"
+        port IS port
         gearing IS gearing
         inverted IS inverted
         nominalVoltageVolts 4.5

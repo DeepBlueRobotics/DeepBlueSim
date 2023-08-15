@@ -1,4 +1,5 @@
 #VRML_SIM R2023b utf8
+# template language: javascript
 
 # A base proto for robot encoders
 PROTO WPIEncoderBase [
@@ -11,6 +12,7 @@ PROTO WPIEncoderBase [
 ]
 {
     PositionSensor {
+        name %<= ["DBSim_Encoder", location === "Motor Shaft", absolute.value, absoluteOffsetDeg.value, inverted.value, CPR.value].join('_') %>
         noise IS noiseStdDevRad
     }
 }

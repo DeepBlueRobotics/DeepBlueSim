@@ -18,8 +18,11 @@ import edu.wpi.first.math.system.plant.DCMotor;
  */
 public class MotorMediator implements Runnable {
 
+    public static final int NEO_BUILTIN_ENCODER_CPR = 42;
+
     public final Motor motor;
     public final double gearing;
+    public final boolean inverted;
     public final DCMotor motorConstants;
     public final SimDeviceSim motorDevice;
     public final Brake brake;
@@ -31,21 +34,25 @@ public class MotorMediator implements Runnable {
     /**
      * Creates a new MotorMediator
      * @param motor the Webots motor to link to
+     * @param simDevice the SimDeviceSim to use
+     * @param motorConstants the motor constants to use
+     * @param gearing the gear ratio to use
      * @param callbackStore a collection to store callbacks in
      * @throws IllegalArgumentException if {@code motor} is not a WPIMotorBase
      */
-    public MotorMediator(Motor motor, Collection<ScopedObject<?>> callbackStore) throws IllegalArgumentException {
+    public MotorMediator(Motor motor, SimDeviceSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) throws IllegalArgumentException {
         this.motor = motor;
-        gearing = 1;
-        motorConstants = new DCMotor(0, 0, 0, 0, 0, 1);
-        motorDevice = new SimDeviceSim(String.format("%s[%d]", motor.getName(), 0 /* motor.getPort() */));
+        motorDevice = simDevice;
+        this.motorConstants = motorConstants;
+        this.gearing = gearing;
+        this.inverted = inverted;
 
-        if(motor.getName().equals("Spark Max")) {
+        if(motor.getName().startsWith("DBSim_Motor_Spark Max")) {
             PositionSensor encoder = motor.getPositionSensor();
             if(encoder == null) {
                 System.err.println(String.format("WARNING: Spark Max encoder not found for motor: \"%s\", no position data will be reported!", motor.getName()));
             } else {
-                new SimDeviceEncoderMediator(encoder, new SimDeviceSim(String.format("%s[%d]_RelativeEncoder", motor.getName(), 0 /* motor.getPort() */)));
+                new SimDeviceEncoderMediator(encoder, new SimDeviceSim(motorDevice.id + "_RelativeEncoder"), true, false, 0, inverted, NEO_BUILTIN_ENCODER_CPR, gearing);
             }
         }
 
@@ -84,7 +91,7 @@ public class MotorMediator implements Runnable {
         }
 
         double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
-        motor.setVelocity(velocity / gearing);
+        motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
 
         double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);
         motor.setAvailableTorque(motorConstants.getTorque(currentDraw) * gearing);

@@ -2,12 +2,12 @@
 
 EXTERNPROTO "../protos/WPIEncoderBase.proto"
 
-# A WPIEncoderBase implementation for an absolute encoder for a Spark Max.
-PROTO SparkMaxAbsoluteEncoder [
+# A WPIEncoderBase implementation for an analog sensor for a Spark Max.
+PROTO SparkMaxAnalogSensor [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     field SFFloat absoluteOffsetDeg 0
     field SFBool inverted FALSE
-    field SFInt32 CPR 8192
+    field SFInt32 CPR 4096
     field SFFloat noiseStdDevRad 0
 ]
 {

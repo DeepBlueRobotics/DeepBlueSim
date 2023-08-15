@@ -8,13 +8,8 @@ public class WPILibEncoderMediator extends EncoderMediatorBase {
 
     public final EncoderSim device;
 
-    public WPILibEncoderMediator(PositionSensor encoder, EncoderSim device) {
-        super(encoder);
-        this.device = device;
-    }
-
-    public WPILibEncoderMediator(PositionSensor encoder, EncoderSim device, boolean isOnMotorShaft, boolean isAbsolute, double absoluteOffsetDeg, boolean isInverted, int countsPerRevolution, double gearing) {
-        super(encoder, isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+    public WPILibEncoderMediator(PositionSensor encoder, EncoderSim device, boolean isOnMotorShaft, boolean isInverted, int countsPerRevolution, double gearing) {
+        super(encoder, isOnMotorShaft, false, 0, isInverted, countsPerRevolution, gearing);
         this.device = device;
     }
 
