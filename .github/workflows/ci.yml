@@ -37,14 +37,14 @@ jobs:
       uses: ./.github/actions/run-system-test
 
     - name: Archive the example folder
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: always()
       with:
         name: Resulting example project for ${{ runner.os }}
         path: example/
 
     - name: Archive Webots log
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: always()
       with:
         name: Webots log for ${{ runner.os }}
