@@ -13,6 +13,7 @@ import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.StringCallback;
 import org.java_websocket.client.WebSocketClient;
+import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
@@ -94,7 +95,7 @@ public class DeepBlueSim {
             throw new RuntimeException("Couldn't even do one timestep!");
         }
 
-        // SimRegisterer.connectDevices();
+        SimRegisterer.connectDevices();
 
         // Connect to the robot code
         try {
