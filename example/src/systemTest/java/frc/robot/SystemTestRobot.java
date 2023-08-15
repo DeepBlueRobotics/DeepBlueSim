@@ -75,15 +75,15 @@ public class SystemTestRobot extends Robot {
                 System.out.println("WebotsSupervisor is ready");
                 future.complete(true);
             }
-            // Wait up to 10 minutes for Webots to respond. On GitHub's MacOS Continuous
+            // Wait up to 15 minutes for Webots to respond. On GitHub's MacOS Continuous
             // Integration servers, it can take over 8 minutes for Webots to start.
             var startedWaitingTimeMs = System.currentTimeMillis();
             var isReady = false;
             System.err.println("Waiting for WebotsSupervisor to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
-            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 36000000) {
+            while (!isReady && System.currentTimeMillis() - startedWaitingTimeMs < 900000) {
                 try {
                     long elapsedTime = System.currentTimeMillis() - startedWaitingTimeMs;
-                    long remainingTime = 36000000 - elapsedTime;
+                    long remainingTime = 900000 - elapsedTime;
                     if(remainingTime > 0) isReady = future.get(remainingTime, TimeUnit.MILLISECONDS);
                     else isReady = true;
                 } catch (TimeoutException ex) {
