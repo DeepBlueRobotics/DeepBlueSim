@@ -52,9 +52,9 @@ public class DeepBlueSim {
         }
         Simulation.init(robot, robot.getBasicTimeStep());
 
-        // Use a SimDeviceSim to coordinate with robot code tests
+        // Use a SimDeviceSim to coordinate with robot code
+        final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
         {
-            final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
             // Regular report the simulated robot's position
             Simulation.registerPeriodicMethod(new Runnable() {
                 public void run() {
@@ -94,6 +94,7 @@ public class DeepBlueSim {
         if (robot.step(basicTimeStep) == -1) {
             throw new RuntimeException("Couldn't even do one timestep!");
         }
+        webotsSupervisorSim.set("simTimeSec", robot.getTime());
 
         SimRegisterer.connectDevices();
 
@@ -116,6 +117,7 @@ public class DeepBlueSim {
         }));
 
         while(robot.step(basicTimeStep) != -1) {
+            webotsSupervisorSim.set("simTimeSec", robot.getTime());
             queuedMessages.forEach(Runnable::run);
             queuedMessages.clear();
             Simulation.runPeriodicMethods();
