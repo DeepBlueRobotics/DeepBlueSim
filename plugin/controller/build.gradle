@@ -16,7 +16,7 @@ plugins {
     id 'distribution'
 
     // Support building a fat jar (aka shadowJar) containing needed dependencies
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 
     // Support finding the local webots installation and adding it as a dependency
     id "org.carlmontrobotics.webots" version "0.13.0"
@@ -47,8 +47,10 @@ dependencies {
 
 // Configure the building of the fat jar 
 shadowJar {
-    // Force name, so it doesn't contain the version number.
-    archiveName = "DeepBlueSim.jar"
+    archiveBaseName.set('DeepBlueSim')
+
+    // Don't add -version to the jar filename
+    archiveVersion.set('')    
 
     // Make sure the licenseReport task runs first
     dependsOn "licenseReport"
@@ -89,7 +91,7 @@ distributions {
 
 webotsFolderDistZip {
     // Force name, so it doesn't contain the version number.
-    archiveName = "Webots.zip"
+    archiveFileName = "Webots.zip"
 }
 
 artifacts {

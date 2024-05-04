@@ -1,11 +1,14 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2021.1.2"
-    id "org.team199.deepbluesim" version "0.0.12"
+    id 'jvm-test-suite'
+    id "edu.wpi.first.GradleRIO" version "2024.3.1"
+    id "org.team199.deepbluesim" version "2024.0.0"
 }
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
 def ROBOT_MAIN_CLASS = "frc.robot.Main"
 
@@ -13,30 +16,35 @@ def ROBOT_MAIN_CLASS = "frc.robot.Main"
 // This is added by GradleRIO's backing project EmbeddedTools.
 deploy {
     targets {
-        roboRIO("roborio") {
+        roborio(getTargetTypeClass('RoboRIO')) {
             // Team number is loaded either from the .wpilib/wpilib_preferences.json
             // or from command line. If not found an exception will be thrown.
             // You can use getTeamOrDefault(team) instead of getTeamNumber if you
             // want to store a team number in this file.
-            team = frc.getTeamNumber()
-        }
-    }
-    artifacts {
-        frcJavaArtifact('frcJava') {
-            targets << "roborio"
-            // Debug can be overridden by command line, for use with VSCode
-            debug = frc.getDebugOrDefault(false)
-        }
-        // Built in artifact to deploy arbitrary files to the roboRIO.
-        fileTreeArtifact('frcStaticFileDeploy') {
-            // The directory below is the local directory to deploy
-            files = fileTree(dir: 'src/main/deploy')
-            // Deploy to RoboRIO target, into /home/lvuser/deploy
-            targets << "roborio"
-            directory = '/home/lvuser/deploy'
+            team = project.frc.getTeamNumber()
+            debug = project.frc.getDebugOrDefault(false)
+
+            artifacts {
+                // First part is artifact name, 2nd is artifact type
+                // getTargetTypeClass is a shortcut to get the class type using a string
+
+                frcJava(getArtifactTypeClass('FRCJavaArtifact')) {
+                }
+
+                // Static files artifact
+                frcStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
+                    files = project.fileTree('src/main/deploy')
+                    directory = '/home/lvuser/deploy'
+                }
+            }
         }
     }
 }
+
+def deployArtifact = deploy.targets.roborio.artifacts.frcJava
+
+// Set to true to use debug for JNI.
+wpi.java.debugJni = false
 
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
@@ -44,117 +52,88 @@ def includeDesktopSupport = true
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {
-    implementation wpi.deps.wpilib()
-    nativeZip wpi.deps.wpilibJni(wpi.platforms.roborio)
-    nativeDesktopZip wpi.deps.wpilibJni(wpi.platforms.desktop)
+    implementation wpi.java.deps.wpilib()
+    implementation wpi.java.vendor.java()
 
+    roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
+    roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
 
-    implementation wpi.deps.vendor.java()
-    nativeZip wpi.deps.vendor.jni(wpi.platforms.roborio)
-    nativeDesktopZip wpi.deps.vendor.jni(wpi.platforms.desktop)
+    roborioRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.roborio)
+    roborioRelease wpi.java.vendor.jniRelease(wpi.platforms.roborio)
 
-    testImplementation 'junit:junit:4.12'
+    nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
+    nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
+    simulationDebug wpi.sim.enableDebug()
 
-    // Enable simulation gui support (except during Continuous Integration).
-    // Must check the box in vscode to enable support upon debugging
-    if (System.getenv()['CI'] == null) {
-        simulation wpi.deps.sim.gui(wpi.platforms.desktop, false)
-        simulation wpi.deps.sim.driverstation(wpi.platforms.desktop, false)
-    }
+    nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
+    nativeRelease wpi.java.vendor.jniRelease(wpi.platforms.desktop)
+    simulationRelease wpi.sim.enableRelease()
 
-    // Websocket extensions require additional configuration.
-    simulation wpi.deps.sim.ws_server(wpi.platforms.desktop, false)
-    // simulation wpi.deps.sim.ws_client(wpi.platforms.desktop, false)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
 }
+
+test {
+    useJUnitPlatform()
+    systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+}
+
+// Simulation configuration (e.g. environment variables).
+wpi.sim.addGui()
+wpi.sim.addDriverstation()
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    from sourceSets.main.allSource
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-// Support a systemTest task that runs a system level functional test in the simulator
+// Configure jar and deploy tasks
+deployArtifact.jarTask = jar
+wpi.java.configureExecutableTasks(jar)
+wpi.java.configureTestTasks(test)
 
-sourceSets {
-    systemTest {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
+// Configure string concat to always inline compile
+tasks.withType(JavaCompile) {
+    options.compilerArgs.add '-XDstringConcat=inline'
 }
 
-configurations {
-    systemTestImplementation.extendsFrom testImplementation
-    systemTestRuntimeOnly.extendsFrom runtimeOnly    
-}
+def ws_server = wpi.sim.addWebsocketsServer()
 
-task('systemTestJar', type: Jar) {
-    archiveBaseName = 'systemTest'
-    from sourceSets.main.output
-    from sourceSets.systemTest.output
-    from { configurations.systemTestRuntimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
-}
+testing {
+    suites {
+        configureEach {
+            useJUnitJupiter()
 
-task('systemTest', type: SynchronousJavaSimulationTask) {
-    dependsOn 'systemTestJar'
-    dependsOn 'extractTestJNI'
-}
-
-assemble.dependsOn installDeepBlueSim
-
-check.dependsOn 'systemTest'
-
-class SynchronousJavaSimulationTask extends edu.wpi.first.gradlerio.test.JavaSimulationTask {
-    @Override
-    Process launch(List<String> cmd) {
-        // Let the base class handle these situations
-        if (scriptOnly || project.hasProperty('headless')) {
-            return super.launch(cmd)
+            targets {
+                all {
+                    testTask.configure {
+                        systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+                    }
+                }                
+            }
         }
-        // Remove the extraneous double quotes added by the caller
-        cmd = cmd*.replace('"','')
-        def builder = new ProcessBuilder(cmd)
-        // Incorporate the task's env and the simulation extension's env (e.g. HALSIM_EXTENSIONS)
-        def env = builder.environment()
-        env.putAll environment
-        env.putAll project.extensions.getByType(edu.wpi.first.gradlerio.wpi.simulation.SimulationExtension).environment
-        // Set the working dir if specified
-        if (workingDir != null) {
-            workingDir.mkdirs()
-            builder.directory(workingDir)
-        }
-        // Redirect stderr to stdout
-        builder.redirectErrorStream(true)
-        // Start the process
-        Process p = builder.start()
-        println "Waiting for simulation to finish..."
-        // Copy the output asynchronously so that the current thread can be interrupted
-        // (e.g. if the task times out)
-        try {
-            p.inputStream.withStream { stream ->
-                def executor = java.util.concurrent.Executors.newFixedThreadPool(1)
-                def copyStreamCallable = new java.util.concurrent.Callable<Integer>() {
-                    def buf = new byte[8192]
-                    @Override
-                    Integer call() {
-                        int length = stream.read(buf)
-                        if (length > 0) 
-                            System.out.write(buf, 0, length)
-                        return length
+
+        systemTest(JvmTestSuite)  { 
+            dependencies {
+                implementation project() 
+            }
+
+            targets { 
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
                     }
                 }
-                while (executor.submit(copyStreamCallable).get() > 0) {
-                }
             }
-        } catch (InterruptedException) {
-            p.destroy()
         }
-        p.waitFor()
-        if (p.exitValue() != 0)
-            throw new RuntimeException("Simulation failed with exit code ${p.exitValue()}.")
-        return p
     }
 }
+
+wpi.java.configureTestTasks(systemTest)
+deepbluesim.configureForSimulation(systemTest, [ws_server])
+assemble.dependsOn installDeepBlueSim
 

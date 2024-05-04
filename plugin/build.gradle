@@ -14,30 +14,33 @@ plugins {
     id 'maven-publish'
 
     // Support publishing to the Gradle Plugin Portal
-    id 'com.gradle.plugin-publish' version '0.12.0'
+    id 'com.gradle.plugin-publish' version '1.2.1'
 
     // Apply the Groovy plugin to add support for Groovy
     id 'groovy'
 }
 
 repositories {
-    // Use JCenter for resolving dependencies.
-    jcenter()
-    maven {
-      url "https://plugins.gradle.org/m2/"
-    }
+    mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
     // Use the awesome Spock testing and specification framework
-    testImplementation 'org.spockframework:spock-core:1.3-groovy-2.5'
-    testImplementation 'edu.wpi.first:GradleRIO:2021.1.2'
+    testImplementation platform("org.spockframework:spock-bom:2.2-groovy-3.0")
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
     implementation 'commons-io:commons-io:2.8.0'
+    implementation 'edu.wpi.first:GradleRIO:2024.3.1'
 }
 
 group 'org.team199'
 
 gradlePlugin {
+    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
+    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
     // Define the plugin
     plugins {
         deepbluesim {
@@ -45,15 +48,9 @@ gradlePlugin {
             displayName = 'DeepBlueSim Plugin'
             description = 'A plugin that simplifies developing WPILib projects that use Webots for simulation.'
             implementationClass = 'org.team199.deepbluesim.gradle.DeepBlueSimPlugin'
+            tags.set(['FRC', 'WPILib', 'Webots'])
         }
     }
-}
-
-// Info for publishing to the Gradle Plugin Portal
-pluginBundle {
-    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
-    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
-    tags = ['FRC', 'WPILib', 'Webots']     
 }
 
 // Add a source set for the functional test suite
@@ -69,6 +66,11 @@ configurations.functionalTestImplementation.extendsFrom(configurations.testImple
 tasks.register('functionalTest', Test) {
     testClassesDirs = sourceSets.functionalTest.output.classesDirs
     classpath = sourceSets.functionalTest.runtimeClasspath
+}
+
+tasks.withType(Test).configureEach {
+    // Using JUnitPlatform for running tests
+    useJUnitPlatform()
 }
 
 tasks.named('check') {
@@ -92,3 +94,14 @@ processResources {
         from configurations.extraFiles
     }
 }
+
+// Support publishing locally so that we can test before publishing to the gradle plugin portal
+publishing {
+    repositories {
+        maven {
+            name = 'localPluginRepository'
+            url = 'build/local-plugin-repository'
+        }
+    }
+}
+

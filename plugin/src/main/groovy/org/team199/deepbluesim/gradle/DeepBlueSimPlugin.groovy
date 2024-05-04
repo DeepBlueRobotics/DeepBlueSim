@@ -5,32 +5,41 @@ package org.team199.deepbluesim.gradle
 
 import org.gradle.api.Project
 import org.gradle.api.Plugin
+import org.gradle.api.Task
 
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
 
+import edu.wpi.first.gradlerio.simulation.JavaSimulationTask;
+import edu.wpi.first.gradlerio.simulation.JavaExternalSimulationTask;
+import edu.wpi.first.gradlerio.simulation.NativeSimulationTask;
+import edu.wpi.first.gradlerio.simulation.NativeExternalSimulationTask;
+
 /**
- * A simple 'hello world' plugin.
+ * A plugin that allows FRC robots to be simulated in the Webots simulator.
  */
 class DeepBlueSimPlugin implements Plugin<Project> {
     void apply(Project project) {
-        def installDeepBlueSim = project.tasks.register("installDeepBlueSim") {
-            doLast {
-                def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
-                if (resourceStream == null) throw new RuntimeException("resourceStream is null")
-                def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
-                dbsDir.mkdirs()
-                FileUtils.copyInputStreamToFile(resourceStream, new File(dbsDir,"Webots.zip"))
-                project.copy {
-                    from project.zipTree(new File(dbsDir,"Webots.zip"))
-                    into project.projectDir
+        project.pluginManager.withPlugin('edu.wpi.first.GradleRIO') {
+            def installDeepBlueSim = project.tasks.register("installDeepBlueSim") {
+                doLast {
+                    def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
+                    if (resourceStream == null) throw new RuntimeException("resourceStream is null")
+                    def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
+                    dbsDir.mkdirs()
+                    FileUtils.copyInputStreamToFile(resourceStream, new File(dbsDir,"Webots.zip"))
+                    project.copy {
+                        from project.zipTree(new File(dbsDir,"Webots.zip"))
+                        into project.projectDir
+                    }
                 }
             }
-        }
-        project.tasks.matching({ task -> 
-            (task.name.toLowerCase().contains("simulate"))
-        }).all { GroovyObject t -> 
-            t.dependsOn(installDeepBlueSim)
+            [JavaSimulationTask, JavaExternalSimulationTask, NativeSimulationTask, NativeExternalSimulationTask].each { cls ->
+                project.tasks.withType(cls) { task -> 
+                    task.dependsOn(installDeepBlueSim)
+                }
+            }
+            project.extensions.create('deepbluesim', DeepBlueSimExtension, project.wpi)
         }
     }
 }
