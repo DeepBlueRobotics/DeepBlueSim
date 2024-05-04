@@ -16,6 +16,7 @@ import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
@@ -47,11 +48,13 @@ public class SystemTestRobot extends Robot {
 
     SimDevice webotsSupervisor = null;
     SimDouble positionX = null, positionY = null, positionZ = null;
+    SimDouble simTimeSec = null;
 
     @Override
     public void simulationInit() {
         webotsSupervisor = SimDevice.create("WebotsSupervisor");
         SimDouble simStartMs = webotsSupervisor.createDouble("simStartMs", SimDevice.Direction.kInput, 0.0);
+        simTimeSec = webotsSupervisor.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
         positionX = webotsSupervisor.createDouble("self.position.x", SimDevice.Direction.kInput, 0.0);
         positionY = webotsSupervisor.createDouble("self.position.y", SimDevice.Direction.kInput, 0.0);
         positionZ = webotsSupervisor.createDouble("self.position.z", SimDevice.Direction.kInput, 0.0);
@@ -99,6 +102,20 @@ public class SystemTestRobot extends Robot {
         // occurred while we waited, will be considered behind schedule and
         // will all happen at once.
         SimHooks.restartTiming();
+
+        // Pause the clock so that we can step it in sync with the simulator
+        SimHooks.pauseTiming();
+
+        webotsSupervisorSim.registerValueChangedCallback(simTimeSec, new SimValueCallback() {
+            @Override
+            public void callback(String name, int handle, int direction, HALValue value) {
+                double deltaSecs = value.getDouble() - Timer.getFPGATimestamp();
+                if (deltaSecs > 0.0) {
+                    SimHooks.stepTimingAsync(deltaSecs);
+                }
+            }
+        }, true);
+
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
         DriverStationSim.setEnabled(true);
@@ -107,14 +124,12 @@ public class SystemTestRobot extends Robot {
         super.simulationInit();
     }
 
-    private int count = 0;
-
     @Override
     public void simulationPeriodic() {
         super.simulationPeriodic();
 
-        count++;
-        if (count > 50*10) {
+        // The motors are on for 2 secs. We wait an extra second to give the robot time to stop.
+        if (Timer.getFPGATimestamp() > 3.0) {
             // Simulate disabling the robot
             DriverStationSim.setEnabled(false);
             DriverStationSim.notifyNewData();
