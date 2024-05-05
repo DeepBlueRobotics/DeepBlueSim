@@ -54,6 +54,7 @@ public class SystemTestRobot extends Robot {
     public void simulationInit() {
         webotsSupervisor = SimDevice.create("WebotsSupervisor");
         SimDouble simStartMs = webotsSupervisor.createDouble("simStartMs", SimDevice.Direction.kInput, 0.0);
+        SimDouble robotStartMs = webotsSupervisor.createDouble("robotStartMs", SimDevice.Direction.kOutput, 0.0);
         simTimeSec = webotsSupervisor.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
         positionX = webotsSupervisor.createDouble("self.position.x", SimDevice.Direction.kInput, 0.0);
         positionY = webotsSupervisor.createDouble("self.position.y", SimDevice.Direction.kInput, 0.0);
@@ -66,18 +67,37 @@ public class SystemTestRobot extends Robot {
             @Override
             public void callback(String name, int handle, int direction, HALValue value) {
                 if (value.getDouble() > 0.0) {
-                    System.out.println("WebotsSupervisor is ready");
+                    System.out.println("WebotsSupervisor is ready.");
+                    System.out.println("Telling WebotsSupervisor that we're ready");
+                    robotStartMs.set(System.currentTimeMillis());
                     future.complete(true);
                 }
             }
         }, true)) {
             System.out.println("Telling WebotsSupervisor that we're ready");
-            SimDouble robotStartMs = webotsSupervisor.createDouble("robotStartMs", SimDevice.Direction.kOutput, 0.0);
             robotStartMs.set(System.currentTimeMillis());
             if (simStartMs.get() > 0.0) {
                 System.out.println("WebotsSupervisor is ready");
                 future.complete(true);
             }
+            // Reset the clock. Without this, *Periodic calls that should have 
+            // occurred while we waited, will be considered behind schedule and
+            // will all happen at once.
+            SimHooks.restartTiming();
+
+            // Pause the clock so that we can step it in sync with the simulator
+            SimHooks.pauseTiming();
+
+            webotsSupervisorSim.registerValueChangedCallback(simTimeSec, new SimValueCallback() {
+                @Override
+                public void callback(String name, int handle, int direction, HALValue value) {
+                    double deltaSecs = value.getDouble() - Timer.getFPGATimestamp();
+                    if (deltaSecs > 0.0) {
+                        SimHooks.stepTimingAsync(deltaSecs);
+                    }
+                }
+            }, true);
+
             // Wait up to 15 minutes for Webots to respond. On GitHub's MacOS Continuous
             // Integration servers, it can take over 8 minutes for Webots to start.
             var startedWaitingTimeMs = System.currentTimeMillis();
@@ -98,24 +118,7 @@ public class SystemTestRobot extends Robot {
             assertTrue("Webots ready in time", isReady);
         }
 
-        // Reset the clock. Without this, *Periodic calls that should have 
-        // occurred while we waited, will be considered behind schedule and
-        // will all happen at once.
-        SimHooks.restartTiming();
-
-        // Pause the clock so that we can step it in sync with the simulator
-        SimHooks.pauseTiming();
-
-        webotsSupervisorSim.registerValueChangedCallback(simTimeSec, new SimValueCallback() {
-            @Override
-            public void callback(String name, int handle, int direction, HALValue value) {
-                double deltaSecs = value.getDouble() - Timer.getFPGATimestamp();
-                if (deltaSecs > 0.0) {
-                    SimHooks.stepTimingAsync(deltaSecs);
-                }
-            }
-        }, true);
-
+        System.out.println("WebotsSupervisor is ready. Enabling in autonomous.");
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
         DriverStationSim.setEnabled(true);
