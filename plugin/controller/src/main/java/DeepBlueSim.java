@@ -1,6 +1,7 @@
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.CompletableFuture;
 
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
@@ -53,6 +54,7 @@ public class DeepBlueSim {
         Simulation.init(robot, robot.getBasicTimeStep());
 
         // Use a SimDeviceSim to coordinate with robot code
+        final CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
         final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
         {
             // Regular report the simulated robot's position
@@ -66,15 +68,17 @@ public class DeepBlueSim {
                 }
             });
 
-
             // If the robot code starts after us, we expect it to tell us it's ready, and we respond
             // that we're ready.
             callbackStore = webotsSupervisorSim.registerValueChangedCallback("robotStartMs", new StringCallback() {
                 @Override
                 public void callback(String name, String value) {
-                    System.out.println("Telling the robot we're ready");
-                    webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
-                }
+                    if (value != null) {
+                        System.out.println("Telling the robot we're ready");
+                        webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
+                        future.complete(true);
+                    }
+            }
             }, true);
 
             // If the robot code starts before we us, then it might have already tried to tell
@@ -83,6 +87,7 @@ public class DeepBlueSim {
             ConnectionProcessor.addOpenListener(() -> {
                 System.out.println("Telling the robot we're ready");
                 webotsSupervisorSim.set("simStartMs", System.currentTimeMillis());
+                future.complete(true);
             });
         }
 
@@ -94,13 +99,12 @@ public class DeepBlueSim {
         if (robot.step(basicTimeStep) == -1) {
             throw new RuntimeException("Couldn't even do one timestep!");
         }
-        webotsSupervisorSim.set("simTimeSec", robot.getTime());
-
         SimRegisterer.connectDevices();
 
         // Connect to the robot code
         try {
             System.out.println("Trying to connect to robot...");
+            System.out.flush();
             wsConnection = WSConnection.connectHALSim(true);
         } catch(URISyntaxException e) {
             System.err.println("Error occurred connecting to server:");
@@ -116,12 +120,20 @@ public class DeepBlueSim {
             } catch(InterruptedException e) {}
         }));
 
-        while(robot.step(basicTimeStep) != -1) {
+        try {
+            future.get();
+        } catch (Exception ex) {
+            throw new RuntimeException("Exception while waiting for robot to be ready");
+        }
+
+        System.out.println("Starting simulation");
+        System.out.flush();
+        do {
             webotsSupervisorSim.set("simTimeSec", robot.getTime());
             queuedMessages.forEach(Runnable::run);
             queuedMessages.clear();
             Simulation.runPeriodicMethods();
-        }
+        } while(robot.step(basicTimeStep) != -1);
 
         System.out.println("Shutting down DeepBlueSim...");
         System.out.flush();
