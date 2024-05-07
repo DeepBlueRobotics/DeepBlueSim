@@ -69,46 +69,77 @@ public class SystemTestRobot extends Robot {
         super.simulationInit();
     }
 
+    private final Timer robotTime = new Timer();
+
     private void webotsInit() {
+        // Start robot time right before the first periodic call is made so that we ignore
+        // startup time.
+        robotTime.stop();
+        robotTime.reset();
+        addPeriodic(() -> {
+            robotTime.start();
+        }, getPeriod(), -getPeriod());
         SimDevice timeSynchronizer = SimDevice.create("TimeSynchronizer");
         SimDouble simTimeSecSim = timeSynchronizer.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
-        SimDouble robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
+        final SimDouble robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
         SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
+
+        final Notifier pauser = new Notifier(() -> {
+            // This is replaced on the next line
+        });
+        pauser.setHandler(() -> {
+            double simTimeSec = simTimeSecSim.get();
+            double robotTimeSec = robotTime.get();
+            double deltaSecs = simTimeSec - robotTimeSec;
+            // If we still haven't caught up to the simulator, then wait longer.
+            // This would typically happen when robot time hasn't yet started.
+            if (deltaSecs > 0) {
+                pauser.stop();
+                pauser.startSingle(deltaSecs);
+                return;
+            }
+            // We're caught up, so pause and tell the sim what our new time is so that it can continue.
+            SimHooks.pauseTiming();
+            robotTimeSecSim.set(robotTimeSec);
+        });
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
 
-        final Notifier pauser = new Notifier(SimHooks::pauseTiming);
         timeSynchronizerSim.registerValueChangedCallback(simTimeSecSim, new SimValueCallback() {
             @Override
             public synchronized void callback(String name, int handle, int direction, HALValue value) {
                 double simTimeSec = value.getDouble();
-                double robotTimeSec = Timer.getFPGATimestamp();
-                double deltaSecs = simTimeSec - robotTimeSec;
+                double robotTimeSec = robotTime.get();
 
                 // Ignore the default initial value
                 if (simTimeSec == -1.0) {
                     return;
                 }
-                // If we asked for the simulation to start and it has started, say that we're ready,
-                // Otherwise, let robot code run for deltaSecs. 
-                if (robotTimeSecSim.get() == START_SIMULATION && simTimeSec == START_SIMULATION) {
-                    isReadyFuture.complete(true);
-                } else if (deltaSecs >= 0.0) {
-                    // We use a Notifier instead of SimHooks.stepTiming() because 
-                    // using SimHooks.stepTiming() causes accesses to sim data to block.
-                    pauser.stop();
-                    pauser.startSingle(deltaSecs);
-                    SimHooks.resumeTiming();
-                    // Increment the robot time we'll report to the sim. Strictly speaking it won't be that time
-                    // until the pauser notification runs deltaSecs from now but this allows the sim to run in parrallel
-                    // with the robot code. It's less deterministic but faster and arguably more realistic.
-                    robotTimeSec += deltaSecs;
+                // If we asked for the simulation to start and it has started, say that we're ready.
+                if (robotTimeSecSim.get() == START_SIMULATION) {
+                    if (simTimeSec == START_SIMULATION) {
+                        isReadyFuture.complete(true);
+                        robotTimeSecSim.set(robotTimeSec);
+                    }
+                    return;
+                }
+                // Otherwise, ignore notifications that the sim has started.
+                if (simTimeSec == START_SIMULATION) {
+                    return;
                 }
 
-                // Tell the sim what the robot time is if it has changed.
-                if (robotTimeSec != robotTimeSecSim.get()) {
-                    robotTimeSecSim.set(robotTimeSec);
+                // If we're not behind the sim time, there is nothing to do.
+                double deltaSecs = simTimeSec - robotTimeSec;
+                if (deltaSecs < 0.0) {
+                    return;
                 }
+
+                // We are behind the sim time, so run until we've caught up.
+                // We use a Notifier instead of SimHooks.stepTiming() because 
+                // using SimHooks.stepTiming() causes accesses to sim data to block.
+                pauser.stop();
+                pauser.startSingle(deltaSecs);
+                SimHooks.resumeTiming();
             }
         }, true);
 
@@ -150,7 +181,7 @@ public class SystemTestRobot extends Robot {
         super.simulationPeriodic();
 
         // The motors are on for 2 secs. We wait an extra second to give the robot time to stop.
-        if (Timer.getFPGATimestamp() > 3.0) {
+        if (robotTime.get() > 3.0) {
             // Simulate disabling the robot
             DriverStationSim.setEnabled(false);
             DriverStationSim.notifyNewData();
