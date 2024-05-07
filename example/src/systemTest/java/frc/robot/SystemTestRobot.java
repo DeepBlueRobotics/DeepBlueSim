@@ -50,20 +50,29 @@ public class SystemTestRobot extends Robot {
     }
 
     SimDevice webotsSupervisor = null;
-    SimDevice timeSynchronizer = null;
     SimDouble positionX = null, positionY = null, positionZ = null;
-    SimDouble simTimeSecSim = null;
-    SimDouble robotTimeSecSim = null;
 
     @Override
     public void simulationInit() {
-        timeSynchronizer = SimDevice.create("TimeSynchronizer");
-        simTimeSecSim = timeSynchronizer.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
-        robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
         webotsSupervisor = SimDevice.create("WebotsSupervisor");
         positionX = webotsSupervisor.createDouble("self.position.x", SimDevice.Direction.kInput, 0.0);
         positionY = webotsSupervisor.createDouble("self.position.y", SimDevice.Direction.kInput, 0.0);
         positionZ = webotsSupervisor.createDouble("self.position.z", SimDevice.Direction.kInput, 0.0);
+        webotsInit();
+
+        System.out.println("Webots. Enabling in autonomous."); System.out.flush();
+        // Simulate starting autonomous
+        DriverStationSim.setAutonomous(true);
+        DriverStationSim.setEnabled(true);
+        DriverStationSim.notifyNewData();
+
+        super.simulationInit();
+    }
+
+    private void webotsInit() {
+        SimDevice timeSynchronizer = SimDevice.create("TimeSynchronizer");
+        SimDouble simTimeSecSim = timeSynchronizer.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
+        SimDouble robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
         SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
@@ -134,15 +143,6 @@ public class SystemTestRobot extends Robot {
             }
         }
         assertTrue("Webots ready in time", isReady);
-
-
-        System.out.println("Webots. Enabling in autonomous."); System.out.flush();
-        // Simulate starting autonomous
-        DriverStationSim.setAutonomous(true);
-        DriverStationSim.setEnabled(true);
-        DriverStationSim.notifyNewData();
-
-        super.simulationInit();
     }
 
     @Override
