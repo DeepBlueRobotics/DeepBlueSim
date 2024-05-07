@@ -3,6 +3,8 @@ import java.net.URISyntaxException;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
@@ -29,6 +31,8 @@ public class DeepBlueSim {
     private static RunningObject<WebSocketClient> wsConnection = null;
 
     private static final double START_SIMULATION = -2.0;
+
+    private static volatile long lastStepMillis = 0;
 
     public static void main(String[] args) {
         // Set up exception handling to log to stderr and exit
@@ -59,6 +63,9 @@ public class DeepBlueSim {
 
         Simulation.init(robot, robot.getBasicTimeStep());
 
+        // Remember the current simulation speed (default to real time if paused)
+        final int originalSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
+
         // Use a SimDeviceSim to coordinate with robot code
         final CompletableFuture<Boolean> isDoneFuture = new CompletableFuture<Boolean>();
         final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
@@ -75,6 +82,20 @@ public class DeepBlueSim {
             }
         });
 
+        // Pause the simulator if it hasn't taken any steps in the last 1-2 seconds
+        // so it doesn't suck up CPU.
+        Timer simPauseTimer = new Timer();
+        simPauseTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (System.currentTimeMillis() - lastStepMillis > 1000) {
+                    queuedMessages.add(() -> {
+                        robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
+                    });
+                }
+            }
+        }, 1000, 1000);
+
         // Whenever the robot time changes, step the simulation until just past that time
         robotTimeSecCallbackStore = timeSynchronizerSim.registerValueChangedCallback("robotTimeSec", new StringCallback() {
             @Override
@@ -88,6 +109,8 @@ public class DeepBlueSim {
                 // If we are asked to start the simulation, reload the world.
                 // this will restart this controller process so that we are running the most recent controller.
                 if (robotTimeSec == START_SIMULATION) {
+                    // Unpause before reloading so that the new controller can take it's first step.
+                    robot.simulationSetMode(originalSimulationSpeed);
                     robot.worldReload();
                     return;
                 }
@@ -99,7 +122,10 @@ public class DeepBlueSim {
                     if (simTimeSec > robotTimeSec) {
                         break;
                     }
+                    // Unpause if necessary
+                    robot.simulationSetMode(originalSimulationSpeed);
                     boolean isDone = (robot.step(basicTimeStep) == -1);
+                    lastStepMillis = System.currentTimeMillis();
                     timeSynchronizerSim.set("simTimeSec", robot.getTime());
                     if (isDone) {
                         isDoneFuture.complete(true);
