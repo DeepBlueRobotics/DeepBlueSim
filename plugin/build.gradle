@@ -41,9 +41,6 @@ gradlePlugin {
             tags.set(['FRC', 'WPILib', 'Webots'])
         }
     }
-            tags.set(['FRC', 'WPILib', 'Webots'])
-        }
-    }
 }
 
 // Add a source set for the functional test suite

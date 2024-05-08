@@ -17,7 +17,6 @@ plugins {
 
     // Support building a fat jar (aka shadowJar) containing needed dependencies
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
 
     // Support finding the local webots installation and adding it as a dependency
     id "org.carlmontrobotics.webots" version "1.0.0"

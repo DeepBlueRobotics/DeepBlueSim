@@ -109,6 +109,8 @@ public class DeepBlueSim {
                 // If we are asked to start the simulation, reload the world.
                 // this will restart this controller process so that we are running the most recent controller.
                 if (robotTimeSec == START_SIMULATION) {
+                    // Cancel the sim pause timer so that it doesn't pause the simulation after we unpause it below.
+                    simPauseTimer.cancel();
                     // Unpause before reloading so that the new controller can take it's first step.
                     robot.simulationSetMode(originalSimulationSpeed);
                     robot.worldReload();
