@@ -1,85 +1,173 @@
 package org.team199.deepbluesim;
 
-import org.team199.deepbluesim.mediators.*;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.team199.deepbluesim.mediators.GyroMediator;
+import org.team199.deepbluesim.mediators.PWMMotorMediator;
+import org.team199.deepbluesim.mediators.SimDeviceMotorMediator;
+import org.team199.deepbluesim.mediators.SimDeviceEncoderMediator;
+import org.team199.deepbluesim.mediators.WPILibEncoderMediator;
 import org.team199.wpiws.ScopedObject;
-import org.team199.wpiws.UniqueArrayList;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.SimDeviceCallback;
 
-// Performs automatic registration of callbacks detecting both the initalization of new devices as well as data callbacks for devices such as Motors, Gyros, etc.
-// This allows us to automatically link these devices to Webots, reducing the amount of code we would have to change from a standard robot project
+import com.cyberbotics.webots.controller.Device;
+import com.cyberbotics.webots.controller.Gyro;
+import com.cyberbotics.webots.controller.Motor;
+import com.cyberbotics.webots.controller.Node;
+import com.cyberbotics.webots.controller.PositionSensor;
+import com.cyberbotics.webots.controller.Supervisor;
+
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
+
 public class SimRegisterer {
-    
-    private static final SimDeviceCallback MISC_DEVICE_CALLBACK = SimRegisterer::callback;
-    private static final UniqueArrayList<ScopedObject<?>> CALLBACKS = new UniqueArrayList<>();
 
-    static {
-        // Register Initalized Callbacks for Misc Devices
-        CALLBACKS.add(SimDeviceSim.registerDeviceCreatedCallback("", MISC_DEVICE_CALLBACK, true));
-        // Register Initalized Callbacks for PWM Devices
-        CALLBACKS.add(PWMSim.registerStaticInitializedCallback((name, isInitialized) -> {
-            if(isInitialized) {
-                callback("PWM", name, 0);
+    private static final CopyOnWriteArraySet<String> unboundEncoders = new CopyOnWriteArraySet<>();
+    private static final CopyOnWriteArraySet<ScopedObject<?>> CALLBACKS = new CopyOnWriteArraySet<>();
+
+    public static void connectDevices() {
+        Supervisor robot = Simulation.getSupervisor();
+
+        boolean hasGyro = false;
+
+        for (int i = 0; i < robot.getNumberOfDevices(); i++) {
+            Device device = robot.getDeviceByIndex(i);
+            String name = device.getName();
+            if (name.startsWith("DBSim_")) {
+                try {
+                    String type = name.split("_")[1];
+                    switch (type) {
+                        case "Encoder":
+                            connectEncoder((PositionSensor) device, robot);
+                            break;
+                        case "Motor":
+                            connectMotor((Motor) device, robot);
+                            break;
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error occurred connecting to device " + device.getName() + ":");
+                    e.printStackTrace(System.err);
+                    System.err.flush();
+                }
             }
-        }, true));
-        // Register Initalized Callbacks for Encoder Devices
-        CALLBACKS.add(EncoderSim.registerStaticInitializedCallback((name, isInitialized) -> {
-            if(isInitialized) {
-                callback("Encoder", name, 0);
+
+            if (device instanceof Gyro) {
+                if (hasGyro) {
+                    System.err.println("Warning: multiple gyros detected! Only one will be used.");
+                } else {
+                    new GyroMediator((Gyro) device);
+                    hasGyro = true;
+                }
             }
-        }, true));
-    }
 
-    // Initalize SimRegisterer. This method exists to ensure that the static block is called
-    public static void init() {}
-
-    // Callback methods which place new devices in a processing queue which is processed every robot period
-    // The WPILib callbacks are notified as part of the device creation. This process ensures that the devices complete their setup process
-    // This is especially important for SimDevice's because their initalized callbacks can be notified before their values have been created
-    // Queuing also ensures that callbacks (which are usually executed asycronously) are processed syncronously with the rest of the robot code
-
-    // Callback for when a Miscellaneous Device is registered
-    private static void callback(String deviceName) {
-        if(deviceName.startsWith("Talon") || deviceName.startsWith("Victor") || deviceName.startsWith("SparkMax")) {
-            // If a new Talon or Victor has been initalized, attempt to link it to a Webots Motor
-            // Create a WebotsMotorForwarder for this motor
-            final WebotsMotorForwarder fwdr = new WebotsMotorForwarder(Simulation.getRobot(), deviceName);
-            // Register a callback for when the Motor Output changes
-            CALLBACKS.add(new SimDeviceSim(deviceName).registerValueChangedCallback("Motor Output",
-                // Call the callback function
-                fwdr,
-                // Initalize with current speed
-                true));
-        }
-        if(deviceName.startsWith("navX")) {
-            // If a navX is registered, try to link its SimDevice to the Webots robot
-            MockGyro.linkGyro();
-        }
-        if(deviceName.startsWith("CANEncoder_")) {
-            //deviceName should be CANEncoder_<motorName>
-            new MockedSparkEncoder(new SimDeviceSim(deviceName), deviceName.substring(11));
+            if(!unboundEncoders.isEmpty()) {
+                Simulation.registerPeriodicMethod(SimRegisterer::tryBindEncoders);
+            }
         }
     }
 
-    // Callback for when a known device type is registered on a Non-Can port
-    private static void callback(String type, String port, int storePos) {
-        if(type.equals("PWM")) {
-            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
-            // Register a speed callback on this device
-            CALLBACKS.add(new PWMSim(port).registerSpeedCallback(
-                // Call a motor forwarder for a callback
-                new WebotsMotorForwarder(Simulation.getRobot(), "PWM[" + port + "]"),
-                // Initalize with current speed
-                true));
+    public static void tryBindEncoders() {
+        if(unboundEncoders.isEmpty()) return;
+
+        Supervisor robot = Simulation.getSupervisor();
+
+        String[] unboundEncodersCopy = unboundEncoders.toArray(new String[0]);
+        unboundEncoders.clear();
+
+        for (String encoderName : unboundEncodersCopy) {
+            try {
+                connectEncoder((PositionSensor) robot.getDevice(encoderName), robot);
+            } catch (Exception e) {
+                System.err.println("Error occurred connecting to device " + encoderName + ":");
+                e.printStackTrace(System.err);
+                System.err.flush();
+            }
         }
-        else if(type.equals("Encoder")) {
-            // If a new PWM device has been initalized, attempt to link it to a Webots Motor
-            // Register a speed callback on this device
-            EncoderSim sim = new EncoderSim(port);
-            new MockedEncoder(CALLBACKS, sim, port);
+    }
+
+    public static void connectEncoder(PositionSensor device, Supervisor robot) {
+        Node node = robot.getFromDevice(device);
+
+        String[] nameParts = device.getName().split("_");
+        boolean isOnMotorShaft = Boolean.parseBoolean(nameParts[2]);
+        boolean isAbsolute = Boolean.parseBoolean(nameParts[3]);
+        double absoluteOffsetDeg = Double.parseDouble(nameParts[4]);
+        boolean isInverted = Boolean.parseBoolean(nameParts[5]);
+        int countsPerRevolution = Integer.parseInt(nameParts[6]);
+
+        double gearing;
+        try {
+            String motorName = device.getMotor().getName();
+            if(motorName.startsWith("DBSim_Motor")) {
+                gearing = Double.parseDouble(motorName.split("_")[4]);
+            } else {
+                throw new IllegalArgumentException();
+            }
+        } catch(Exception e) {
+            System.err.println("Warning: No valid motor found for encoder \"" + device.getName() + "\"! Assuming 1:1 gearing...");
+            gearing = 1;
+        }
+
+        if (node.getField("channelA") != null) { // WPILib Encoder
+            int channelA = node.getField("channelA").getSFInt32();
+            int channelB = node.getField("channelB").getSFInt32();
+
+            // WPILib encoders no longer have deterministic names (based on channel numbers), so we have to search for the encoder
+            // This was the best way I could think of to do it
+            Optional<EncoderSim> simDevice = Arrays.stream(EncoderSim.enumerateDevices()).map(EncoderSim::new)
+                .filter(encoder -> encoder.getChannelA() == channelA && encoder.getChannelB() == channelB)
+                .findAny();
+
+            if(simDevice.isPresent()) {
+                new WPILibEncoderMediator(device, simDevice.get(), isOnMotorShaft, isInverted, countsPerRevolution, gearing);
+            } else {
+                unboundEncoders.add(device.getName());
+            }
+        } else if(node.getField("id") != null) { // CANCoder
+            new SimDeviceEncoderMediator(device, new SimDeviceSim("CANCoder[" + node.getField("id").getSFInt32() + "]"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+        } else if(node.getTypeName().startsWith("SparkMax")) { // One of the SparkMax encoder types
+            Motor motor = device.getMotor();
+
+            String motorName;
+            if(motor == null || !(motorName = motor.getName()).startsWith("DBSim_Motor_Spark Max")) {
+                System.err.println("Warning: Spark Max Encoder \"" + device.getName() + "\" is not attached to a Spark Max motor!");
+                return;
+            }
+
+            String[] motorNameParts = motorName.split("_");
+            int motorId = Integer.parseInt(motorNameParts[3]);
+
+            String simDeviceName = "SparkMax[" + motorId + "]_" + node.getTypeName().substring("SparkMax".length());
+
+            new SimDeviceEncoderMediator(device, new SimDeviceSim(simDeviceName), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+        } else {
+            System.err.println("Warning: Ignoring invalid encoder: " + device.getName() + "!");
+        }
+    }
+
+    public static void connectMotor(Motor device, Supervisor robot) {
+        String[] nameParts = device.getName().split("_");
+        String controllerType = nameParts[2];
+        int port = Integer.parseInt(nameParts[3]);
+        double gearing = Double.parseDouble(nameParts[4]);
+        boolean inverted = Boolean.parseBoolean(nameParts[5]);
+        double nominalVoltageVolts = Double.parseDouble(nameParts[6]);
+        double stallTorqueNewtonMeters = Double.parseDouble(nameParts[7]);
+        double stallCurrentAmps = Double.parseDouble(nameParts[8]);
+        double freeCurrentAmps = Double.parseDouble(nameParts[9]);
+        double freeSpeedRPM = Double.parseDouble(nameParts[10]);
+
+        DCMotor motorConstants = new DCMotor(nominalVoltageVolts, stallTorqueNewtonMeters, stallCurrentAmps, freeCurrentAmps, Units.rotationsPerMinuteToRadiansPerSecond(freeSpeedRPM), 1);
+
+        if(controllerType.equals("PWM")) {
+            new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted, CALLBACKS);
+        } else {
+            String simDeviceName = controllerType.replaceAll("\\s", "") + "[" + port + "]";
+            new SimDeviceMotorMediator(device, new SimDeviceSim(simDeviceName), motorConstants, gearing, inverted, CALLBACKS);
         }
     }
 

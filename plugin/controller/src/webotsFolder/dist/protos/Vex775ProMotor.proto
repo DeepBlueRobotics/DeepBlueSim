@@ -1,0 +1,29 @@
+#VRML_SIM R2023b utf8
+
+# license: WPILib BSD
+# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+
+EXTERNPROTO "../protos/WPIMotorBase.proto"
+
+# A WPIMotorBase with the parameters of a Vex 775 Pro motor.
+PROTO Vex775ProMotor [
+    field SFString{"Talon SRX", "Victor SPX", "PWM"} controllerType "Talon SRX"
+    field SFInt32 port 0
+    field SFFloat gearing 1
+    field SFBool inverted FALSE
+    field SFString sound "default"
+]
+{
+    WPIMotorBase {
+        controllerType IS controllerType
+        port IS port
+        gearing IS gearing
+        inverted IS inverted
+        nominalVoltageVolts 12
+        stallTorqueNewtonMeters 0.71
+        stallCurrentAmps 134
+        freeCurrentAmps 0.7
+        freeSpeedRPM 18730
+        sound IS sound
+    }
+}

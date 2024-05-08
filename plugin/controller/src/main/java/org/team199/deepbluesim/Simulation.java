@@ -2,7 +2,9 @@ package org.team199.deepbluesim;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Robot;
+import com.cyberbotics.webots.controller.Supervisor;
 
 /**
  * Manages control over the robot simulation and Webots connection
@@ -13,7 +15,7 @@ public final class Simulation {
     /**
      * An object representing the Webots robot
      */
-    private static Robot robot;
+    private static Supervisor robot;
     /**
      * The value of the basicTimeStep field of the WorldInfo node of the Webots robot
      * @see Robot#getBasicTimeStep()
@@ -23,16 +25,10 @@ public final class Simulation {
      * {@link #timeStep} converted into milliseconds. This is equivalent to <code>timeStep * 1000</code>
      */
     private static double timeStepMillis;
-    // Use a CopyOnWriteArrayList to prevent syncronization errors
-    private static final CopyOnWriteArrayList<Runnable> periodicMethods;
+    // Use a CopyOnWriteArrayList to prevent synchronization errors
+    private static final CopyOnWriteArrayList<Runnable> periodicMethods = new CopyOnWriteArrayList<>();
 
-    static {
-        periodicMethods = new CopyOnWriteArrayList<>();
-        // Register callbacks
-        SimRegisterer.init();
-    }
-
-    public static synchronized void init(Robot robot, double basicTimeStepMillis) {
+    public static synchronized void init(Supervisor robot, double basicTimeStepMillis) {
         if(init) {
             return;
         }
@@ -54,6 +50,10 @@ public final class Simulation {
         return robot;
     }
 
+    public static Supervisor getSupervisor() {
+        return robot;
+    }
+
     public static double getBasicTimeStep() {
         return timeStep;
     }
@@ -66,6 +66,15 @@ public final class Simulation {
         periodicMethods.forEach(Runnable::run);
     }
 
+    public static Node getPROTOBase(Node node, String baseName) {
+        if(node == null) {
+            return null;
+        }
+        // while(node.isProto() && node.getBaseTypeName())
+        return null;
+    }
+
     private Simulation() {}
 
 }
+

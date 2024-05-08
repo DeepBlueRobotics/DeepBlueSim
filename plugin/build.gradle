@@ -25,19 +25,9 @@ repositories {
     gradlePluginPortal()
 }
 
-dependencies {
-    // Use the awesome Spock testing and specification framework
-    testImplementation platform("org.spockframework:spock-bom:2.2-groovy-3.0")
-    testImplementation 'org.spockframework:spock-core'
-
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    
-    implementation 'commons-io:commons-io:2.8.0'
-    implementation 'edu.wpi.first:GradleRIO:2024.3.1'
-}
-
 group 'org.team199'
 
+// Info for publishing to the Gradle Plugin Portal
 gradlePlugin {
     website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
     vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
@@ -48,6 +38,9 @@ gradlePlugin {
             displayName = 'DeepBlueSim Plugin'
             description = 'A plugin that simplifies developing WPILib projects that use Webots for simulation.'
             implementationClass = 'org.team199.deepbluesim.gradle.DeepBlueSimPlugin'
+            tags.set(['FRC', 'WPILib', 'Webots'])
+        }
+    }
             tags.set(['FRC', 'WPILib', 'Webots'])
         }
     }
@@ -84,6 +77,14 @@ configurations {
 }
 
 dependencies {
+    // Use the awesome Spock testing and specification framework
+    testImplementation platform("org.spockframework:spock-bom:2.2-groovy-3.0")
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    implementation 'commons-io:commons-io:2.8.0'
+    implementation 'edu.wpi.first:GradleRIO:2024.3.1'
     // include the Webots.zip artifact produced by the controller's webotsFolder configuration
     extraFiles project(path: ':controller', configuration: 'webotsFolder')
 }

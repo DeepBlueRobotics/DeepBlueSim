@@ -7,7 +7,7 @@ runs:
       run: |
         # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
         # tasks is executed.
-        ./gradlew :example:externalSimulate --info --stacktrace
+        ./gradlew :example:simulateExternalJavaRelease --info --stacktrace
       shell: bash
 
     - name: Start Webots
