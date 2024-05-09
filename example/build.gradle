@@ -137,3 +137,7 @@ wpi.java.configureTestTasks(systemTest)
 deepbluesim.configureForSimulation(systemTest, [ws_server])
 assemble.dependsOn installDeepBlueSim
 
+tasks.named('check') { 
+    dependsOn(testing.suites.systemTest)
+}
+
