@@ -8,8 +8,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.hal.HALValue;
 import edu.wpi.first.hal.SimDevice;
 import edu.wpi.first.hal.SimDouble;
+import edu.wpi.first.hal.simulation.SimValueCallback;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -26,7 +28,7 @@ public class SystemTestRobot extends Robot {
      * Time value set by the simulator and the robot to indicate that the simulation should start.
      */
     private static final double START_SIMULATION = -2.0;
-    private static final Notifier pauser = new Notifier(() -> { /* This is replaced in webotsInit */ });
+    private static Notifier pauser;
 
     public static void main(String... args) {
         RobotBase.startRobot(SystemTestRobot::new);
@@ -84,6 +86,9 @@ public class SystemTestRobot extends Robot {
         final SimDouble robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
         SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
 
+        pauser = new Notifier(() -> {
+            // This is replaced on the next line
+        });
         pauser.setHandler(() -> {
             double simTimeSec = simTimeSecSim.get();
             double robotTimeSec = robotTime.get();
@@ -102,39 +107,42 @@ public class SystemTestRobot extends Robot {
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
 
-        timeSynchronizerSim.registerValueChangedCallback(simTimeSecSim, (name, handle, direction, value) -> {
-            double simTimeSec = value.getDouble();
-            double robotTimeSec = robotTime.get();
+        timeSynchronizerSim.registerValueChangedCallback(simTimeSecSim, new SimValueCallback() {
+            @Override
+            public synchronized void callback(String name, int handle, int direction, HALValue value) {
+                double simTimeSec = value.getDouble();
+                double robotTimeSec = robotTime.get();
 
-            // Ignore the default initial value
-            if (simTimeSec == -1.0) {
-                return;
-            }
-            // If we asked for the simulation to start and it has started, say that we're ready.
-            if (robotTimeSecSim.get() == START_SIMULATION) {
-                if (simTimeSec == START_SIMULATION) {
-                    isReadyFuture.complete(true);
-                    robotTimeSecSim.set(robotTimeSec);
+                // Ignore the default initial value
+                if (simTimeSec == -1.0) {
+                    return;
                 }
-                return;
-            }
-            // Otherwise, ignore notifications that the sim has started.
-            if (simTimeSec == START_SIMULATION) {
-                return;
-            }
+                // If we asked for the simulation to start and it has started, say that we're ready.
+                if (robotTimeSecSim.get() == START_SIMULATION) {
+                    if (simTimeSec == START_SIMULATION) {
+                        isReadyFuture.complete(true);
+                        robotTimeSecSim.set(robotTimeSec);
+                    }
+                    return;
+                }
+                // Otherwise, ignore notifications that the sim has started.
+                if (simTimeSec == START_SIMULATION) {
+                    return;
+                }
 
-            // If we're not behind the sim time, there is nothing to do.
-            double deltaSecs = simTimeSec - robotTimeSec;
-            if (deltaSecs <= 0.0) {
-                return;
-            }
+                // If we're not behind the sim time, there is nothing to do.
+                double deltaSecs = simTimeSec - robotTimeSec;
+                if (deltaSecs < 0.0) {
+                    return;
+                }
 
-            // We are behind the sim time, so run until we've caught up.
-            // We use a Notifier instead of SimHooks.stepTiming() because
-            // using SimHooks.stepTiming() causes accesses to sim data to block.
-            pauser.stop();
-            pauser.startSingle(deltaSecs);
-            SimHooks.resumeTiming();
+                // We are behind the sim time, so run until we've caught up.
+                // We use a Notifier instead of SimHooks.stepTiming() because
+                // using SimHooks.stepTiming() causes accesses to sim data to block.
+                pauser.stop();
+                pauser.startSingle(deltaSecs);
+                SimHooks.resumeTiming();
+            }
         }, true);
 
         // Reset the clock. Without this, *Periodic calls that should have
