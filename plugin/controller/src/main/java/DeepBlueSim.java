@@ -30,8 +30,14 @@ public class DeepBlueSim {
     private static ScopedObject<Pair<String, StringCallback>> robotTimeSecCallbackStore = null;
     private static RunningObject<WebSocketClient> wsConnection = null;
 
+    /**
+     * Time value set by the simulator and the robot to indicate that the simulation should start.
+     */
     private static final double START_SIMULATION = -2.0;
 
+    /**
+     * The time in milliseconds since the last timestep update from the robot.
+     */
     private static volatile long lastStepMillis = 0;
 
     public static void main(String[] args) {
@@ -72,14 +78,12 @@ public class DeepBlueSim {
         final SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
 
         // Regularly report the simulated robot's position
-        Simulation.registerPeriodicMethod(new Runnable() {
-            public void run() {
-                Node self = robot.getSelf();
-                double[] pos = self.getPosition();
-                webotsSupervisorSim.set("self.position.x", pos[0]);
-                webotsSupervisorSim.set("self.position.y", pos[1]);
-                webotsSupervisorSim.set("self.position.z", pos[2]);
-            }
+        Simulation.registerPeriodicMethod(() -> {
+            Node self = robot.getSelf();
+            double[] pos = self.getPosition();
+            webotsSupervisorSim.set("self.position.x", pos[0]);
+            webotsSupervisorSim.set("self.position.y", pos[1]);
+            webotsSupervisorSim.set("self.position.z", pos[2]);
         });
 
         // Pause the simulator if it hasn't taken any steps in the last 1-2 seconds
@@ -101,7 +105,7 @@ public class DeepBlueSim {
             @Override
             public synchronized void callback(String name, String value) {
                 // Ignore null default initial value
-                if (value == null) 
+                if (value == null)
                     return;
 
                 double robotTimeSec = Double.parseDouble(value);
@@ -117,7 +121,7 @@ public class DeepBlueSim {
 
                 // Keep stepping the simulation forward until the sim time is more than the robot time
                 // or the simulation ends.
-                while(true) {
+                for(;;) {
                     double simTimeSec = robot.getTime();
                     if (simTimeSec > robotTimeSec) {
                         break;
@@ -175,7 +179,7 @@ public class DeepBlueSim {
                 queuedMessages.takeFirst().run();
             }
         } catch (Exception ex) {
-            throw new RuntimeException("Exception while waiting for simulation to be done");
+            throw new RuntimeException("Exception while waiting for simulation to be done", ex);
         }
 
         System.out.println("Shutting down DeepBlueSim...");
