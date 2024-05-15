@@ -5,9 +5,13 @@ package org.team199.deepbluesim.gradle
 
 import org.gradle.api.Project
 import org.gradle.api.Plugin
+import org.gradle.internal.os.OperatingSystem
 
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
+
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * A simple 'hello world' plugin.
@@ -20,16 +24,27 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                 if (resourceStream == null) throw new RuntimeException("resourceStream is null")
                 def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
                 dbsDir.mkdirs()
-                FileUtils.copyInputStreamToFile(resourceStream, new File(dbsDir,"Webots.zip"))
+
+                // Java IO cannot open files with the hidden attribute set on Windows (JDK-8047342)
+                // This capability is needed to overwrite the files loaded from the zip (if they exist)
+                // Webots automatically sets the hidden attribute on the .wbproj file
+                // so the task will fail unless we remove it
+                if(OperatingSystem.current().isWindows()) {
+                    def wbprojPath = Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds", ".DBSExample.wbproj")
+                    Files.setAttribute(wbprojPath, "dos:hidden", false)
+                }
+
+                def extractedZipFile = new File(dbsDir, "Webots.zip")
+                FileUtils.copyInputStreamToFile(resourceStream, extractedZipFile)
                 project.copy {
-                    from project.zipTree(new File(dbsDir,"Webots.zip"))
+                    from project.zipTree(extractedZipFile)
                     into project.projectDir
                 }
             }
         }
-        project.tasks.matching({ task -> 
+        project.tasks.matching({ task ->
             (task.name.toLowerCase().contains("simulate"))
-        }).all { GroovyObject t -> 
+        }).all { GroovyObject t ->
             t.dependsOn(installDeepBlueSim)
         }
     }
