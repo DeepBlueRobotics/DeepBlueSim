@@ -31,7 +31,9 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                 // so the task will fail unless we remove it
                 if(OperatingSystem.current().isWindows()) {
                     def wbprojPath = Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds", ".DBSExample.wbproj")
-                    Files.setAttribute(wbprojPath, "dos:hidden", false)
+                    if(Files.exists(wbprojPath)) {
+                        Files.setAttribute(wbprojPath, "dos:hidden", false)
+                    }
                 }
 
                 def extractedZipFile = new File(dbsDir, "Webots.zip")
