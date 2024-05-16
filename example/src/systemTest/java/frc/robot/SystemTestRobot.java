@@ -80,6 +80,7 @@ public class SystemTestRobot extends Robot {
         // startup time.
         robotTime.stop();
         robotTime.reset();
+        // Set the offset to -period to run before other WPILib periodic methods
         addPeriodic(robotTime::start, getPeriod(), -getPeriod());
         SimDevice timeSynchronizer = SimDevice.create("TimeSynchronizer");
         SimDouble simTimeSecSim = timeSynchronizer.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
