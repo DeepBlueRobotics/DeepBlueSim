@@ -29,8 +29,8 @@ group 'org.team199'
 
 // Info for publishing to the Gradle Plugin Portal
 gradlePlugin {
-    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim' 
-    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git' 
+    website = 'https://github.com/DeepBlueRobotics/DeepBlueSim'
+    vcsUrl = 'https://github.com/DeepBlueRobotics/DeepBlueSim.git'
     // Define the plugin
     plugins {
         deepbluesim {
