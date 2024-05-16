@@ -40,6 +40,13 @@ public class DeepBlueSim {
      */
     private static volatile long lastStepMillis = 0;
 
+    private static int usersSimulationSpeed = 0;
+    
+    // Remember the current simulation speed (default to real time if paused)
+    private static void updateUsersSimulationSpeed(Supervisor robot) {
+        usersSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
+    }
+
     public static void main(String[] args) {
         // Set up exception handling to log to stderr and exit
         {
@@ -69,9 +76,7 @@ public class DeepBlueSim {
 
         Simulation.init(robot, robot.getBasicTimeStep());
 
-        // Remember the current simulation speed (default to real time if paused)
-        final int originalSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
-
+        updateUsersSimulationSpeed(robot);
         // Use a SimDeviceSim to coordinate with robot code
         final CompletableFuture<Boolean> isDoneFuture = new CompletableFuture<Boolean>();
         final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
@@ -94,6 +99,7 @@ public class DeepBlueSim {
             public void run() {
                 if (System.currentTimeMillis() - lastStepMillis > 1000) {
                     queuedMessages.add(() -> {
+                        updateUsersSimulationSpeed(robot);
                         robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
                     });
                 }
@@ -114,7 +120,7 @@ public class DeepBlueSim {
                 // this will restart this controller process so that we are running the most recent controller.
                 if (robotTimeSec == START_SIMULATION) {
                     // Unpause before reloading so that the new controller can take it's first step.
-                    robot.simulationSetMode(originalSimulationSpeed);
+                    robot.simulationSetMode(usersSimulationSpeed);
                     robot.worldReload();
                     return;
                 }
@@ -127,7 +133,7 @@ public class DeepBlueSim {
                         break;
                     }
                     // Unpause if necessary
-                    robot.simulationSetMode(originalSimulationSpeed);
+                    robot.simulationSetMode(usersSimulationSpeed);
                     boolean isDone = (robot.step(basicTimeStep) == -1);
                     lastStepMillis = System.currentTimeMillis();
                     timeSynchronizerSim.set("simTimeSec", robot.getTime());
