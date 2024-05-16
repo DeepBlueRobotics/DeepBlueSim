@@ -25,6 +25,9 @@ import edu.wpi.first.wpilibj.simulation.SimHooks;
 
 public class SystemTestRobot {
 
+    /**
+     * Time value set by the simulator and the robot to indicate that the simulation should start.
+     */
     private static final double START_SIMULATION = -2.0;
 
     @Test
@@ -51,6 +54,7 @@ public class SystemTestRobot {
                 positionZ = webotsSupervisor.createDouble("self.position.z", SimDevice.Direction.kInput, 0.0);
                 webotsInit();
 
+                System.out.println("Webots has started. Enabling in autonomous.");
                 // Simulate starting autonomous
                 DriverStationSim.setAutonomous(true);
                 DriverStationSim.setEnabled(true);
@@ -70,9 +74,8 @@ public class SystemTestRobot {
                 // startup time.
                 robotTime.stop();
                 robotTime.reset();
-                addPeriodic(() -> {
-                    robotTime.start();
-                }, getPeriod(), -getPeriod());
+                // Set the offset to -period to run before other WPILib periodic methods
+                addPeriodic(robotTime::start, getPeriod(), -getPeriod());
                 SimDevice timeSynchronizer = SimDevice.create("TimeSynchronizer");
                 SimDouble simTimeSecSim = timeSynchronizer.createDouble("simTimeSec", SimDevice.Direction.kInput, -1.0);
                 final SimDouble robotTimeSecSim = timeSynchronizer.createDouble("robotTimeSec", SimDevice.Direction.kOutput, -1.0);
@@ -126,7 +129,7 @@ public class SystemTestRobot {
                         }
 
                         // We are behind the sim time, so run until we've caught up.
-                        // We use a Notifier instead of SimHooks.stepTiming() because 
+                        // We use a Notifier instead of SimHooks.stepTiming() because
                         // using SimHooks.stepTiming() causes accesses to sim data to block.
                         pauser.stop();
                         pauser.startSingle(deltaSecs);
@@ -134,7 +137,7 @@ public class SystemTestRobot {
                     }
                 }, true);
 
-                // Reset the clock. Without this, *Periodic calls that should have 
+                // Reset the clock. Without this, *Periodic calls that should have
                 // occurred while we waited, will be considered behind schedule and
                 // will all happen at once.
                 SimHooks.restartTiming();
@@ -144,7 +147,7 @@ public class SystemTestRobot {
 
                 // Tell sim to start
                 robotTimeSecSim.set(START_SIMULATION);
-                
+
                 // Wait up to 15 minutes for Webots to respond. On GitHub's MacOS Continuous
                 // Integration servers, it can take over 8 minutes for Webots to start.
                 var startedWaitingTimeMs = System.currentTimeMillis();
@@ -157,7 +160,7 @@ public class SystemTestRobot {
                         if(remainingTime > 0) {
                             isReady = isReadyFuture.get(remainingTime, TimeUnit.MILLISECONDS);
                         }
-                        else isReady = true;
+                        else break;
                     } catch (TimeoutException ex) {
                         System.err.println("Waiting for Webots to be ready. Please open example/Webots/worlds/DBSExample.wbt in Webots.");
                     } catch (InterruptedException|ExecutionException e) {
