@@ -119,16 +119,16 @@ testing {
                     testTask.configure {
                         systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
                     }
-                }                
+                }
             }
         }
 
-        systemTest(JvmTestSuite)  { 
+        systemTest(JvmTestSuite)  {
             dependencies {
-                implementation project() 
+                implementation project()
             }
 
-            targets { 
+            targets {
                 all {
                     testTask.configure {
                         shouldRunAfter(test)
@@ -143,7 +143,6 @@ wpi.java.configureTestTasks(systemTest)
 deepbluesim.configureForSimulation(systemTest, [ws_server])
 assemble.dependsOn installDeepBlueSim
 
-tasks.named('check') { 
+tasks.named('check') {
     dependsOn(testing.suites.systemTest)
 }
-

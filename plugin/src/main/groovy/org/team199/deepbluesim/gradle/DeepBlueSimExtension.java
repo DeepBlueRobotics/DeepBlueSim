@@ -40,7 +40,7 @@ public class DeepBlueSimExtension {
     public void configureForSimulation(Task t) throws Exception {
         configureForSimulation(t, null);
     }
-            
+
     public void configureForSimulation(List<Task> tasks, List<HalSimExtension> extensions) throws Exception {
         for (var t : tasks) {
             configureForSimulation(t, extensions);
@@ -58,7 +58,7 @@ public class DeepBlueSimExtension {
             // Call t.jvmArgs("-XstartOnFirstThread") if that method exists
             try {
                 java.lang.reflect.Method jvmArgsMethod = t.getClass().getMethod("jvmArgs", String.class);
-                jvmArgsMethod.invoke(t, "-XstartOnFirstThread");    
+                jvmArgsMethod.invoke(t, "-XstartOnFirstThread");
             } catch (NoSuchMethodException nsmEx) {
                 // Ignored
             }
@@ -95,12 +95,12 @@ public class DeepBlueSimExtension {
                         System.out.println(
                                 "That can be found at https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads");
                     }
-                        
+
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
             }
-        });        
+        });
     }
 
     private void configureExecutableNatives(Task tt, Provider<ExtractNativeJavaArtifacts> extract) {

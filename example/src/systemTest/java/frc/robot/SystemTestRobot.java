@@ -42,10 +42,10 @@ public class SystemTestRobot {
                     pauser.close();
                 }
             }
-        
+
             SimDevice webotsSupervisor = null;
             SimDouble positionX = null, positionY = null, positionZ = null;
-        
+
             @Override
             public void simulationInit() {
                 webotsSupervisor = SimDevice.create("WebotsSupervisor");
@@ -59,7 +59,7 @@ public class SystemTestRobot {
                 DriverStationSim.setAutonomous(true);
                 DriverStationSim.setEnabled(true);
                 DriverStationSim.notifyNewData();
-        
+
                 super.simulationInit();
             }
             private final Timer robotTime = new Timer();
@@ -173,31 +173,31 @@ public class SystemTestRobot {
             @Override
             public void simulationPeriodic() {
                 super.simulationPeriodic();
-        
+
                 if (robotTime.get() > 3.0) {
                     // Simulate disabling the robot
                     DriverStationSim.setEnabled(false);
                     DriverStationSim.notifyNewData();
-        
+
                     Vector<N3> expectedPos = new Vector<>(N3.instance);
                     expectedPos.set(0, 0, -2.6);
                     expectedPos.set(1, 0, 0.0);
                     expectedPos.set(2, 0, 0.0);
-        
+
                     System.out.println("self.position.x =" + positionX.get());
                     System.out.println("self.position.y =" + positionY.get());
                     System.out.println("self.position.z =" + positionZ.get());
-        
+
                     Vector<N3> actualPos = new Vector<>(N3.instance);
                     actualPos.set(0, 0, positionX.get());
                     actualPos.set(1, 0, positionY.get());
                     actualPos.set(2, 0, positionZ.get());
-        
+
                     var diff = new Vector<N3>(expectedPos.minus(actualPos));
                     var distance = Math.sqrt(diff.elementTimes(diff).elementSum());
-        
+
                     assertEquals(0.0, distance, 1.0, "Robot close to target position");
-        
+
                     // Call endCompetition() to end the test and report success.
                     // NOTE: throwing an exception will end the test and report failure.
                     endCompetition();

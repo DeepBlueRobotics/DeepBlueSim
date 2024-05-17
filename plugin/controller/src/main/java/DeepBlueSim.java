@@ -41,7 +41,7 @@ public class DeepBlueSim {
     private static volatile long lastStepMillis = 0;
 
     private static int usersSimulationSpeed = 0;
-    
+
     // Remember the current simulation speed (default to real time if paused)
     private static void updateUsersSimulationSpeed(Supervisor robot) {
         usersSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();

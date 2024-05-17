@@ -52,7 +52,7 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                 }
             }
             [JavaSimulationTask, JavaExternalSimulationTask, NativeSimulationTask, NativeExternalSimulationTask].each { cls ->
-                project.tasks.withType(cls) { task -> 
+                project.tasks.withType(cls) { task ->
                     task.dependsOn(installDeepBlueSim)
                 }
             }
