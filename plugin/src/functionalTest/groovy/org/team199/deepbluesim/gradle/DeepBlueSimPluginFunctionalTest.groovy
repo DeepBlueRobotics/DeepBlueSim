@@ -4,40 +4,185 @@
 package org.team199.deepbluesim.gradle
 
 import spock.lang.Specification
+import spock.lang.TempDir
 import org.gradle.testkit.runner.GradleRunner
 
 import org.apache.commons.io.FileUtils
 
+import static org.gradle.testkit.runner.TaskOutcome.SUCCESS
 
 /**
  * A simple functional test for the 'org.team199.deepbluesim' plugin.
  */
 class DeepBlueSimPluginFunctionalTest extends Specification {
-    def "installDeepBlueSim task works"() {
-        given:
-        def projectDir = new File("build/functionalTest/installwebotsFolder")
-        FileUtils.deleteDirectory(projectDir)
-        projectDir.mkdirs()
-        new File(projectDir, "settings.gradle") << ""
-        new File(projectDir, "build.gradle") << """
+    @TempDir File testProjectDir
+    File settingsFile
+    File buildFile
+
+    def setup() {
+        settingsFile = new File(testProjectDir, 'settings.gradle')
+        settingsFile <<"""
+        """
+        buildFile = new File(testProjectDir, 'build.gradle')
+        buildFile << """
             plugins {
-                id('org.team199.deepbluesim')
+                id 'org.team199.deepbluesim'
             }
         """
-        def webotsZipFile = new File(projectDir, "build/tmp/deepbluesim/Webots.zip")
-        def webotsDir = new File(projectDir, "Webots")
-        def webotsControllerJar = new File(projectDir, "Webots/controllers/DeepBlueSim/DeepBlueSim.jar")
+    }
+
+    def "installDeepBlueSim task works"() {
+        given:
+        buildFile << """
+            plugins {
+                id 'edu.wpi.first.GradleRIO'
+            }
+        """
+        def webotsZipFile = new File(testProjectDir, "build/tmp/deepbluesim/Webots.zip")
+        def webotsDir = new File(testProjectDir, "Webots")
+        def webotsControllerJar = new File(testProjectDir, "Webots/controllers/DeepBlueSim/DeepBlueSim.jar")
 
         when:
         def runner = GradleRunner.create()
         runner.forwardOutput()
         runner.withPluginClasspath()
         runner.withArguments("installDeepBlueSim")
-        runner.withProjectDir(projectDir)
+        runner.withProjectDir(testProjectDir)
         def result = runner.build()
 
         then:
         webotsZipFile.exists()
         webotsControllerJar.exists()
+    }
+
+    def "deepbluesim.configureForSimulation(task) adds all default enabled extensions to task's environment"(String languagePluginId) {
+        given:
+        buildFile << """
+            plugins {
+                id '${languagePluginId}'
+                id 'edu.wpi.first.GradleRIO'
+            }
+        """
+        buildFile << '''
+        wpi.sim.addWebsocketsServer().defaultEnabled = true
+        wpi.sim.addWebsocketsClient().defaultEnabled = false
+
+        class CaptureEnvironmentChangesTask extends DefaultTask {
+            def environment(Map<String, ?> additions) {
+                println "environment(${additions})"
+            }
+
+            def environment(String name, Object value) {
+                println "environment('${name}', '${value}')"
+            }
+        }
+        tasks.register('myTask', CaptureEnvironmentChangesTask)
+        deepbluesim.configureForSimulation(myTask)
+
+        tasks.register('myTask1', CaptureEnvironmentChangesTask)
+        tasks.register('myTask2', CaptureEnvironmentChangesTask)
+        deepbluesim.configureForSimulation([myTask1, myTask2])
+        '''
+
+        when:
+        def runner = GradleRunner.create()
+        runner.forwardOutput()
+        runner.withPluginClasspath()
+        runner.withArguments("myTask")
+        runner.withProjectDir(testProjectDir)
+        def result = runner.build()
+
+        then:
+        result.task(":myTask").outcome == SUCCESS
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_server.*'\)/).size() == 1
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_client.*'\)/).size() == 0
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*gui.*'\)/).size() == 0
+
+        when:
+        runner = GradleRunner.create()
+        runner.forwardOutput()
+        runner.withPluginClasspath()
+        runner.withArguments("myTask1", "myTask2")
+        runner.withProjectDir(testProjectDir)
+        result = runner.build()
+
+        then:
+        result.task(":myTask1").outcome == SUCCESS
+        result.task(":myTask2").outcome == SUCCESS
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_server.*'\)/).size() == 2
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_client.*'\)/).size() == 0
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*gui.*'\)/).size() == 0
+
+        where:
+        languagePluginId | _
+        'java'           | _
+        // 'cpp'            | _ // TODO
+    }
+
+    def "deepbluesim.configureForSimulation(task, [ext1, ext2]) adds only ext1 and ext2 to task's environment"(String languagePluginId) {
+        given:
+        buildFile << """
+            plugins {
+                id '${languagePluginId}'
+                id 'edu.wpi.first.GradleRIO'
+            }
+        """
+        buildFile << '''
+        def ws_server = wpi.sim.addWebsocketsServer()
+        ws_server.defaultEnabled = false
+        def ws_client = wpi.sim.addWebsocketsClient()
+        ws_client.defaultEnabled = true
+        wpi.sim.addGui().defaultEnabled = true
+
+        class CaptureEnvironmentChangesTask extends DefaultTask {
+            def environment(Map<String, ?> additions) {
+                println "environment(${additions})"
+            }
+
+            def environment(String name, Object value) {
+                println "environment('${name}', '${value}')"
+            }
+        }
+        tasks.register('myTask', CaptureEnvironmentChangesTask)
+        deepbluesim.configureForSimulation(myTask, [ws_server, ws_client])
+
+        tasks.register('myTask1', CaptureEnvironmentChangesTask)
+        tasks.register('myTask2', CaptureEnvironmentChangesTask)
+        deepbluesim.configureForSimulation([myTask1, myTask2], [ws_server, ws_client])
+        '''
+
+        when:
+        def runner = GradleRunner.create()
+        runner.forwardOutput()
+        runner.withPluginClasspath()
+        runner.withArguments("myTask")
+        runner.withProjectDir(testProjectDir)
+        def result = runner.build()
+
+        then:
+        result.task(":myTask").outcome == SUCCESS
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_server.*'\)/).size() == 1
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_client.*'\)/).size() == 1
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*gui.*'\)/).size() == 0
+
+        when:
+        runner = GradleRunner.create()
+        runner.forwardOutput()
+        runner.withPluginClasspath()
+        runner.withArguments("myTask1", "myTask2")
+        runner.withProjectDir(testProjectDir)
+        result = runner.build()
+
+        then:
+        result.task(":myTask1").outcome == SUCCESS
+        result.task(":myTask2").outcome == SUCCESS
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_server.*'\)/).size() == 2
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*ws_client.*'\)/).size() == 2
+        (result.output =~ /environment\('HALSIM_EXTENSIONS', '.*gui.*'\)/).size() == 0
+
+        where:
+        languagePluginId | _
+        'java'           | _
+        // 'cpp'            | _ // TODO
     }
 }

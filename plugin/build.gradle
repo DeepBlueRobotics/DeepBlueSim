@@ -14,7 +14,7 @@ plugins {
     id 'maven-publish'
 
     // Support publishing to the Gradle Plugin Portal
-    id 'com.gradle.plugin-publish' version '1.1.0'
+    id 'com.gradle.plugin-publish' version '1.2.1'
 
     // Apply the Groovy plugin to add support for Groovy
     id 'groovy'
@@ -22,9 +22,7 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven {
-      url "https://plugins.gradle.org/m2/"
-    }
+    gradlePluginPortal()
 }
 
 group 'org.team199'
@@ -60,6 +58,11 @@ tasks.register('functionalTest', Test) {
     classpath = sourceSets.functionalTest.runtimeClasspath
 }
 
+tasks.withType(Test).configureEach {
+    // Using JUnitPlatform for running tests
+    useJUnitPlatform()
+}
+
 tasks.named('check') {
     // Run the functional tests as part of `check`
     dependsOn(tasks.functionalTest)
@@ -72,9 +75,13 @@ configurations {
 
 dependencies {
     // Use the awesome Spock testing and specification framework
-    testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
-    testImplementation 'edu.wpi.first:GradleRIO:2023.4.3'
+    testImplementation platform("org.spockframework:spock-bom:2.2-groovy-3.0")
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     implementation 'commons-io:commons-io:2.8.0'
+    implementation 'edu.wpi.first:GradleRIO:2024.3.1'
     // include the Webots.zip artifact produced by the controller's webotsFolder configuration
     extraFiles project(path: ':controller', configuration: 'webotsFolder')
 }
@@ -83,5 +90,15 @@ dependencies {
 processResources {
     into('org/team199/deepbluesim/gradle') {
         from configurations.extraFiles
+    }
+}
+
+// Support publishing locally so that we can test before publishing to the gradle plugin portal
+publishing {
+    repositories {
+        maven {
+            name = 'localPluginRepository'
+            url = 'build/local-plugin-repository'
+        }
     }
 }

@@ -5,32 +5,85 @@ package org.team199.deepbluesim.gradle
 
 import org.gradle.testfixtures.ProjectBuilder
 import org.gradle.api.Project
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.testing.Test
+
 import spock.lang.Specification
 
 /**
  * A simple unit test for the 'org.team199.deepbluesim' plugin.
  */
 class DeepBlueSimPluginTest extends Specification {
-    def "plugin registers installDeepBlueSim task"() {
+    def "plugin registers installDeepBlueSim task when GradleRIO plugin applied"() {
         given:
         def project = ProjectBuilder.builder().build()
 
         when:
-        project.plugins.apply("org.team199.deepbluesim")
+        project.pluginManager.apply("org.team199.deepbluesim")
+
+        then:
+        project.tasks.findByName("installDeepBlueSim") == null
+
+        when:
+        project.pluginManager.apply("edu.wpi.first.GradleRIO")
 
         then:
         project.tasks.findByName("installDeepBlueSim") != null
     }
 
-    def "plugin makes simulation tasks depend on DeepBlueSim"() {
+    def "plugin makes java simulation tasks depend on installDeepBlueSim"() {
         given:
         def project = ProjectBuilder.builder().build()
 
         when:
-        project.plugins.apply("org.team199.deepbluesim") 
-        project.plugins.apply("edu.wpi.first.GradleRIO")
+        project.pluginManager.apply("org.team199.deepbluesim")
+        project.pluginManager.apply("java")
+        project.pluginManager.apply("edu.wpi.first.GradleRIO")
 
         then:
-        project.tasks.findByName('externalSimulate').taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim"))
+        project.tasks.withType(edu.wpi.first.gradlerio.simulation.JavaSimulationTask).findAll({
+            it.taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim")) == false
+        }).isEmpty()
+        project.tasks.withType(edu.wpi.first.gradlerio.simulation.JavaExternalSimulationTask).findAll({
+            it.taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim")) == false
+        }).isEmpty()
+    }
+
+    def "plugin makes native simulation tasks depend on installDeepBlueSim"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+
+        when:
+        project.pluginManager.apply("org.team199.deepbluesim")
+        project.pluginManager.apply("cpp")
+        project.pluginManager.apply("edu.wpi.first.GradleRIO")
+
+        then:
+        // Some gradle bug makes findAll() throw a ConcurrentModificationException when the cpp plugin is applied
+        // so we just copy the relevant tasks into a list instead.
+        def tasksWithoutNeededDep = []
+        project.tasks.withType(edu.wpi.first.gradlerio.simulation.NativeSimulationTask) {
+            if (it.taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim")) == false) {
+                tasksWithoutNeededDep << it
+            }
+        }
+        project.tasks.withType(edu.wpi.first.gradlerio.simulation.NativeExternalSimulationTask) {
+            if (it.taskDependencies.getDependencies().contains(project.tasks.findByName("installDeepBlueSim")) == false) {
+                tasksWithoutNeededDep << it
+            }
+        }
+        tasksWithoutNeededDep == []
+    }
+
+    def "plugin provides deepbluesim extension"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+
+        when:
+        project.pluginManager.apply("org.team199.deepbluesim")
+        project.pluginManager.apply("edu.wpi.first.GradleRIO")
+
+        then:
+        project.deepbluesim != null
     }
 }

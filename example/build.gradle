@@ -1,11 +1,14 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2023.4.3"
-    id "org.team199.deepbluesim" version "0.0.12"
+    id 'jvm-test-suite'
+    id "edu.wpi.first.GradleRIO" version "2024.3.1"
+    id "org.team199.deepbluesim" version "2024.0.0"
 }
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
 def ROBOT_MAIN_CLASS = "frc.robot.Main"
 
@@ -38,6 +41,15 @@ deploy {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
+def deployArtifact = deploy.targets.roborio.artifacts.frcJava
+
+// Set to true to use debug for JNI.
+wpi.java.debugJni = false
+
 // Set this to true to enable desktop support.
 def includeDesktopSupport = true
 
@@ -61,80 +73,76 @@ dependencies {
     nativeRelease wpi.java.vendor.jniRelease(wpi.platforms.desktop)
     simulationRelease wpi.sim.enableRelease()
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
 }
 
-// Enable simulation gui support (except during Continuous Integration).
+test {
+    useJUnitPlatform()
+    systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+}
+
 // Must check the box in vscode to enable support upon debugging
 if (System.getenv()['CI'] == null) {
     wpi.sim.addGui().defaultEnabled = true
     wpi.sim.addDriverstation()
 }
 
-wpi.sim.addWebsocketsServer()
-
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    from sourceSets.main.allSource
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-// Support a systemTest task that runs a system level functional test in the simulator
-
-sourceSets {
-    systemTest {
-        compileClasspath += sourceSets.main.output
-        runtimeClasspath += sourceSets.main.output
-    }
-}
-
-configurations {
-    systemTestImplementation.extendsFrom testImplementation
-    systemTestRuntimeOnly.extendsFrom runtimeOnly
-}
-
-task('systemTestJar', type: Jar) {
-    archiveBaseName = 'systemTest'
-    from sourceSets.main.output
-    from sourceSets.systemTest.output
-    from { configurations.systemTestRuntimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest("frc.robot.SystemTestRobot")
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-import org.gradle.internal.os.OperatingSystem
-task('systemTest', type: JavaExec) {
-    // Run the jar file
-    dependsOn 'systemTestJar'
-    classpath = files(tasks.systemTestJar)
+// Configure jar and deploy tasks
+deployArtifact.jarTask = jar
+wpi.java.configureExecutableTasks(jar)
+wpi.java.configureTestTasks(test)
 
-    String pathSeparator = File.pathSeparator
+// Configure string concat to always inline compile
+tasks.withType(JavaCompile) {
+    options.compilerArgs.add '-XDstringConcat=inline'
+}
 
-    // Load native libraries
-    // See https://github.com/wpilibsuite/GradleRIO/blob/88f3420b1fe554d78b7b682e2adf2080c124ba42/src/main/java/edu/wpi/first/gradlerio/wpi/java/TestTaskDoFirstAction.java#L28C14-L28C14
-    dependsOn 'extractReleaseNative'
-    String nativeDir = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get().getAbsolutePath()
-    if(OperatingSystem.current().isUnix() || OperatingSystem.current().isMacOsX() || OperatingSystem.current().isLinux()) {
-        environment "LD_LIBRARY_PATH", nativeDir
-        environment "DYLD_FALLBACK_LIBRARY_PATH", nativeDir
-        environment "DYLD_LIBRARY_PATH", nativeDir
-    } else if(OperatingSystem.current().isWindows()) {
-        environment 'PATH', System.getenv('PATH') + pathSeparator + nativeDir
-    }
-    systemProperty "java.library.path", systemProperties["java.library.path"] + pathSeparator + nativeDir
+def ws_server = wpi.sim.addWebsocketsServer()
 
-    afterEvaluate { // We have to wait until after the project is evaluated so WPILibPlugin can setup the repositories to load the HALSim extensions from
-        // Load HALSim extensions (See https://github.com/wpilibsuite/GradleRIO/blob/88f3420b1fe554d78b7b682e2adf2080c124ba42/src/main/java/edu/wpi/first/gradlerio/wpi/java/WPIJavaExtension.java#L139)
-        File ldPath = tasks.extractReleaseNative.getDestinationDirectory().getAsFile().get()
-        def simExtension = project.extensions.getByType(edu.wpi.first.gradlerio.wpi.WPIExtension).getSim()
-        def halsimExtensions = simExtension.getHalSimLocations(List.of(ldPath), false)
-        environment 'HALSIM_EXTENSIONS', halsimExtensions.stream().map { it.libName }.reduce("", { a, b -> a + pathSeparator + b })
+testing {
+    suites {
+        configureEach {
+            useJUnitJupiter()
+
+            targets {
+                all {
+                    testTask.configure {
+                        systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+                    }
+                }
+            }
+        }
+
+        systemTest(JvmTestSuite)  {
+            dependencies {
+                implementation project()
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+        }
     }
 }
 
+wpi.java.configureTestTasks(systemTest)
+deepbluesim.configureForSimulation(systemTest, [ws_server])
 assemble.dependsOn installDeepBlueSim
 
-check.dependsOn 'systemTest'
+tasks.named('check') {
+    dependsOn(testing.suites.systemTest)
+}
