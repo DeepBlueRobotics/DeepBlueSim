@@ -53,12 +53,20 @@ nativeConfig.dependencies.add wpilibTools.deps.wpilib("wpimath")
 
 // Add repositories containing project dependencies
 repositories {
+    // We need mavelLocal() because VSCode's Language Support for Java doesn't
+    // currently handle dependencies in Gradle included builds. As a results, it
+    // complains about being unable to resolve WPIWebSockets. The workaround is
+    // to tell this project to use mavenLocal() so it can find it and run
+    // "./gradlew :WPIWebSockets:publishToMavenLocal" to put it there. You will
+    // then need to tell VSCode to "Java: Clean Language Server Workspace".
+    mavenLocal()
     mavenCentral()
     jcenter()
 }
 
 // Add dependencies
 dependencies {
+    // See comment in repositories section if VSCode can't resolve WPIWebSockets.
     implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
     testImplementation 'junit:junit:4.13'
 

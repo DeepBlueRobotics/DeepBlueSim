@@ -61,3 +61,11 @@ example's
 [`SystemTestRobot.java`](example/src/systemTest/java/frc/robot/SystemTestRobot.java)
 for an example implementation.
 
+## Contributing
+
+NOTE: If you are using VSCode and attempting to work on the code in
+`plugin/controller/`, VSCode may complain about being unable to resolve various
+symbols from `WPIWebSockets`. This is because VSCode's Language Support for Java
+doesn't currently handle dependencies in Gradle "included builds". The workaround
+is to run `gradlew :WPIWebSockets:publishToMavenLocal` and then tell VSCode to
+"Java: Clean Language Server Workspace".
