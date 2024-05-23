@@ -5,6 +5,8 @@ import java.util.Collection;
 import org.team199.deepbluesim.ParseUtils;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.ScopedObject;
+import org.team199.wpiws.devices.CANEncoderSim;
+import org.team199.wpiws.devices.CANMotorSim;
 import org.team199.wpiws.devices.SimDeviceSim;
 
 import com.cyberbotics.webots.controller.Brake;
@@ -16,7 +18,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 /**
  * Links WPILib motor controllers to Webots
  */
-public class SimDeviceMotorMediator implements Runnable {
+public class CANMotorMediator implements Runnable {
 
     public static final int NEO_BUILTIN_ENCODER_CPR = 42;
 
@@ -24,7 +26,7 @@ public class SimDeviceMotorMediator implements Runnable {
     public final double gearing;
     public final boolean inverted;
     public final DCMotor motorConstants;
-    public final SimDeviceSim motorDevice;
+    public final CANMotorSim motorDevice;
     public final Brake brake;
 
     private double requestedOutput = 0;
@@ -39,19 +41,19 @@ public class SimDeviceMotorMediator implements Runnable {
      * @param gearing the gear ratio to use
      * @param callbackStore a collection to store callbacks in
      */
-    public SimDeviceMotorMediator(Motor motor, SimDeviceSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) {
+    public CANMotorMediator(Motor motor, CANMotorSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) {
         this.motor = motor;
         motorDevice = simDevice;
         this.motorConstants = motorConstants;
         this.gearing = gearing;
         this.inverted = inverted;
 
-        if(motor.getName().startsWith("DBSim_Motor_Spark Max")) {
+        if(motor.getName().startsWith("DBSim_Motor_Spark ")) {
             PositionSensor encoder = motor.getPositionSensor();
             if(encoder == null) {
-                System.err.println(String.format("WARNING: Spark Max encoder not found for motor: \"%s\", no position data will be reported!", motor.getName()));
+                System.err.println(String.format("WARNING: Spark encoder not found for motor: \"%s\", no position data will be reported!", motor.getName()));
             } else {
-                new SimDeviceEncoderMediator(encoder, new SimDeviceSim(motorDevice.id + "_RelativeEncoder"), true, false, 0, inverted, NEO_BUILTIN_ENCODER_CPR, gearing);
+                new CANEncoderMediator(encoder, new CANEncoderSim(motorDevice.id.replace("CANMotor:", "CANEncoder:"), "SimDevice"), true, false, 0, inverted, NEO_BUILTIN_ENCODER_CPR, gearing);
             }
         }
 
@@ -65,14 +67,14 @@ public class SimDeviceMotorMediator implements Runnable {
 
         brake.setDampingConstant(motorConstants.stallTorqueNewtonMeters * gearing);
 
-        callbackStore.add(motorDevice.registerValueChangedCallback("Brake Mode", (name, enabled) -> {
-            brakeMode = Boolean.parseBoolean(enabled);
+        callbackStore.add(motorDevice.registerBrakemodeCallback((name, enabled) -> {
+            brakeMode = enabled;
         }, true));
-        callbackStore.add(motorDevice.registerValueChangedCallback("Neutral Deadband", (name, deadband) -> {
-            neutralDeadband = Math.abs(ParseUtils.parseDoubleOrDefault(deadband, neutralDeadband));
+        callbackStore.add(motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
+            neutralDeadband = deadband;
         }, true));
-        callbackStore.add(motorDevice.registerValueChangedCallback("Speed", (name, speed) -> {
-            requestedOutput = ParseUtils.parseDoubleOrDefault(speed, requestedOutput);
+        callbackStore.add(motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
+            requestedOutput = percentOutput;
         }, true));
 
         Simulation.registerPeriodicMethod(this);
@@ -96,7 +98,7 @@ public class SimDeviceMotorMediator implements Runnable {
         double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);
         motor.setAvailableTorque(motorConstants.getTorque(currentDraw) * gearing);
 
-        motorDevice.set("Current Draw", currentDraw);
+        motorDevice.setMotorcurrent(currentDraw);
     }
 
 }
