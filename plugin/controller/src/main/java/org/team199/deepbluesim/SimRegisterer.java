@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.team199.deepbluesim.mediators.AnalogInputMediator;
+import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
 import org.team199.deepbluesim.mediators.PWMMotorMediator;
 import org.team199.deepbluesim.mediators.CANMotorMediator;
@@ -155,7 +155,7 @@ public class SimRegisterer {
                 new DutyCycleMediator(device, new DutyCycleSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
             } else if (node.getTypeName().equals("SparkMaxAnalogSensor")) {
                 String simDeviceName = "CANAIn:CANSparkMax[" + motorId + "]";
-                new AnalogInputMediator(device, new AnalogInputSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+                new AnalogInputEncoderMediator(device, new AnalogInputSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
             }
         } else {
             System.err.println("Warning: Ignoring invalid encoder: " + device.getName() + "!");

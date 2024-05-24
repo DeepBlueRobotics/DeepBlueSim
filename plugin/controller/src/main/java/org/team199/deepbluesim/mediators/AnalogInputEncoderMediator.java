@@ -4,11 +4,11 @@ import org.team199.wpiws.devices.AnalogInputSim;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 
-public class AnalogInputMediator extends EncoderMediatorBase {
+public class AnalogInputEncoderMediator extends EncoderMediatorBase {
 
     public final AnalogInputSim device;
 
-    public AnalogInputMediator(PositionSensor encoder, AnalogInputSim device, boolean isOnMotorShaft, boolean isAbsolute, double absoluteOffsetDeg, boolean isInverted, int countsPerRevolution, double gearing) {
+    public AnalogInputEncoderMediator(PositionSensor encoder, AnalogInputSim device, boolean isOnMotorShaft, boolean isAbsolute, double absoluteOffsetDeg, boolean isInverted, int countsPerRevolution, double gearing) {
         super(encoder, isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
         this.device = device;
     }

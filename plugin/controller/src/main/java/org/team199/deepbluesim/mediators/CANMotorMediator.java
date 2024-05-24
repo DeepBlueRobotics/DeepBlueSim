@@ -48,7 +48,7 @@ public class CANMotorMediator implements Runnable {
         this.gearing = gearing;
         this.inverted = inverted;
 
-        if(motor.getName().startsWith("DBSim_Motor_Spark ")) {
+        if(motor.getName().startsWith("DBSim_Motor_Spark")) {
             PositionSensor encoder = motor.getPositionSensor();
             if(encoder == null) {
                 System.err.println(String.format("WARNING: Spark encoder not found for motor: \"%s\", no position data will be reported!", motor.getName()));
@@ -99,6 +99,7 @@ public class CANMotorMediator implements Runnable {
         motor.setAvailableTorque(motorConstants.getTorque(currentDraw) * gearing);
 
         motorDevice.setMotorcurrent(currentDraw);
+        motorDevice.setBusvoltage(12);
     }
 
 }
