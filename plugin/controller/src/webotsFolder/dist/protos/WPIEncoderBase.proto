@@ -12,7 +12,7 @@ PROTO WPIEncoderBase [
 ]
 {
     PositionSensor {
-        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' %>
+        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
         noise IS noiseStdDevRad
     }
 }
