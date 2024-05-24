@@ -22,31 +22,64 @@ import edu.wpi.first.gradlerio.wpi.java.TestTaskDoFirstAction;
 import edu.wpi.first.gradlerio.wpi.simulation.HalSimExtension;
 import edu.wpi.first.gradlerio.simulation.HalSimPair;
 
+/** A Gradle extension that allows tasks to be configured so that they can use WPILib's simulation extensions. */
 public class DeepBlueSimExtension {
 
     private Project project;
     private WPIExtension wpi;
 
+    /**
+     * Constructs an instance for use with a project and a WPI extension.
+     * @param project the project that this will be used with
+     * @param wpi the WPI extension to use when configuring a task
+     */
     @Inject
     public DeepBlueSimExtension(Project project, WPIExtension wpi) {
         this.project = project;
         this.wpi = wpi;
     }
 
+    
+    /** 
+     * Configures the tasks so that they can use the WPILib simulation extensions that are enabled by default.
+     *  
+     * @param tasks      the tasks to be configured
+     * @throws Exception if the tasks can not be configured
+     */
     public void configureForSimulation(List<Task> tasks) throws Exception {
         configureForSimulation(tasks, null);
     }
 
+    /**
+     * Configures a task so it can use the WPILib simulation extensions that are enabled by default.
+     * 
+     * @param t          the task to be configured
+     * @throws Exception if the task can't be configured
+     */
     public void configureForSimulation(Task t) throws Exception {
         configureForSimulation(t, null);
     }
 
+    /**
+     * Configures the tasks so they can use the specificed WPILib simulation extensions.
+     * 
+     * @param tasks      the tasks to be configured
+     * @param extensions the extensions to use. If null, the extensions that are enabled by default are used.
+     * @throws Exception if the task can't be configured
+     */
     public void configureForSimulation(List<Task> tasks, List<HalSimExtension> extensions) throws Exception {
         for (var t : tasks) {
             configureForSimulation(t, extensions);
         }
     }
 
+    /**
+     * Configures a task so it can use the specificed WPILib simulation extensions.
+     * 
+     * @param t          the task to be configured
+     * @param extensions the extensions to use. If null, use the extensions that are enabled by default.
+     * @throws Exception if the task can't be configured
+     */
     public void configureForSimulation(Task t, List<HalSimExtension> extensions) throws Exception {
         var extNames = extensions != null ? extensions.stream().map(x -> x.getName()).toList() : null;
         var java = wpi.getJava();
