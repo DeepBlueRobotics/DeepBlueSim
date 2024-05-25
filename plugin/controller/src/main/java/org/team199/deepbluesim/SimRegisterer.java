@@ -4,12 +4,18 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
 import org.team199.deepbluesim.mediators.PWMMotorMediator;
-import org.team199.deepbluesim.mediators.SimDeviceMotorMediator;
-import org.team199.deepbluesim.mediators.SimDeviceEncoderMediator;
+import org.team199.deepbluesim.mediators.CANMotorMediator;
+import org.team199.deepbluesim.mediators.CANEncoderMediator;
+import org.team199.deepbluesim.mediators.DutyCycleMediator;
 import org.team199.deepbluesim.mediators.WPILibEncoderMediator;
 import org.team199.wpiws.ScopedObject;
+import org.team199.wpiws.devices.AnalogInputSim;
+import org.team199.wpiws.devices.CANMotorSim;
+import org.team199.wpiws.devices.CANEncoderSim;
+import org.team199.wpiws.devices.DutyCycleSim;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 import org.team199.wpiws.devices.SimDeviceSim;
@@ -128,12 +134,12 @@ public class SimRegisterer {
                 unboundEncoders.add(device.getName());
             }
         } else if(node.getField("id") != null) { // CANCoder
-            new SimDeviceEncoderMediator(device, new SimDeviceSim("CANCoder[" + node.getField("id").getSFInt32() + "]"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+            new DutyCycleMediator(device, new DutyCycleSim("CANDutyCycle:CANCoder[" + node.getField("id").getSFInt32() + "]", "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
         } else if(node.getTypeName().startsWith("SparkMax")) { // One of the SparkMax encoder types
             Motor motor = device.getMotor();
 
             String motorName;
-            if(motor == null || !(motorName = motor.getName()).startsWith("DBSim_Motor_Spark Max")) {
+            if(motor == null || !(motorName = motor.getName()).startsWith("DBSim_Motor_Spark")) {
                 System.err.println("Warning: Spark Max Encoder \"" + device.getName() + "\" is not attached to a Spark Max motor!");
                 return;
             }
@@ -141,9 +147,16 @@ public class SimRegisterer {
             String[] motorNameParts = motorName.split("_");
             int motorId = Integer.parseInt(motorNameParts[3]);
 
-            String simDeviceName = "SparkMax[" + motorId + "]_" + node.getTypeName().substring("SparkMax".length());
-
-            new SimDeviceEncoderMediator(device, new SimDeviceSim(simDeviceName), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+            if (node.getTypeName().equals("SparkMaxAlternateEncoder")) {
+                String simDeviceName = "CANEncoder:CANSparkMax[" + motorId + "]-alternate";
+                new CANEncoderMediator(device, new CANEncoderSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+            } else if (node.getTypeName().equals("SparkMaxAbsoluteEncoder")) {
+                String simDeviceName = "CANDutyCycle:CANSparkMax[" + motorId + "]";
+                new DutyCycleMediator(device, new DutyCycleSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+            } else if (node.getTypeName().equals("SparkMaxAnalogSensor")) {
+                String simDeviceName = "CANAIn:CANSparkMax[" + motorId + "]";
+                new AnalogInputEncoderMediator(device, new AnalogInputSim(simDeviceName, "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);
+            }
         } else {
             System.err.println("Warning: Ignoring invalid encoder: " + device.getName() + "!");
         }
@@ -166,8 +179,8 @@ public class SimRegisterer {
         if(controllerType.equals("PWM")) {
             new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted, CALLBACKS);
         } else {
-            String simDeviceName = controllerType.replaceAll("\\s", "") + "[" + port + "]";
-            new SimDeviceMotorMediator(device, new SimDeviceSim(simDeviceName), motorConstants, gearing, inverted, CALLBACKS);
+            String simDeviceName = "CANMotor:CAN" + controllerType.replaceAll("\\s", "") + "[" + port + "]";
+            new CANMotorMediator(device, new CANMotorSim(simDeviceName, "SimDevice"), motorConstants, gearing, inverted, CALLBACKS);
         }
     }
 
