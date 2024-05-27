@@ -66,14 +66,6 @@ public final class Simulation {
         periodicMethods.forEach(Runnable::run);
     }
 
-    public static Node getPROTOBase(Node node, String baseName) {
-        if(node == null) {
-            return null;
-        }
-        // while(node.isProto() && node.getBaseTypeName())
-        return null;
-    }
-
     private Simulation() {}
 
 }
