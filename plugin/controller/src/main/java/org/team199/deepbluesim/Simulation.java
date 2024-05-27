@@ -2,7 +2,6 @@ package org.team199.deepbluesim;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Robot;
 import com.cyberbotics.webots.controller.Supervisor;
 

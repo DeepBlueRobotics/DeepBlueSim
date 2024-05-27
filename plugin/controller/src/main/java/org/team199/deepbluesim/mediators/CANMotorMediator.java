@@ -2,12 +2,10 @@ package org.team199.deepbluesim.mediators;
 
 import java.util.Collection;
 
-import org.team199.deepbluesim.ParseUtils;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.devices.CANEncoderSim;
 import org.team199.wpiws.devices.CANMotorSim;
-import org.team199.wpiws.devices.SimDeviceSim;
 
 import com.cyberbotics.webots.controller.Brake;
 import com.cyberbotics.webots.controller.Motor;
