@@ -18,7 +18,6 @@ import org.team199.wpiws.devices.CANEncoderSim;
 import org.team199.wpiws.devices.DutyCycleSim;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
-import org.team199.wpiws.devices.SimDeviceSim;
 
 import com.cyberbotics.webots.controller.Device;
 import com.cyberbotics.webots.controller.Gyro;
