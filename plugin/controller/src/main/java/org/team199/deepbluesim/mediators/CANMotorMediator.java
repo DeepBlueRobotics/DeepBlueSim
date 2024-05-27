@@ -34,7 +34,6 @@ public class CANMotorMediator implements Runnable {
      * @param simDevice the SimDeviceSim to use
      * @param motorConstants the motor constants to use
      * @param gearing the gear ratio to use
-     * @param callbackStore a collection to store callbacks in
      */
     public CANMotorMediator(Motor motor, CANMotorSim simDevice, DCMotor motorConstants, double gearing, boolean inverted) {
         this.motor = motor;
