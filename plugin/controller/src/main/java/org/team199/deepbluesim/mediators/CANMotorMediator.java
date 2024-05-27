@@ -1,9 +1,6 @@
 package org.team199.deepbluesim.mediators;
 
-import java.util.Collection;
-
 import org.team199.deepbluesim.Simulation;
-import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.devices.CANEncoderSim;
 import org.team199.wpiws.devices.CANMotorSim;
 
@@ -37,9 +34,8 @@ public class CANMotorMediator implements Runnable {
      * @param simDevice the SimDeviceSim to use
      * @param motorConstants the motor constants to use
      * @param gearing the gear ratio to use
-     * @param callbackStore a collection to store callbacks in
      */
-    public CANMotorMediator(Motor motor, CANMotorSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) {
+    public CANMotorMediator(Motor motor, CANMotorSim simDevice, DCMotor motorConstants, double gearing, boolean inverted) {
         this.motor = motor;
         motorDevice = simDevice;
         this.motorConstants = motorConstants;
@@ -65,15 +61,15 @@ public class CANMotorMediator implements Runnable {
 
         brake.setDampingConstant(motorConstants.stallTorqueNewtonMeters * gearing);
 
-        callbackStore.add(motorDevice.registerBrakemodeCallback((name, enabled) -> {
+        motorDevice.registerBrakemodeCallback((name, enabled) -> {
             brakeMode = enabled;
-        }, true));
-        callbackStore.add(motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
+        }, true);
+        motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
             neutralDeadband = deadband;
-        }, true));
-        callbackStore.add(motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
+        }, true);
+        motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
             requestedOutput = percentOutput;
-        }, true));
+        }, true);
 
         Simulation.registerPeriodicMethod(this);
     }

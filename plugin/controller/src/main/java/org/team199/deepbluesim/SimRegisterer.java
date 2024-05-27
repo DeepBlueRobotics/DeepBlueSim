@@ -11,7 +11,6 @@ import org.team199.deepbluesim.mediators.CANMotorMediator;
 import org.team199.deepbluesim.mediators.CANEncoderMediator;
 import org.team199.deepbluesim.mediators.DutyCycleMediator;
 import org.team199.deepbluesim.mediators.WPILibEncoderMediator;
-import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.devices.AnalogInputSim;
 import org.team199.wpiws.devices.CANMotorSim;
 import org.team199.wpiws.devices.CANEncoderSim;
@@ -32,7 +31,6 @@ import edu.wpi.first.math.util.Units;
 public class SimRegisterer {
 
     private static final CopyOnWriteArraySet<String> unboundEncoders = new CopyOnWriteArraySet<>();
-    private static final CopyOnWriteArraySet<ScopedObject<?>> CALLBACKS = new CopyOnWriteArraySet<>();
 
     public static void connectDevices() {
         Supervisor robot = Simulation.getSupervisor();
@@ -176,10 +174,10 @@ public class SimRegisterer {
         DCMotor motorConstants = new DCMotor(nominalVoltageVolts, stallTorqueNewtonMeters, stallCurrentAmps, freeCurrentAmps, Units.rotationsPerMinuteToRadiansPerSecond(freeSpeedRPM), 1);
 
         if(controllerType.equals("PWM")) {
-            new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted, CALLBACKS);
+            new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted);
         } else {
             String simDeviceName = "CANMotor:CAN" + controllerType.replaceAll("\\s", "") + "[" + port + "]";
-            new CANMotorMediator(device, new CANMotorSim(simDeviceName, "SimDevice"), motorConstants, gearing, inverted, CALLBACKS);
+            new CANMotorMediator(device, new CANMotorSim(simDeviceName, "SimDevice"), motorConstants, gearing, inverted);
         }
     }
 
