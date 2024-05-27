@@ -1,8 +1,5 @@
 package org.team199.deepbluesim.mediators;
 
-import java.util.Collection;
-
-import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.devices.PWMSim;
 
 import com.cyberbotics.webots.controller.Motor;
@@ -17,7 +14,7 @@ public class PWMMotorMediator {
     public final DCMotor motorConstants;
     public final PWMSim motorDevice;
 
-    public PWMMotorMediator(Motor motor, PWMSim simDevice, DCMotor motorConstants, double gearing, boolean inverted, Collection<ScopedObject<?>> callbackStore) {
+    public PWMMotorMediator(Motor motor, PWMSim simDevice, DCMotor motorConstants, double gearing, boolean inverted) {
         this.motor = motor;
         this.motorDevice = simDevice;
         this.motorConstants = motorConstants;
@@ -30,10 +27,10 @@ public class PWMMotorMediator {
         // Disable braking
         if(motor.getBrake() != null) motor.getBrake().setDampingConstant(0);
 
-        callbackStore.add(motorDevice.registerSpeedCallback((deviceName, speed) -> {
+        motorDevice.registerSpeedCallback((deviceName, speed) -> {
             double velocity = speed * motorConstants.freeSpeedRadPerSec;
             motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
-        }, true));
+        }, true);
     }
 
 }

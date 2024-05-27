@@ -9,13 +9,11 @@ import java.util.TimerTask;
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
 
-import org.team199.wpiws.Pair;
-import org.team199.wpiws.ScopedObject;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.RunningObject;
 import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.StringCallback;
+import org.team199.wpiws.interfaces.ObjectCallback;
 import org.java_websocket.client.WebSocketClient;
 import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
@@ -26,8 +24,6 @@ public class DeepBlueSim {
 
     private static final BlockingDeque<Runnable> queuedMessages = new LinkedBlockingDeque<>();
 
-    @SuppressWarnings("unused")
-    private static ScopedObject<Pair<String, StringCallback>> robotTimeSecCallbackStore = null;
     private static RunningObject<WebSocketClient> wsConnection = null;
 
     /**
@@ -94,7 +90,7 @@ public class DeepBlueSim {
         Timer simPauseTimer = new Timer();
 
         // Whenever the robot time changes, step the simulation until just past that time
-        robotTimeSecCallbackStore = timeSynchronizerSim.registerValueChangedCallback("robotTimeSec", new StringCallback() {
+        timeSynchronizerSim.registerValueChangedCallback("robotTimeSec", new ObjectCallback<String>() {
             @Override
             public synchronized void callback(String name, String value) {
                 // Ignore null default initial value
