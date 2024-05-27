@@ -2,7 +2,6 @@ package org.team199.deepbluesim;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Robot;
 import com.cyberbotics.webots.controller.Supervisor;
 
@@ -64,14 +63,6 @@ public final class Simulation {
 
     public static void runPeriodicMethods() {
         periodicMethods.forEach(Runnable::run);
-    }
-
-    public static Node getPROTOBase(Node node, String baseName) {
-        if(node == null) {
-            return null;
-        }
-        // while(node.isProto() && node.getBaseTypeName())
-        return null;
     }
 
     private Simulation() {}
