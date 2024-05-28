@@ -1,0 +1,7 @@
+# All PRs need to be approved by a member of the reviewers team
+# Note that for this to work, the repository's access settings (https://github.com/DeepBlueRobotics/<repository>/settings/access)
+# need to be configured to allow the reviewers team (or a parent team like devs) to explicitly have write (or higher) access.
+# It isn't sufficient for all org members to have write access.
+# Also, the branch protection rules (https://github.com/DeepBlueRobotics/<repository>/settings/branches)
+# for the master branch need to have "Require review from Code Owners" enabled.
+* @DeepBlueRobotics/reviewers
