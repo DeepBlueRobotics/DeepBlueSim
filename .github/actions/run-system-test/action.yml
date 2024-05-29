@@ -19,8 +19,3 @@ runs:
       run: |
         ./gradlew build --info --stacktrace
       shell: bash
-
-    - name: Stop Gradle Daemons # https://github.com/actions/cache/blob/0c45773b623bea8c8e75f6c82b208c3cf94ea4f9/examples.md#java---gradle
-      run: |
-        ./gradlew --stop
-      shell: bash
