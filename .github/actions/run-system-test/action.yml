@@ -17,5 +17,5 @@ runs:
 
     - name: Do the system test (and any other tests)
       run: |
-        ./gradlew build --info --stacktrace
+        ./gradlew build --info --stacktrace --build-cache
       shell: bash
