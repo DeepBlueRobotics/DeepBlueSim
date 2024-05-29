@@ -58,6 +58,8 @@ public class DeepBlueSim {
             Thread.currentThread().setUncaughtExceptionHandler(eh);
         }
 
+        System.out.println(
+                "This is a small change that will force the plugin to recompile!");
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
 
         final Supervisor robot = new Supervisor();
