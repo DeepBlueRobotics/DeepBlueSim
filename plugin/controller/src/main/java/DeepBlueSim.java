@@ -58,8 +58,6 @@ public class DeepBlueSim {
             Thread.currentThread().setUncaughtExceptionHandler(eh);
         }
 
-        System.out.println(
-                "This is a small change that will force the plugin to recompile!");
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
 
         final Supervisor robot = new Supervisor();
@@ -84,9 +82,9 @@ public class DeepBlueSim {
         Simulation.registerPeriodicMethod(() -> {
             Node self = robot.getSelf();
             double[] pos = self.getPosition();
-            // webotsSupervisorSim.set("self.position.x", pos[0]);
-            // webotsSupervisorSim.set("self.position.y", pos[1]);
-            // webotsSupervisorSim.set("self.position.z", pos[2]);
+            webotsSupervisorSim.set("self.position.x", pos[0]);
+            webotsSupervisorSim.set("self.position.y", pos[1]);
+            webotsSupervisorSim.set("self.position.z", pos[2]);
         });
 
         Timer simPauseTimer = new Timer();

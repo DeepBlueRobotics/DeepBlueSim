@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    # branches: [ master ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -29,8 +29,6 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
-      with:
-        cache-read-only: false
 
     - name: Setup Webots
       id: setupWebots
