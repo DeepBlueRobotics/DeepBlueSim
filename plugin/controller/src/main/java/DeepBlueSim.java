@@ -1,13 +1,25 @@
+import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
+
+import edu.wpi.first.cscore.CameraServerJNI;
+import edu.wpi.first.math.WPIMathJNI;
+import edu.wpi.first.math.trajectory.TrajectoryUtil;
+import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTablesJNI;
+import edu.wpi.first.util.CombinedRuntimeLoader;
+import edu.wpi.first.util.WPIUtilJNI;
 
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.RunningObject;
@@ -15,6 +27,7 @@ import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.ObjectCallback;
 import org.java_websocket.client.WebSocketClient;
+import org.opencv.core.Core;
 import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
 
@@ -43,7 +56,7 @@ public class DeepBlueSim {
         usersSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // Set up exception handling to log to stderr and exit
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
@@ -57,6 +70,23 @@ public class DeepBlueSim {
             Thread.setDefaultUncaughtExceptionHandler(eh);
             Thread.currentThread().setUncaughtExceptionHandler(eh);
         }
+
+        // Boilerplate code so we can use NetworkTables
+        {
+            NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
+            WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
+            WPIMathJNI.Helper.setExtractOnStaticLoad(false);
+            CameraServerJNI.Helper.setExtractOnStaticLoad(false);
+
+            CombinedRuntimeLoader.loadLibraries(DeepBlueSim.class, "wpiutiljni",
+                    "wpimathjni", "ntcorejni", Core.NATIVE_LIBRARY_NAME,
+                    "cscorejni");
+        }
+
+        NetworkTableInstance inst = NetworkTableInstance.getDefault();
+        NetworkTable table = inst.getTable("WebotsSupervisor");
+        inst.startClient4("Webots controller");
+        inst.setServer("localhost");
 
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
 
