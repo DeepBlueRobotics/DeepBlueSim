@@ -2,3 +2,4 @@ rootProject.name = 'DeepBlueSim'
 includeBuild 'WPIWebSockets'
 includeBuild 'plugin'
 includeBuild 'example'
+org.gradle.caching=true

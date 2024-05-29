@@ -17,7 +17,7 @@ runs:
 
     - name: Do the system test (and any other tests)
       run: |
-        ./gradlew build --info --stacktrace --build-cache
+        ./gradlew build --info --stacktrace
       shell: bash
 
     - name: Stop Gradle Daemons # https://github.com/actions/cache/blob/0c45773b623bea8c8e75f6c82b208c3cf94ea4f9/examples.md#java---gradle
