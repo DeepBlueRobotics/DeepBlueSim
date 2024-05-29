@@ -11,9 +11,7 @@ import java.util.TimerTask;
 import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
 
-import edu.wpi.first.cscore.CameraServerJNI;
 import edu.wpi.first.math.WPIMathJNI;
-import edu.wpi.first.math.trajectory.TrajectoryUtil;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -27,7 +25,6 @@ import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.ObjectCallback;
 import org.java_websocket.client.WebSocketClient;
-import org.opencv.core.Core;
 import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
 
@@ -76,11 +73,9 @@ public class DeepBlueSim {
             NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
             WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
             WPIMathJNI.Helper.setExtractOnStaticLoad(false);
-            CameraServerJNI.Helper.setExtractOnStaticLoad(false);
 
             CombinedRuntimeLoader.loadLibraries(DeepBlueSim.class, "wpiutiljni",
-                    "wpimathjni", "ntcorejni", Core.NATIVE_LIBRARY_NAME,
-                    "cscorejni");
+                    "wpimathjni", "ntcorejni");
         }
 
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
