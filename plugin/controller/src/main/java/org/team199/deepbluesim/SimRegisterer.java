@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
 import org.team199.deepbluesim.mediators.PWMMotorMediator;
+import org.team199.deepbluesim.mediators.PlayingWithFusionTimeOfFlightMediator;
 import org.team199.deepbluesim.mediators.CANMotorMediator;
 import org.team199.deepbluesim.mediators.CANEncoderMediator;
 import org.team199.deepbluesim.mediators.DutyCycleMediator;
@@ -19,6 +20,7 @@ import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 
 import com.cyberbotics.webots.controller.Device;
+import com.cyberbotics.webots.controller.DistanceSensor;
 import com.cyberbotics.webots.controller.Gyro;
 import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Node;
@@ -49,6 +51,10 @@ public class SimRegisterer {
                             break;
                         case "Motor":
                             connectMotor((Motor) device, robot);
+                            break;
+                        case "PlayingWithFusionTimeOfFlight":
+                            connectPlayingWithFusionTimeOfFlight(
+                                    (DistanceSensor) device, robot);
                             break;
                     }
                 } catch (Exception e) {
@@ -179,6 +185,20 @@ public class SimRegisterer {
             String simDeviceName = "CANMotor:CAN" + controllerType.replaceAll("\\s", "") + "[" + port + "]";
             new CANMotorMediator(device, new CANMotorSim(simDeviceName, "SimDevice"), motorConstants, gearing, inverted);
         }
+    }
+
+    public static void connectPlayingWithFusionTimeOfFlight(
+            DistanceSensor device, Supervisor robot) {
+        String port = device.getName().split("_")[2];
+
+        String baseDeviceName =
+                "CANAIn:PlayingWithFusionTimeOfFlight[%d]".formatted(port);
+        AnalogInputSim rangeDevice = new AnalogInputSim(
+                baseDeviceName + "-rangeVoltsIsMM", "SimDevice");
+        AnalogInputSim ambientLightLevelDevice = new AnalogInputSim(
+                baseDeviceName + "-ambientLightLevelVoltsIsMcps", "SimDevice");
+        new PlayingWithFusionTimeOfFlightMediator(device, rangeDevice,
+                ambientLightLevelDevice);
     }
 
 }
