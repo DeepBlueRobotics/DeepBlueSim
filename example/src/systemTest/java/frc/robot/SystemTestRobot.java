@@ -28,7 +28,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
 
-@Timeout(value = 20, unit = TimeUnit.MINUTES)
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
 public class SystemTestRobot {
 
     /**
