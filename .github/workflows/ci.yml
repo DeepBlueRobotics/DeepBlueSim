@@ -16,16 +16,19 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: "recursive"
         fetch-depth: 0
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: 17
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Setup Webots
       id: setupWebots
@@ -37,14 +40,14 @@ jobs:
       uses: ./.github/actions/run-system-test
 
     - name: Archive the example folder
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: Resulting example project for ${{ runner.os }}
         path: example/
 
     - name: Archive Webots log
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: Webots log for ${{ runner.os }}
@@ -61,19 +64,19 @@ jobs:
       uses: fkirc/skip-duplicate-actions@v5
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: 17
 
     - name: Setup Webots
       id: setupWebots
-      uses: DeepBlueRobotics/setup-webots@versioning-and-caching
+      uses: DeepBlueRobotics/setup-webots@v2
       with:
         webotsVersion: R2023b
 
     - name: Checkout source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: "recursive"
         fetch-depth: 0
