@@ -7,6 +7,10 @@
 PROTO PlayingWithFusionTimeOfFlight [
     unconnectedField SFInt32 port        0
 
+    # Sensor parameters
+    field SFInt32    numberOfRays        5
+    field SFFloat    gaussianWidth       0.25
+
     # Expose fields from Solid and Pose
     field SFVec3f    translation         0 0 0
     field SFRotation rotation            1 0 0 -1.5708
@@ -60,9 +64,9 @@ PROTO PlayingWithFusionTimeOfFlight [
                       3.6  3600 0.05
                       4    3600 0    ]
         type "infra-red"
-        numberOfRays 5
+        numberOfRays IS numberOfRays
         aperture 0.471 # 27 degrees
-        gaussianWidth 1
+        gaussianWidth IS gaussianWidth
         resolution 0.001 # 1mm
         redColorSensitivity 1
 
