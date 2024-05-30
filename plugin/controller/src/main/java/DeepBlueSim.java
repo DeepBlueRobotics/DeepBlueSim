@@ -1,22 +1,38 @@
+import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.CompletableFuture;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.LinkedBlockingDeque;
 
-import com.cyberbotics.webots.controller.Node;
-import com.cyberbotics.webots.controller.Supervisor;
-
+import org.ejml.simple.SimpleMatrix;
+import org.java_websocket.client.WebSocketClient;
+import org.team199.deepbluesim.SimRegisterer;
+import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.RunningObject;
 import org.team199.wpiws.connection.WSConnection;
 import org.team199.wpiws.devices.SimDeviceSim;
 import org.team199.wpiws.interfaces.ObjectCallback;
-import org.java_websocket.client.WebSocketClient;
-import org.team199.deepbluesim.SimRegisterer;
-import org.team199.deepbluesim.Simulation;
+
+import com.cyberbotics.webots.controller.Supervisor;
+
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.WPIMathJNI;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTablesJNI;
+import edu.wpi.first.util.CombinedRuntimeLoader;
+import edu.wpi.first.util.WPIUtilJNI;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
 // the name of the jar.
@@ -43,7 +59,17 @@ public class DeepBlueSim {
         usersSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
     }
 
-    public static void main(String[] args) {
+    private static Set<String> defPathsToPublish =
+            new ConcurrentSkipListSet<String>();
+
+    private static Map<String, DoubleArrayPublisher> positionPublisherByDefPath =
+            new HashMap<>();
+    private static Map<String, DoubleArrayPublisher> rotationPublisherByDefPath =
+            new HashMap<>();
+    private static Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
+            new HashMap<>();
+
+    public static void main(String[] args) throws IOException {
         // Set up exception handling to log to stderr and exit
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
@@ -57,6 +83,25 @@ public class DeepBlueSim {
             Thread.setDefaultUncaughtExceptionHandler(eh);
             Thread.currentThread().setUncaughtExceptionHandler(eh);
         }
+
+        // Boilerplate code so we can use NetworkTables
+        {
+            NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
+            WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
+            WPIMathJNI.Helper.setExtractOnStaticLoad(false);
+
+            CombinedRuntimeLoader.loadLibraries(DeepBlueSim.class, "wpiutiljni",
+                    "wpimathjni", "ntcorejni");
+        }
+
+        NetworkTableInstance inst = NetworkTableInstance.getDefault();
+        NetworkTable table = inst.getTable("WebotsSupervisor");
+        inst.startClient4("Webots controller");
+        inst.setServer("localhost");
+
+        table.addSubTableListener((parent, name, t) -> {
+            defPathsToPublish.add(name);
+        });
 
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
 
@@ -74,17 +119,52 @@ public class DeepBlueSim {
 
         updateUsersSimulationSpeed(robot);
         // Use a SimDeviceSim to coordinate with robot code
-        final CompletableFuture<Boolean> isDoneFuture = new CompletableFuture<Boolean>();
-        final SimDeviceSim webotsSupervisorSim = new SimDeviceSim("WebotsSupervisor");
-        final SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
+        final CompletableFuture<Boolean> isDoneFuture =
+                new CompletableFuture<Boolean>();
+        final SimDeviceSim timeSynchronizerSim =
+                new SimDeviceSim("TimeSynchronizer");
 
-        // Regularly report the simulated robot's position
+        // Regularly report the position, rotation, and/or velocity of the requested nodes
         Simulation.registerPeriodicMethod(() -> {
-            Node self = robot.getSelf();
-            double[] pos = self.getPosition();
-            webotsSupervisorSim.set("self.position.x", pos[0]);
-            webotsSupervisorSim.set("self.position.y", pos[1]);
-            webotsSupervisorSim.set("self.position.z", pos[2]);
+            for (var defPath : defPathsToPublish) {
+                var node = robot.getFromDef(defPath);
+                if (node == null) {
+                    System.err.println(
+                            "Could not find node for the following DEF path: "
+                                    + defPath);
+                    continue;
+                }
+                var subTable = table.getSubTable(defPath);
+                if (subTable == null) {
+                    System.err.println(
+                            "Could not find subtable for the following DEF path: "
+                                    + defPath);
+                    continue;
+                }
+                var positionTopic = subTable.getDoubleArrayTopic("position");
+                if (positionTopic.exists()) {
+                    var publisher = positionPublisherByDefPath.computeIfAbsent(
+                            defPath, (key) -> positionTopic.publish());
+                    publisher.set(node.getPosition());
+                }
+                var rotationTopic = subTable.getDoubleArrayTopic("rotation");
+                if (rotationTopic.exists()) {
+                    var simpleMatrix =
+                            new SimpleMatrix(3, 3, true, node.getOrientation());
+                    var rotation =
+                            new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
+                    var publisher = rotationPublisherByDefPath.computeIfAbsent(
+                            defPath, (key) -> rotationTopic.publish());
+                    publisher.set(new double[] {rotation.getX(),
+                            rotation.getY(), rotation.getZ()});
+                }
+                var velocityTopic = subTable.getDoubleArrayTopic("velocity");
+                if (velocityTopic.exists()) {
+                    var publisher = velocityPublisherByDefPath.computeIfAbsent(
+                            defPath, (key) -> velocityTopic.publish());
+                    publisher.set(node.getVelocity());
+                }
+            }
         });
 
         Timer simPauseTimer = new Timer();

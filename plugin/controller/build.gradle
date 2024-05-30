@@ -50,6 +50,9 @@ def nativeTasks = wpilibTools.createExtractionTasks {
 
 nativeTasks.addToSourceSetResources(sourceSets.main)
 nativeConfig.dependencies.add wpilibTools.deps.wpilib("wpimath")
+nativeConfig.dependencies.add wpilibTools.deps.wpilib("wpinet")
+nativeConfig.dependencies.add wpilibTools.deps.wpilib("wpiutil")
+nativeConfig.dependencies.add wpilibTools.deps.wpilib("ntcore")
 
 // Add repositories containing project dependencies
 repositories {
@@ -71,6 +74,9 @@ dependencies {
     testImplementation 'junit:junit:4.13'
 
     implementation wpilibTools.deps.wpilibJava("wpimath")
+    implementation wpilibTools.deps.wpilibJava("wpiutil")
+    implementation wpilibTools.deps.wpilibJava("wpinet")
+    implementation wpilibTools.deps.wpilibJava("ntcore")
 
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
@@ -80,6 +86,7 @@ dependencies {
     implementation group: "com.fasterxml.jackson.core", name: "jackson-databind", version: wpi.versions.jacksonVersion.get()
 
     implementation group: "org.ejml", name: "ejml-simple", version: wpi.versions.ejmlVersion.get()
+    implementation group: "us.hebi.quickbuf", name: "quickbuf-runtime", version: wpi.versions.quickbufVersion.get();
 }
 
 // Configure the building of the fat jar
@@ -97,8 +104,10 @@ shadowJar {
     // launching the controller, so don't include them.
     exclude 'com/cyberbotics/**/*'
 
-    // Remove anything that was required by something that was excluded
-    minimize()
+    // Per the docs for creating a standalone NetworkTables program:
+    // https://docs.wpilib.org/en/stable/docs/software/networktables/client-side-program.html
+    // Presumably because it's all one big jar
+    exclude("module-info.class")
 
     // Include our license and the (renamed) license report
     from files("LICENSE.md", "$buildDir/reports/licenses/licenseReport.html")
