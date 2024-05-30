@@ -194,10 +194,10 @@ public class SimRegisterer {
 
         String baseDeviceName =
                 "PlayingWithFusionTimeOfFlight[%s]".formatted(port);
-        CANAnalogInputSim rangeDevice = new CANAnalogInputSim(
-                baseDeviceName + "-rangeVoltsIsMM", "SimDevice");
+        CANAnalogInputSim rangeDevice =
+                new CANAnalogInputSim(baseDeviceName + "-rangeVoltsIsMM");
         CANAnalogInputSim ambientLightLevelDevice = new CANAnalogInputSim(
-                baseDeviceName + "-ambientLightLevelVoltsIsMcps", "SimDevice");
+                baseDeviceName + "-ambientLightLevelVoltsIsMcps");
         new PlayingWithFusionTimeOfFlightMediator(device, rangeDevice,
                 ambientLightLevelDevice);
     }
