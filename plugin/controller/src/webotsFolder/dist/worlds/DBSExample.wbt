@@ -4,6 +4,8 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 
 WorldInfo {
   coordinateSystem "NUE"
@@ -33,26 +35,137 @@ DEF ROBOT Robot {
   children [
     Solid {
       children [
-        Gyro {
-        }
-        HingeJoint {
-          jointParameters HingeJointParameters {
-            position -4.1511655620378363e-11
-            axis 0 0 1
-            anchor -0.167 0 -0.232
+        PoweredHingeJoint {
+          devices [
+            MiniCIMMotor {
+              controllerType "PWM"
+              port 3
+              gearing 6.9973
+            }
+            WPIQuadratureEncoder {
+            }
+            Brake {
+            }
+          ]
+          endPoint Solid {
+            translation 0.1669999999999989 -2.4730714204904136e-06 0.23200000000253404
+            rotation 0.9999999748139617 -4.98403937699204e-10 -0.00022443724243920477 5.307156870259904e-06
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry DEF Wheel Cylinder {
+                  height 0.0125
+                  radius 0.0635
+                }
+              }
+            ]
+            name "FR"
+            boundingObject USE Wheel
+            physics Physics {
+            }
           }
-          device [
+          jointParameters HingeJointParameters {
+            position 8.919282517793818e-11
+            axis 0 0 -1
+            anchor 0.167 0 0.232
+          }
+        }
+        PoweredHingeJoint {
+          devices [
+            MiniCIMMotor {
+              controllerType "PWM"
+              port 2
+              gearing 6.9973
+            }
+            WPIQuadratureEncoder {
+              channelA 2
+              channelB 3
+            }
+            Brake {
+            }
+          ]
+          endPoint Solid {
+            translation -0.16700000000000098 -2.4730714204834747e-06 0.232000000002534
+            rotation 0.9999999838397753 -3.9064444371707457e-10 -0.00017977888988938742 5.307156870259904e-06
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry DEF Wheel Cylinder {
+                  height 0.0125
+                  radius 0.0635
+                }
+              }
+            ]
+            name "BR"
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            position 4.150378260475315e-11
+            axis 0 0 -1
+            anchor -0.167 0 0.232
+          }
+        }
+        PoweredHingeJoint {
+          devices [
+            WPIQuadratureEncoder {
+              channelA 4
+              channelB 5
+            }
+            MiniCIMMotor {
+              controllerType "PWM"
+              port 1
+              gearing 6.9973
+            }
+            Brake {
+            }
+          ]
+          endPoint Solid {
+            translation 0.16700000000000323 -2.47307141028677e-06 -0.231999999997466
+            rotation 0.9999998281251962 1.296624959703654e-09 0.0005863016100932187 5.307156870259904e-06
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry DEF Wheel Cylinder {
+                  height 0.0125
+                  radius 0.0635
+                }
+              }
+            ]
+            name "FL"
+            boundingObject USE Wheel
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            position 9.225294324560214e-11
+            axis 0 0 1
+            anchor 0.167 0 -0.232
+          }
+        }
+        PoweredHingeJoint {
+          devices [
+            WPIQuadratureEncoder {
+              channelA 6
+              channelB 7
+            }
             MiniCIMMotor {
               controllerType "PWM"
               gearing 6.9973
             }
-            PositionSensor {
-              name "Back Left Encoder"
+            Brake {
             }
           ]
           endPoint Solid {
-            translation -0.1670000000000002 -2.473071410269423e-06 -0.23199999999746604
-            rotation 0.9999999896747462 2.2245706338344181e-10 0.00014370284342362158 5.307156870259904e-06
+            translation -0.1670000000000021 -2.473071410269423e-06 -0.23199999999746604
+            rotation 0.9999999999957659 -1.5114783490239782e-10 2.9099830654518306e-06 5.307156870259904e-06
             children [
               Shape {
                 appearance PBRAppearance {
@@ -69,72 +182,13 @@ DEF ROBOT Robot {
             physics Physics {
             }
           }
-        }
-        HingeJoint {
           jointParameters HingeJointParameters {
-            position 9.225294324560214e-11
+            position -4.1511655620378363e-11
             axis 0 0 1
-            anchor 0.167 0 -0.232
-          }
-          device [
-            MiniCIMMotor {
-              controllerType "PWM"
-              port 1
-              gearing 6.9973
-            }
-            PositionSensor {
-              name "Front Left Encoder"
-            }
-          ]
-          endPoint Solid {
-            translation 0.1670000000000008 -2.47307141028677e-06 -0.231999999997466
-            rotation 0.9999999286680492 7.431074700799304e-10 0.0003777087457428224 5.307156870259904e-06
-            children [
-              Shape {
-                appearance PBRAppearance {
-                  metalness 0.5
-                }
-                geometry USE Wheel
-              }
-            ]
-            name "FL"
-            boundingObject USE Wheel
-            physics Physics {
-            }
+            anchor -0.167 0 -0.232
           }
         }
-        HingeJoint {
-          jointParameters HingeJointParameters {
-            position 4.150378260475315e-11
-            axis 0 0 -1
-            anchor -0.167 0 0.232
-          }
-          device [
-            PositionSensor {
-              name "Back Right Encoder"
-            }
-            MiniCIMMotor {
-              controllerType "PWM"
-              port 2
-              gearing 6.9973
-            }
-          ]
-          endPoint Solid {
-            translation -0.1670000000000002 -2.4730714204834747e-06 0.232000000002534
-            rotation 0.9999999931301866 -2.2462931806780253e-10 -0.00011721615407189237 5.307156870259904e-06
-            children [
-              Shape {
-                appearance PBRAppearance {
-                  metalness 0.5
-                }
-                geometry USE Wheel
-              }
-            ]
-            name "BR"
-            boundingObject USE Wheel
-            physics Physics {
-            }
-          }
+        Gyro {
         }
         HingeJoint {
           jointParameters HingeJointParameters {
@@ -152,21 +206,6 @@ DEF ROBOT Robot {
               name "Front Right Encoder"
             }
           ]
-          endPoint Solid {
-            translation 0.16699999999999957 -2.4730714204904136e-06 0.23200000000253404
-            rotation 0.9999999876420861 -3.2001829594138985e-10 -0.00015721268214391712 5.307156870259904e-06
-            children [
-              Shape {
-                appearance PBRAppearance {
-                  metalness 0.5
-                }
-                geometry USE Wheel
-              }
-            ]
-            boundingObject USE Wheel
-            physics Physics {
-            }
-          }
         }
         Shape {
           appearance PBRAppearance {

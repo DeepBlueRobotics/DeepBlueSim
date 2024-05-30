@@ -1,0 +1,24 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+# tags: hidden, no3dView
+
+EXTERNPROTO "../protos/WPIEncoderBase.proto"
+
+# A base proto for robot encoders built into motors
+PROTO WPIBuiltinEncoderBase [
+    unconnectedField SFBool absolute FALSE
+    unconnectedField SFFloat absoluteOffsetDeg 0
+    unconnectedField SFBool inverted FALSE
+    unconnectedField SFInt32 CPR 4096
+    field SFFloat noiseStdDevRad 0
+]
+{
+    WPIEncoderBase {
+        location "Motor Shaft"
+        absolute IS absolute
+        absoluteOffsetDeg IS absoluteOffsetDeg
+        inverted IS inverted
+        CPR IS CPR
+        noiseStdDevRad IS noiseStdDevRad
+    }
+}

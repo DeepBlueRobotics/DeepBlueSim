@@ -1,8 +1,8 @@
 #VRML_SIM R2023b utf8
 
-EXTERNPROTO "../protos/WPIEncoderBase.proto"
+EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
 
-# A WPIEncoderBase implementation for an alternate encoder for a Spark Max.
+# A WPIStandaloneEncoderBase implementation for an alternate encoder for a Spark Max.
 PROTO SparkMaxAlternateEncoder [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     field SFBool inverted FALSE
@@ -10,7 +10,7 @@ PROTO SparkMaxAlternateEncoder [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIEncoderBase {
+    WPIStandaloneEncoderBase {
         location IS location
         absolute FALSE
         absoluteOffsetDeg 0

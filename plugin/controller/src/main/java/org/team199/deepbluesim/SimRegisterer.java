@@ -30,7 +30,8 @@ import edu.wpi.first.math.util.Units;
 
 public class SimRegisterer {
 
-    private static final CopyOnWriteArraySet<String> unboundEncoders = new CopyOnWriteArraySet<>();
+    private static final CopyOnWriteArraySet<PositionSensor> unboundEncoders =
+            new CopyOnWriteArraySet<>();
 
     public static void connectDevices() {
         Supervisor robot = Simulation.getSupervisor();
@@ -78,14 +79,16 @@ public class SimRegisterer {
 
         Supervisor robot = Simulation.getSupervisor();
 
-        String[] unboundEncodersCopy = unboundEncoders.toArray(new String[0]);
+        PositionSensor[] unboundEncodersCopy =
+                unboundEncoders.toArray(new PositionSensor[0]);
         unboundEncoders.clear();
 
-        for (String encoderName : unboundEncodersCopy) {
+        for (PositionSensor device : unboundEncodersCopy) {
             try {
-                connectEncoder((PositionSensor) robot.getDevice(encoderName), robot);
+                connectEncoder(device, robot);
             } catch (Exception e) {
-                System.err.println("Error occurred connecting to device " + encoderName + ":");
+                System.err.println("Error occurred connecting to device "
+                        + device.getName() + ":");
                 e.printStackTrace(System.err);
                 System.err.flush();
             }
@@ -128,7 +131,7 @@ public class SimRegisterer {
             if(simDevice.isPresent()) {
                 new WPILibEncoderMediator(device, simDevice.get(), isOnMotorShaft, isInverted, countsPerRevolution, gearing);
             } else {
-                unboundEncoders.add(device.getName());
+                unboundEncoders.add(device);
             }
         } else if(node.getField("id") != null) { // CANCoder
             new DutyCycleMediator(device, new DutyCycleSim("CANDutyCycle:CANCoder[" + node.getField("id").getSFInt32() + "]", "SimDevice"), isOnMotorShaft, isAbsolute, absoluteOffsetDeg, isInverted, countsPerRevolution, gearing);

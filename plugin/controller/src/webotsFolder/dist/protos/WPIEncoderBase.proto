@@ -1,5 +1,6 @@
 #VRML_SIM R2023b utf8
 # template language: javascript
+# tags: hidden, no3dView
 
 # A base proto for robot encoders
 PROTO WPIEncoderBase [
@@ -8,11 +9,12 @@ PROTO WPIEncoderBase [
     unconnectedField SFFloat absoluteOffsetDeg 0
     unconnectedField SFBool inverted FALSE
     unconnectedField SFInt32 CPR 4096
+    field SFString name ""
     field SFFloat noiseStdDevRad 0
 ]
 {
     PositionSensor {
-        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
+        name IS name
         noise IS noiseStdDevRad
     }
 }

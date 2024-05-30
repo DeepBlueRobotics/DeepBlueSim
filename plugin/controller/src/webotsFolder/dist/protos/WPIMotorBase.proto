@@ -1,5 +1,6 @@
 #VRML_SIM R2023b utf8
 # template language: javascript
+# tags: hidden, no3dView
 
 # A RotationalMotor with the properties necessary to construct a WPILib DCMotor
 PROTO WPIMotorBase [
