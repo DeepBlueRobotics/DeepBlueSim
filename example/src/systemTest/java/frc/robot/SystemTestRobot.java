@@ -3,8 +3,10 @@ package frc.robot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.ejml.simple.SimpleMatrix;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +19,8 @@ import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.hal.simulation.SimValueCallback;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.networktables.DoubleArrayTopic;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
@@ -43,15 +47,23 @@ public class SystemTestRobot {
                 }
             }
 
-            SimDevice webotsSupervisor = null;
-            SimDouble positionX = null, positionY = null, positionZ = null;
+            DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
 
             @Override
             public void simulationInit() {
-                webotsSupervisor = SimDevice.create("WebotsSupervisor");
-                positionX = webotsSupervisor.createDouble("self.position.x", SimDevice.Direction.kInput, 0.0);
-                positionY = webotsSupervisor.createDouble("self.position.y", SimDevice.Direction.kInput, 0.0);
-                positionZ = webotsSupervisor.createDouble("self.position.z", SimDevice.Direction.kInput, 0.0);
+                NetworkTableInstance inst = NetworkTableInstance.getDefault();
+                // Ask that the robot's position, rotation, and velocity be updated for us every
+                // simulation step
+                positionTopic = inst.getDoubleArrayTopic(
+                        "/WebotsSupervisor/ROBOT/position");
+                positionTopic.publish().set(new double[] {});
+                rotationTopic = inst.getDoubleArrayTopic(
+                        "/WebotsSupervisor/ROBOT/rotation");
+                rotationTopic.publish().set(new double[] {});
+                velocityTopic = inst.getDoubleArrayTopic(
+                        "/WebotsSupervisor/ROBOT/velocity");
+                velocityTopic.publish().set(new double[] {});
+
                 webotsInit();
 
                 System.out.println("Webots has started. Enabling in autonomous.");
@@ -179,21 +191,17 @@ public class SystemTestRobot {
                     DriverStationSim.setEnabled(false);
                     DriverStationSim.notifyNewData();
 
-                    Vector<N3> expectedPos = new Vector<>(N3.instance);
-                    expectedPos.set(0, 0, -2.6);
-                    expectedPos.set(1, 0, 0.0);
-                    expectedPos.set(2, 0, 0.0);
+                    Vector<N3> expectedPos = new Vector<N3>(new SimpleMatrix(3,
+                            1, true, new double[] {-2.6, 0, 0}));
 
-                    System.out.println("self.position.x =" + positionX.get());
-                    System.out.println("self.position.y =" + positionY.get());
-                    System.out.println("self.position.z =" + positionZ.get());
+                    double[] position = positionTopic.subscribe(null).get();
+                    System.out.println(
+                            "robot position =" + Arrays.toString(position));
 
-                    Vector<N3> actualPos = new Vector<>(N3.instance);
-                    actualPos.set(0, 0, positionX.get());
-                    actualPos.set(1, 0, positionY.get());
-                    actualPos.set(2, 0, positionZ.get());
+                    Vector<N3> actualPos = new Vector<N3>(
+                            new SimpleMatrix(3, 1, true, position));
 
-                    var diff = new Vector<N3>(expectedPos.minus(actualPos));
+                    var diff = expectedPos.minus(actualPos);
                     var distance = Math.sqrt(diff.elementTimes(diff).elementSum());
 
                     assertEquals(0.0, distance, 1.0, "Robot close to target position");
