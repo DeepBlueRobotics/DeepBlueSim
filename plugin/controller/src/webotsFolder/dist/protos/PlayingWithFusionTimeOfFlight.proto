@@ -1,0 +1,85 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+# license: WPILib BSD
+# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+
+PROTO PlayingWithFusionTimeOfFlight [
+    unconnectedField SFInt32 port        0
+
+    # Sensor parameters
+    field SFInt32    numberOfRays        5
+    field SFFloat    gaussianWidth       0.25
+
+    # Expose fields from Solid and Pose
+    field SFVec3f    translation         0 0 0
+    field SFRotation rotation            1 0 0 -1.5708
+    field SFFloat    translationStep     0.01
+    field SFFloat    rotationStep        0.261799387
+    field SFNode{Appearance{},PBRAppearance{}} appearance PBRAppearance {
+        baseColor 0 0 0
+        metalness 0
+    }
+    field SFNode{Physics{}} physics      NULL
+    field SFBool     locked              FALSE
+    field SFString   contactMaterial     "default"
+    field MFNode{ImmersionProperties{}} immersionProperties []
+    field SFFloat    radarCrossSection   0.0
+    field MFColor    recognitionColors   []
+]
+{
+    DistanceSensor {
+        # General
+        name %<= '"DBSim_PlayingWithFusionTimeOfFlight_' + fields.port.value + '"' >%
+        model "PlayingWithFusion-TimeOfFlightSensor"
+        description  %<= '"DeepBlueSim Playing With Fusion Time Of Flight Sensor on CAN Port ' + fields.port.value + '"' >%
+
+        # Model
+        boundingObject Pose {
+            translation -0.004953 0 0
+            children [
+                Box {
+                    size 0.009906 0.055538 0.01559
+                }
+            ]
+        }
+        children [
+            Pose {
+                translation -0.009906 0 0
+                rotation 0.577351 -0.57735 -0.57735 2.09439
+                children [
+                    Shape {
+                        appearance IS appearance
+                        geometry Mesh {
+                            url "../models/PlayingWithFusionTimeOfFlight.stl"
+                        }
+                    }
+                ]
+            }
+        ]
+
+        # Sensor
+        lookupTable [ 0      40 0
+                      0.04   40 0.05
+                      3.6  3600 0.05
+                      4    3600 0    ]
+        type "infra-red"
+        numberOfRays IS numberOfRays
+        aperture 0.471 # 27 degrees
+        gaussianWidth IS gaussianWidth
+        resolution 0.001 # 1mm
+        redColorSensitivity 1
+
+        # Misc
+        translation IS translation
+        rotation IS rotation
+        translationStep IS translationStep
+        rotationStep IS rotationStep
+        physics IS physics
+        locked IS locked
+        contactMaterial IS contactMaterial
+        immersionProperties IS immersionProperties
+        radarCrossSection IS radarCrossSection
+        recognitionColors IS recognitionColors
+    }
+}
