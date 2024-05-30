@@ -60,7 +60,7 @@ PROTO PlayingWithFusionTimeOfFlight [
                       3.6  3600 0.00555
                       4    3600 0       ]
         type "infra-red"
-        numberOfRays 4
+        numberOfRays 5
         aperture 0.471 # 27 degrees
         gaussianWidth 1
         resolution 0.001 # 1mm
