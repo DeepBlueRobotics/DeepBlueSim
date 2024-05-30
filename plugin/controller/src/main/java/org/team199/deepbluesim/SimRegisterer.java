@@ -192,7 +192,7 @@ public class SimRegisterer {
         String port = device.getName().split("_")[2];
 
         String baseDeviceName =
-                "CANAIn:PlayingWithFusionTimeOfFlight[%d]".formatted(port);
+                "CANAIn:PlayingWithFusionTimeOfFlight[%s]".formatted(port);
         AnalogInputSim rangeDevice = new AnalogInputSim(
                 baseDeviceName + "-rangeVoltsIsMM", "SimDevice");
         AnalogInputSim ambientLightLevelDevice = new AnalogInputSim(

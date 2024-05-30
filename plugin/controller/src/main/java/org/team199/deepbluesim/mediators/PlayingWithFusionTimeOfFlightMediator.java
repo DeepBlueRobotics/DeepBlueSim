@@ -7,6 +7,10 @@ import com.cyberbotics.webots.controller.DistanceSensor;
 
 public class PlayingWithFusionTimeOfFlightMediator implements Runnable {
 
+    // We can't set this via the SimDevice
+    // See comment in run()
+    public static final int SAMPLING_PERIOD_MS = 100;
+
     public final DistanceSensor sensor;
     public final AnalogInputSim rangeDevice, ambientLightLevelDevice;
 
@@ -16,6 +20,8 @@ public class PlayingWithFusionTimeOfFlightMediator implements Runnable {
         this.sensor = sensor;
         this.rangeDevice = rangeDevice;
         this.ambientLightLevelDevice = ambientLightLevelDevice;
+
+        sensor.enable(100);
 
         Simulation.registerPeriodicMethod(this);
     }
