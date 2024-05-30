@@ -56,9 +56,9 @@ PROTO PlayingWithFusionTimeOfFlight [
 
         # Sensor
         lookupTable [ 0      40 0
-                      0.04   40 0.2
-                      3.6  3600 0.00555
-                      4    3600 0       ]
+                      0.04   40 0.05
+                      3.6  3600 0.05
+                      4    3600 0    ]
         type "infra-red"
         numberOfRays 5
         aperture 0.471 # 27 degrees
