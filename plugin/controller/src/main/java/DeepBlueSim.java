@@ -1,18 +1,26 @@
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.LinkedBlockingDeque;
 
-import com.cyberbotics.webots.controller.Node;
+import org.ejml.simple.SimpleMatrix;
+import org.java_websocket.client.WebSocketClient;
+import org.team199.deepbluesim.SimRegisterer;
+import org.team199.deepbluesim.Simulation;
+import org.team199.wpiws.connection.ConnectionProcessor;
+import org.team199.wpiws.connection.RunningObject;
+import org.team199.wpiws.connection.WSConnection;
+import org.team199.wpiws.devices.SimDeviceSim;
+import org.team199.wpiws.interfaces.ObjectCallback;
+
 import com.cyberbotics.webots.controller.Supervisor;
 
 import edu.wpi.first.math.Matrix;
@@ -20,23 +28,11 @@ import edu.wpi.first.math.WPIMathJNI;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
-
-import org.team199.wpiws.connection.ConnectionProcessor;
-import org.team199.wpiws.connection.RunningObject;
-import org.team199.wpiws.connection.WSConnection;
-import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.ObjectCallback;
-import org.ejml.simple.SimpleMatrix;
-import org.java_websocket.client.WebSocketClient;
-import org.team199.deepbluesim.SimRegisterer;
-import org.team199.deepbluesim.Simulation;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
 // the name of the jar.
@@ -125,7 +121,8 @@ public class DeepBlueSim {
         // Use a SimDeviceSim to coordinate with robot code
         final CompletableFuture<Boolean> isDoneFuture =
                 new CompletableFuture<Boolean>();
-        final SimDeviceSim timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
+        final SimDeviceSim timeSynchronizerSim =
+                new SimDeviceSim("TimeSynchronizer");
 
         // Regularly report the position, rotation, and/or velocity of the requested nodes
         Simulation.registerPeriodicMethod(() -> {
