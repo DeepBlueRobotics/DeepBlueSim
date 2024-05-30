@@ -1,7 +1,7 @@
 package org.team199.deepbluesim.mediators;
 
 import org.team199.deepbluesim.Simulation;
-import org.team199.wpiws.devices.AnalogInputSim;
+import org.team199.wpiws.devices.CANAnalogInputSim;
 
 import com.cyberbotics.webots.controller.DistanceSensor;
 
@@ -12,11 +12,11 @@ public class PlayingWithFusionTimeOfFlightMediator implements Runnable {
     public static final int SAMPLING_PERIOD_MS = 100;
 
     public final DistanceSensor sensor;
-    public final AnalogInputSim rangeDevice, ambientLightLevelDevice;
+    public final CANAnalogInputSim rangeDevice, ambientLightLevelDevice;
 
     public PlayingWithFusionTimeOfFlightMediator(DistanceSensor sensor,
-            AnalogInputSim rangeDevice,
-            AnalogInputSim ambientLightLevelDevice) {
+            CANAnalogInputSim rangeDevice,
+            CANAnalogInputSim ambientLightLevelDevice) {
         this.sensor = sensor;
         this.rangeDevice = rangeDevice;
         this.ambientLightLevelDevice = ambientLightLevelDevice;

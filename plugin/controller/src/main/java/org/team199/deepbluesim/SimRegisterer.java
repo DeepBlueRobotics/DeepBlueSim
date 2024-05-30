@@ -13,6 +13,7 @@ import org.team199.deepbluesim.mediators.CANEncoderMediator;
 import org.team199.deepbluesim.mediators.DutyCycleMediator;
 import org.team199.deepbluesim.mediators.WPILibEncoderMediator;
 import org.team199.wpiws.devices.AnalogInputSim;
+import org.team199.wpiws.devices.CANAnalogInputSim;
 import org.team199.wpiws.devices.CANMotorSim;
 import org.team199.wpiws.devices.CANEncoderSim;
 import org.team199.wpiws.devices.DutyCycleSim;
@@ -192,10 +193,10 @@ public class SimRegisterer {
         String port = device.getName().split("_")[2];
 
         String baseDeviceName =
-                "CANAIn:PlayingWithFusionTimeOfFlight[%s]".formatted(port);
-        AnalogInputSim rangeDevice = new AnalogInputSim(
+                "PlayingWithFusionTimeOfFlight[%s]".formatted(port);
+        CANAnalogInputSim rangeDevice = new CANAnalogInputSim(
                 baseDeviceName + "-rangeVoltsIsMM", "SimDevice");
-        AnalogInputSim ambientLightLevelDevice = new AnalogInputSim(
+        CANAnalogInputSim ambientLightLevelDevice = new CANAnalogInputSim(
                 baseDeviceName + "-ambientLightLevelVoltsIsMcps", "SimDevice");
         new PlayingWithFusionTimeOfFlightMediator(device, rangeDevice,
                 ambientLightLevelDevice);
