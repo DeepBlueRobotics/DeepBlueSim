@@ -6,7 +6,7 @@ EXTERNPROTO "../protos/WPIEncoderBase.proto"
 
 # A base proto for robot encoders built into motors
 PROTO WPIBuiltinEncoderBase [
-    unconnectedField SFString name ""
+    field SFString name ""
     unconnectedField SFBool absolute FALSE
     unconnectedField SFFloat absoluteOffsetDeg 0
     unconnectedField SFBool inverted FALSE
@@ -16,11 +16,6 @@ PROTO WPIBuiltinEncoderBase [
 {
     WPIEncoderBase {
         name IS name
-        location "Motor Shaft"
-        absolute IS absolute
-        absoluteOffsetDeg IS absoluteOffsetDeg
-        inverted IS inverted
-        CPR IS CPR
         noiseStdDevRad IS noiseStdDevRad
     }
 }
