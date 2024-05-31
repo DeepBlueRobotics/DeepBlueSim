@@ -16,11 +16,6 @@ PROTO WPIStandaloneEncoderBase [
 {
     WPIEncoderBase {
         name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
-        location IS location
-        absolute IS absolute
-        absoluteOffsetDeg IS absoluteOffsetDeg
-        inverted IS inverted
-        CPR IS CPR
         noiseStdDevRad IS noiseStdDevRad
     }
 }
