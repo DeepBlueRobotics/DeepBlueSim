@@ -1,0 +1,64 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+EXTERNPROTO "../protos/NEOMotor.proto"
+EXTERNPROTO "../protos/NEO550Motor.proto"
+EXTERNPROTO "../protos/Falcon500Motor.proto"
+EXTERNPROTO "../protos/CIMMotor.proto"
+EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/Vex775ProMotor.proto"
+EXTERNPROTO "../protos/RomiBuiltinMotor.proto"
+EXTERNPROTO "../protos/BanebotsRs550Motor.proto"
+EXTERNPROTO "../protos/BanebotsRs775Motor.proto"
+EXTERNPROTO "../protos/REVBuiltinEncoder.proto"
+EXTERNPROTO "../protos/SparkMaxAbsoluteEncoder.proto"
+EXTERNPROTO "../protos/SparkMaxAlternateEncoder.proto"
+EXTERNPROTO "../protos/SparkMaxAnalogSensor.proto"
+EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
+EXTERNPROTO "../protos/CANCoder.proto"
+
+# A RotationalMotor with the properties necessary to construct a WPILib DCMotor
+PROTO PoweredHingeJoint [
+    field MFNode{
+      NEOMotor{}, NEO550Motor{}, Falcon500Motor{}, CIMMotor{}, MiniCIMMotor{}, Vex775ProMotor{}, RomiBuiltinMotor{}, BanebotsRs550Motor{}, BanebotsRs775Motor{},
+      REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{}, WPIQuadratureEncoder{}, CANCoder{},
+      Brake{}
+    } devices [NEOMotor{} REVBuiltinEncoder{} Brake{}]
+    field SFNode{Solid{}} endPoint Solid{}
+    field SFNode{HingeJointParameters{}} jointParameters HingeJointParameters{}
+]
+{
+%<
+import {info,assert} from 'wbutility.js'; 
+let devices = fields.devices.value;
+let hasBrake = false;
+let motorDevice = null;
+let encoderDevice = null;
+for (let i = 0; i < devices.length; i++) {
+  if (devices[i].node_name == "Brake") {
+    hasBrake = true;
+  } else if (devices[i].node_name.endsWith("Motor")) {
+    motorDevice = devices[i];
+  } else if (devices[i].node_name.endsWith("Encoder")) {
+    encoderDevice = devices[i];
+  }
+}
+assert(hasBrake, "PoweredHingeJoint is missing the required Brake device!");
+assert(motorDevice != null, "PoweredHingeJoint is missing the required motor device!");
+let motorType = motorDevice.node_name;
+let controllerType = motorDevice.fields.controllerType.value;
+if (controllerType.startsWith("Spark")) {
+  assert(encoderDevice != null, "PoweredHingeJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
+    + "Consider adding a REVBuiltinEncoder.");
+} else if (controllerType == "PWM" && encoderDevice != null) {
+  let encoderType = encoderDevice.node_name;
+  assert(!encoderType.endsWith("BuiltinEncoder"), "PoweredHingeJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
+}
+
+>%
+    HingeJoint {
+        device IS devices
+        endPoint IS endPoint
+        jointParameters IS jointParameters
+    }        
+}

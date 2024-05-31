@@ -1,8 +1,8 @@
 #VRML_SIM R2023b utf8
 
-EXTERNPROTO "../protos/WPIEncoderBase.proto"
+EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
 
-# A WPIEncoderBase implementation for an analog sensor for a Spark Max.
+# A WPIStandaloneEncoderBase implementation for an analog sensor for a Spark Max.
 PROTO SparkMaxAnalogSensor [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     field SFFloat absoluteOffsetDeg 0
@@ -11,7 +11,7 @@ PROTO SparkMaxAnalogSensor [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIEncoderBase {
+    WPIStandaloneEncoderBase {
         location IS location
         absolute TRUE
         absoluteOffsetDeg IS absoluteOffsetDeg

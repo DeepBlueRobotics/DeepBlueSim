@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.ejml.simple.SimpleMatrix;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +28,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
 
+@Timeout(value = 30, unit = TimeUnit.MINUTES)
 public class SystemTestRobot {
 
     /**

@@ -1,0 +1,17 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+EXTERNPROTO "../protos/WPIBuiltinEncoderBase.proto"
+
+# A proto for encoders built into REV motors
+# The DeepBlueSim robot controller will use the motor's type (e.g. NEOMotor) and controllerType
+# (e.g. "Spark Max") to determine the encoder's CPR.
+
+PROTO REVBuiltinEncoder [
+    field SFFloat noiseStdDevRad 0
+]
+{
+    WPIBuiltinEncoderBase {
+        noiseStdDevRad IS noiseStdDevRad
+    }
+}
