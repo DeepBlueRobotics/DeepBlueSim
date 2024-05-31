@@ -39,6 +39,15 @@ public class DeepBlueSimExtension {
         this.wpi = wpi;
     }
 
+    /**
+     * Retruns a dependency that should be added to any test configuration that wants to use work
+     * effectively with DeepBlueSim.
+     * 
+     * @return the test library dependency
+     */
+    public String testLib() {
+        return "org.carlmontrobotics:libdeepbluesim";
+    }
     
     /** 
      * Configures the tasks so that they can use the WPILib simulation extensions that are enabled by default.
