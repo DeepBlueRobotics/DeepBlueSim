@@ -27,11 +27,6 @@ class DeepBlueSimPlugin implements Plugin<Project> {
         project.pluginManager.withPlugin('edu.wpi.first.GradleRIO') {
             def installDeepBlueSim = project.tasks.register("installDeepBlueSim") {
                 doLast {
-                    def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream("Webots.zip")
-                    if (resourceStream == null) throw new RuntimeException("resourceStream is null")
-                    def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
-                    dbsDir.mkdirs()
-
                     // Java IO cannot open files with the hidden attribute set on Windows (JDK-8047342)
                     // This capability is needed to overwrite the files loaded from the zip (if they exist)
                     // Webots automatically sets the hidden attribute on the .wbproj file
@@ -43,12 +38,8 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                         }
                     }
 
-                    def extractedZipFile = new File(dbsDir, "Webots.zip")
-                    FileUtils.copyInputStreamToFile(resourceStream, extractedZipFile)
-                    project.copy {
-                        from project.zipTree(extractedZipFile)
-                        into project.projectDir
-                    }
+                    extractResource(project, "Webots.zip")
+                    extractResource(project, "libdeepbluesim.zip")
                 }
             }
             [JavaSimulationTask, JavaExternalSimulationTask, NativeSimulationTask, NativeExternalSimulationTask].each { cls ->
@@ -57,6 +48,20 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                 }
             }
             project.extensions.create('deepbluesim', DeepBlueSimExtension, project.wpi)
+        }
+    }
+
+    void extractResource(Project project, String resourceZip) {
+        def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream(resourceZip)
+        if (resourceStream == null) throw new RuntimeException("resourceStream is null")
+        def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
+        dbsDir.mkdirs()
+
+        def extractedZipFile = new File(dbsDir, resourceZip)
+        FileUtils.copyInputStreamToFile(resourceStream, extractedZipFile)
+        project.copy {
+            from project.zipTree(extractedZipFile)
+            into project.projectDir
         }
     }
 }

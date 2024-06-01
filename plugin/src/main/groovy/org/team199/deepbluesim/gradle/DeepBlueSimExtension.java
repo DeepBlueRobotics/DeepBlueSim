@@ -12,6 +12,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.Provider;
 import org.gradle.internal.os.OperatingSystem;
 import org.gradle.process.JavaForkOptions;
@@ -40,13 +41,13 @@ public class DeepBlueSimExtension {
     }
 
     /**
-     * Retruns a dependency that should be added to any test configuration that wants to use work
+     * Returns a dependency that should be added to any test configuration that wants to work
      * effectively with DeepBlueSim.
      * 
      * @return the test library dependency
      */
-    public String testLib() {
-        return "org.carlmontrobotics:libdeepbluesim";
+    public FileTree testDep() {
+        return project.fileTree("libdeepbluesim");
     }
     
     /** 

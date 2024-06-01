@@ -126,7 +126,7 @@ testing {
         systemTest(JvmTestSuite)  {
             dependencies {
                 implementation project()
-                implementation deepbluesim.testLib()
+                implementation deepbluesim.testDep()
             }
 
             targets {

@@ -9,7 +9,8 @@ plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
 
-    id "maven-publish"
+    // Support creating distributions archives
+    id 'distribution'
 
     // Support WPILib
     id "edu.wpi.first.GradleRIO" version "2024.3.1"
@@ -74,6 +75,8 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 tasks.named('test') {
@@ -81,14 +84,30 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-publishing {
-    publications {
-        gpr(MavenPublication) {
-            groupId = 'org.carlmontrobotics'
-            artifactId = 'libdeepbluesim'
-            version = '0.0.1'
+configurations {
+    libdeepbluesimFolder {
+        canBeConsumed = true
+        canBeResolved = false
+    }
+}
 
-            from components.java
+distributions {
+    libdeepbluesimFolder {
+        distributionBaseName = "libdeepbluesim"
+        contents {
+            from(jar)
+            from(sourcesJar)
+            from(javadocJar)
         }
     }
 }
+
+libdeepbluesimFolderDistZip {
+    // Force name, so it doesn't contain the version number.
+    archiveFileName = "libdeepbluesim.zip"
+}
+
+artifacts {
+    libdeepbluesimFolder(libdeepbluesimFolderDistZip)
+}
+

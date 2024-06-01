@@ -84,9 +84,12 @@ dependencies {
     implementation 'edu.wpi.first:GradleRIO:2024.3.1'
     // include the Webots.zip artifact produced by the controller's webotsFolder configuration
     extraFiles project(path: ':controller', configuration: 'webotsFolder')
+
+    // include the libdeepbluesim.zip artifact produced by the libdeepbluesim's libdeepbluesimFolder configuration
+    extraFiles project(path: ':libdeepbluesim', configuration: 'libdeepbluesimFolder')
 }
 
-// Copy the extra files (namely Webots.zip) into the the jar
+// Copy the extra files (namely Webots.zip and libdeepbluesim.zip) into the the jar
 processResources {
     into('org/team199/deepbluesim/gradle') {
         from configurations.extraFiles
