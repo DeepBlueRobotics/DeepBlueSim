@@ -15,6 +15,11 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
 
+/**
+ * A manager for Webots robots that use the DeepBlueSim controller. It keeps the time in the
+ * simulator synchronized to the robot time and provides a way to add Watchers to track the
+ * kinematics of Webots nodes.
+ */
 public class WebotsManager implements AutoCloseable {
     private final TimedRobot robot;
     private final Timer robotTime = new Timer();
@@ -29,18 +34,42 @@ public class WebotsManager implements AutoCloseable {
         // This is replaced in waitForUserToStart()
     });
 
+    /**
+     * Constructs an instance that connects the robot code to the Webots-simulated robot controlled
+     * by DeepBlueSim.
+     * 
+     * @param robot the robot to connect to the Webots-simulated robot.
+     */
     public WebotsManager(TimedRobot robot) {
         this.robot = robot;
     }
 
+    /**
+     * Gets the current robot time.
+     * 
+     * @return the current robot time in seconds.
+     */
     public double getTimeSecs() {
         return robotTime.get();
     }
 
+    /**
+     * Adds a Watcher for a Webots node.
+     * 
+     * @param defPath the DEF path (i.e. a dot separated path of DEF names, like "ROBOT.ARM.ROLLER")
+     *        of the node to watch.
+     * @return the Watcher object.
+     */
     public Watcher addWatcher(String defPath) {
         return new Watcher(defPath);
     }
 
+    /**
+     * Asks the user to load and start a particular Webots world and waits until they have done so.
+     * 
+     * @param worldFile the world file's path to be displayed to the user.
+     * @throws TimeoutException if the world hasn't been started in time.
+     */
     public void waitForUserToStart(String worldFile) throws TimeoutException {
         // Start robot time right before the first periodic call is made so that we ignore
         // startup time.
@@ -158,6 +187,9 @@ public class WebotsManager implements AutoCloseable {
         }
     }
 
+    /**
+     * Closes this instance, freeing any resources that in holds.
+     */
     public void close() {
         pauser.close();
     }

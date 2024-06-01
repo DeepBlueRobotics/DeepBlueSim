@@ -5,9 +5,18 @@ import edu.wpi.first.networktables.DoubleArrayTopic;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 
+/**
+ * Provides kinematic information for a Webots node.
+ */
 public class Watcher {
-    DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
+    private DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
 
+    /**
+     * Constructs an instance that watches a particular Webots node.
+     *
+     * @param defPath the DEF path (i.e. a dot separated path of DEF names, like "ROBOT.ARM.ROLLER")
+     *        of the node to watch.
+     */
     Watcher(String defPath) {
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
 
@@ -22,6 +31,11 @@ public class Watcher {
         velocityTopic.publish().set(new double[] {});
     }
 
+    /**
+     * Gets the current position of the node.
+     * 
+     * @return the node's position.
+     */
     public Translation3d getPosition() {
         double[] posAsArray = positionTopic.subscribe(null).get();
         return new Translation3d(posAsArray[0], posAsArray[1], posAsArray[2]);
