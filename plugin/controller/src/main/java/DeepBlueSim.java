@@ -1,6 +1,11 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -18,8 +23,6 @@ import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.connection.ConnectionProcessor;
 import org.team199.wpiws.connection.RunningObject;
 import org.team199.wpiws.connection.WSConnection;
-import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.ObjectCallback;
 
 import com.cyberbotics.webots.controller.Supervisor;
 
@@ -28,24 +31,29 @@ import edu.wpi.first.math.WPIMathJNI;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoubleEntry;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTable.TableEventListener;
+import edu.wpi.first.networktables.NetworkTableEvent;
+import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.networktables.StringEntry;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
-// NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
+// NOTE: Webots expects the controller class to *not* be in a package and have a name that matches
+// the
 // the name of the jar.
 public class DeepBlueSim {
 
-    private static final BlockingDeque<Runnable> queuedMessages = new LinkedBlockingDeque<>();
+    private static final BlockingDeque<Runnable> queuedMessages =
+            new LinkedBlockingDeque<>();
 
     private static RunningObject<WebSocketClient> wsConnection = null;
-
-    /**
-     * Time value set by the simulator and the robot to indicate that the simulation should start.
-     */
-    private static final double START_SIMULATION = -2.0;
 
     /**
      * The time in milliseconds since the last timestep update from the robot.
@@ -56,7 +64,10 @@ public class DeepBlueSim {
 
     // Remember the current simulation speed (default to real time if paused)
     private static void updateUsersSimulationSpeed(Supervisor robot) {
-        usersSimulationSpeed = robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE ? Supervisor.SIMULATION_MODE_REAL_TIME : robot.simulationGetMode();
+        usersSimulationSpeed =
+                robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE
+                        ? Supervisor.SIMULATION_MODE_REAL_TIME
+                        : robot.simulationGetMode();
     }
 
     private static Set<String> defPathsToPublish =
@@ -69,7 +80,20 @@ public class DeepBlueSim {
     private static Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
             new HashMap<>();
 
+    private static final PrintStream log;
+
+    static {
+        try {
+            File logFile = new File("DeepBlueSim.log");
+            System.out.println("Logging to " + logFile.getAbsolutePath());
+            log = new PrintStream(new FileOutputStream(logFile), true);
+        } catch (FileNotFoundException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
     public static void main(String[] args) throws IOException {
+
+        log.println("Starting log");
         // Set up exception handling to log to stderr and exit
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
@@ -94,12 +118,21 @@ public class DeepBlueSim {
                     "wpimathjni", "ntcorejni");
         }
 
+        // Use a NetworkTables to coordinate with robot code
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
-        NetworkTable table = inst.getTable("WebotsSupervisor");
+        if (false)
+            inst.addLogger(0, Integer.MAX_VALUE, (event) -> {
+                log.println("NT instance log level %d message: %s(%d): %s"
+                        .formatted(event.logMessage.level,
+                                event.logMessage.filename,
+                                event.logMessage.line, event.logMessage.message)
+                        + event.logMessage);
+            });
         inst.startClient4("Webots controller");
         inst.setServer("localhost");
+        NetworkTable watchedNodes = inst.getTable("WebotsSupervisor");
 
-        table.addSubTableListener((parent, name, t) -> {
+        watchedNodes.addSubTableListener((parent, name, t) -> {
             defPathsToPublish.add(name);
         });
 
@@ -109,20 +142,18 @@ public class DeepBlueSim {
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
 
         if (!robot.getSupervisor()) {
-            System.err.println("The robot does not have supervisor=true. This is required to detect devices.");
+            System.err.println(
+                    "The robot does not have supervisor=true. This is required to detect devices.");
             System.exit(1);
         }
         // Get the basic timestep to use for calls to robot.step()
-        final int basicTimeStep = (int)Math.round(robot.getBasicTimeStep());
+        final int basicTimeStep = (int) Math.round(robot.getBasicTimeStep());
 
         Simulation.init(robot, robot.getBasicTimeStep());
 
         updateUsersSimulationSpeed(robot);
-        // Use a SimDeviceSim to coordinate with robot code
         final CompletableFuture<Boolean> isDoneFuture =
                 new CompletableFuture<Boolean>();
-        final SimDeviceSim timeSynchronizerSim =
-                new SimDeviceSim("TimeSynchronizer");
 
         // Regularly report the position, rotation, and/or velocity of the requested nodes
         Simulation.registerPeriodicMethod(() -> {
@@ -134,7 +165,7 @@ public class DeepBlueSim {
                                     + defPath);
                     continue;
                 }
-                var subTable = table.getSubTable(defPath);
+                var subTable = watchedNodes.getSubTable(defPath);
                 if (subTable == null) {
                     System.err.println(
                             "Could not find subtable for the following DEF path: "
@@ -169,72 +200,92 @@ public class DeepBlueSim {
 
         Timer simPauseTimer = new Timer();
 
-        // Whenever the robot time changes, step the simulation until just past that time
-        timeSynchronizerSim.registerValueChangedCallback("robotTimeSec", new ObjectCallback<String>() {
-            @Override
-            public synchronized void callback(String name, String value) {
-                // Ignore null default initial value
-                if (value == null)
-                    return;
+        NetworkTable timeSync = inst.getTable("TimeSynchronizer");
+        var pubSubOptions = new PubSubOption[] {
+                // PubSubOption.sendAll(true),
+                // PubSubOption.periodic(Double.MIN_VALUE)
+        };
 
-                double robotTimeSec = Double.parseDouble(value);
-
-                // If we are asked to start the simulation, reload the world.
-                // this will restart this controller process so that we are running the most recent controller.
-                if (robotTimeSec == START_SIMULATION) {
-                    // Cancel the sim pause timer so that it doesn't pause the simulation after we unpause it below.
-                    simPauseTimer.cancel();
-                    // Unpause before reloading so that the new controller can take it's first step.
-                    robot.simulationSetMode(usersSimulationSpeed);
-                    robot.worldReload();
-                    return;
-                }
-
-                // Keep stepping the simulation forward until the sim time is more than the robot time
-                // or the simulation ends.
-                for(;;) {
-                    double simTimeSec = robot.getTime();
-                    if (simTimeSec > robotTimeSec) {
-                        break;
-                    }
-                    // Unpause if necessary
-                    robot.simulationSetMode(usersSimulationSpeed);
-                    boolean isDone = (robot.step(basicTimeStep) == -1);
-
-                    // If that was our first step, schedule a task to pause the simulator if it
-                    // doesn't taken any steps for 1-2 seconds so it doesn't suck up CPU.
-                    if (lastStepMillis == 0) {
-                        simPauseTimer.schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                if (System.currentTimeMillis() - lastStepMillis > 1000) {
-                                    queuedMessages.add(() -> {
-                                        updateUsersSimulationSpeed(robot);
-                                        robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
-                                    });
+        final long sleepMs = 0;
+        // Add a listener to handle reload requests.
+        DoubleEntry simTimeSecEntry = timeSync.getDoubleTopic("simTimeSec")
+                .getEntry(-1.0, pubSubOptions);
+        StringEntry reloadRequestEntry = timeSync.getStringTopic("reloadStatus")
+                .getEntry("", PubSubOption.sendAll(true));
+        timeSync.addListener("reloadStatus",
+                EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
+                (table, key, event) -> {
+                    final String reloadStatus =
+                            new String(event.valueData.value.getString());
+                    log.println("In listener, reloadStatus = " + reloadStatus);
+                    switch (reloadStatus) {
+                        case "Requested":
+                            queuedMessages.add(() -> {
+                                try {
+                                    if (sleepMs > 0)
+                                        Thread.sleep(sleepMs);
+                                } catch (Exception ex) {
+                                    throw new RuntimeException(ex);
                                 }
-                            }
-                        }, 1000, 1000);
+                                // Cancel the sim pause timer so that it doesn't pause the
+                                // simulation after we unpause it below.
+                                simPauseTimer.cancel();
+                                // Unpause before reloading so that the new controller can take it's
+                                // first step.
+                                robot.simulationSetMode(usersSimulationSpeed);
+
+                                // Note that the use of kValueRemote flag on this listener should
+                                // prevent the following line from triggering this listener
+                                // directly. Instead, it should only be triggered in the new
+                                // process.
+                                long serverTime = reloadRequestEntry
+                                        .getAtomic().serverTime + 10000;
+                                log.println(
+                                        "Setting reloadstatus = In Progress at "
+                                                + serverTime);
+                                reloadRequestEntry.set("In Progress");
+                                try {
+                                    if (sleepMs > 0)
+                                        Thread.sleep(sleepMs);
+                                } catch (Exception ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                                inst.flush();
+                                log.println("Reloading world");
+                                log.flush();
+                                log.close();
+                                robot.worldReload();
+                            });
+                            break;
+                        case "In Progress":
+                            // This should only occur after a reload because we used the
+                            // kValueRemote flag.
+                            queuedMessages.add(() -> {
+                                try {
+                                    Thread.sleep(200);
+                                } catch (Exception ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                                long serverTime = reloadRequestEntry
+                                        .getAtomic().serverTime + 10000;
+                                log.println(
+                                        "Setting reloadstatus = Completed at "
+                                                + serverTime);
+                                simTimeSecEntry.set(0.0);
+                                reloadRequestEntry.set("Completed");
+                                try {
+                                    Thread.sleep(200);
+                                } catch (Exception ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                                inst.flush();
+                                log.println(
+                                        "Done setting reloadstatus = Completed");
+                            });
+                            break;
                     }
 
-                    lastStepMillis = System.currentTimeMillis();
-                    timeSynchronizerSim.set("simTimeSec", robot.getTime());
-                    if (isDone) {
-                        isDoneFuture.complete(true);
-                        break;
-                    }
-                    Simulation.runPeriodicMethods();
-                }
-            }
-        }, true);
-
-
-        // If the robot code starts before we us, then it might have already tried to tell
-        // us it was ready and we would have missed it. So, we tell it we're ready when we
-        // connect to it.
-        ConnectionProcessor.addOpenListener(() -> {
-            timeSynchronizerSim.set("simTimeSec", START_SIMULATION);
-        });
+                });
 
         // Wait until startup has completed to ensure that the Webots simulator is
         // not still starting up.
@@ -243,14 +294,15 @@ public class DeepBlueSim {
         }
         SimRegisterer.connectDevices();
 
+
         // Pause the simulation until either the robot code tells us to proceed or the
         // user does.
         robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
 
-        // Connect to the robot code
+        // Connect to the robot code on a separate thread. Does not block.
         try {
             wsConnection = WSConnection.connectHALSim(true);
-        } catch(URISyntaxException e) {
+        } catch (URISyntaxException e) {
             System.err.println("Error occurred connecting to server:");
             e.printStackTrace(System.err);
             System.err.flush();
@@ -261,18 +313,76 @@ public class DeepBlueSim {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 wsConnection.object.closeBlocking();
-            } catch(InterruptedException e) {}
+            } catch (InterruptedException e) {
+            }
         }));
 
-        // Process incoming messages until simulation finishes
+        // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
+        // the robot of the new sim time.
+        DoubleSubscriber robotTimeSecSubscriber = timeSync
+                .getDoubleTopic("robotTimeSec").subscribe(-1.0, pubSubOptions);
+        timeSync.addListener("robotTimeSec",
+                EnumSet.of(Kind.kValueAll, Kind.kImmediate),
+                (table, key, event) -> {
+                    final double robotTimeSec =
+                            event.valueData.value.getDouble();
+                    log.println("In listener, robotTimeSec = " + robotTimeSec);
+                    queuedMessages.add(() -> {
+                        // Keep stepping the simulation forward until the sim time is more than
+                        // the robot time or the simulation ends.
+                        for (;;) {
+                            double simTimeSec = robot.getTime();
+                            if (simTimeSec > robotTimeSec) {
+                                break;
+                            }
+                            // Unpause if necessary
+                            robot.simulationSetMode(usersSimulationSpeed);
+                            boolean isDone = (robot.step(basicTimeStep) == -1);
+
+                            // If that was our first step, schedule a task to pause the
+                            // simulator if it doesn't taken any steps for 1-2 seconds so it
+                            // doesn't suck up CPU.
+                            if (lastStepMillis == 0) {
+                                simPauseTimer.schedule(new TimerTask() {
+                                    @Override
+                                    public void run() {
+                                        if (System.currentTimeMillis()
+                                                - lastStepMillis > 1000) {
+                                            queuedMessages.add(() -> {
+                                                updateUsersSimulationSpeed(
+                                                        robot);
+                                                robot.simulationSetMode(
+                                                        Supervisor.SIMULATION_MODE_PAUSE);
+                                            });
+                                        }
+                                    }
+                                }, 1000, 1000);
+                            }
+
+                            lastStepMillis = System.currentTimeMillis();
+                            log.println(
+                                    "Setting simTimeSec = " + robot.getTime());
+                            simTimeSecEntry.set(robot.getTime());
+                            inst.flush();
+                            if (isDone) {
+                                isDoneFuture.complete(true);
+                                break;
+                            }
+                            Simulation.runPeriodicMethods();
+                        }
+                    });
+                });
+
+        // Process messages until simulation finishes
         try {
             while (isDoneFuture.getNow(false).booleanValue() == false) {
-                if (timeSynchronizerSim.get("robotTimeSec") != null || !queuedMessages.isEmpty()) {
+                if (robotTimeSecSubscriber.exists()
+                        || !queuedMessages.isEmpty()) {
                     // Either there is a message waiting or it is ok to wait for it because the
                     // robot code will tell us when to step the simulation.
                     queuedMessages.takeFirst().run();
-                } else if (timeSynchronizerSim.get("robotTimeSec") == null
-                        && robot.simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
+                } else if (!robotTimeSecSubscriber.exists() && robot
+                        .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
                     // The robot code isn't going to tell us when to step the simulation and the
                     // user has unpaused it.
                     Simulation.runPeriodicMethods();
@@ -290,11 +400,11 @@ public class DeepBlueSim {
                 }
             }
         } catch (Exception ex) {
-            throw new RuntimeException("Exception while waiting for simulation to be done", ex);
+            throw new RuntimeException(
+                    "Exception while waiting for simulation to be done", ex);
         }
 
-        System.out.println("Shutting down DeepBlueSim...");
-        System.out.flush();
+        log.println("Shutting down DeepBlueSim...");
 
         System.exit(0);
     }
