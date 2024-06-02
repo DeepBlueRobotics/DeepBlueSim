@@ -62,7 +62,7 @@ public class SystemTestRobot {
                     DriverStationSim.notifyNewData();
 
                     Translation3d actualPos = robotWatcher.getPosition();
-                    System.out.println("robot position =" + actualPos);
+                    System.out.println("robot position = " + actualPos);
 
                     Translation3d expectedPos = new Translation3d(-2.6, 0, 0);
                     var distance = expectedPos.getDistance(actualPos);

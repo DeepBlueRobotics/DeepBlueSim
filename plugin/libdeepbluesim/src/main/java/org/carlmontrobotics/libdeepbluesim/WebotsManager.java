@@ -6,11 +6,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import edu.wpi.first.networktables.DoubleEntry;
+import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTable.TableEventListener;
-import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
@@ -29,15 +28,18 @@ public class WebotsManager implements AutoCloseable {
     private final TimedRobot robot;
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
-    private final NetworkTable timeSync;
-    private final StringEntry reloadRequestEntry;
-    private final DoubleEntry robotTimeSecEntry;
+    private final NetworkTable coordinator;
+    private final StringEntry reloadStatusEntry;
+    private final DoublePublisher robotTimeSecPublisher;
     private final DoubleSubscriber simTimeSecSubscriber;
 
-    /**
-     * Time value set by the simulator and the robot to indicate that the simulation should start.
-     */
-    private static final double START_SIMULATION = -2.0;
+    // Use these to control NetworkTables logging.
+    // - ntLoglevel = 0 means no NT logging
+    // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
+    // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
+    // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
+    private static int ntLogLevel = 0;
+    private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
     @SuppressWarnings("resource")
     private final Notifier pauser = new Notifier(() -> {
@@ -53,27 +55,28 @@ public class WebotsManager implements AutoCloseable {
     public WebotsManager(TimedRobot robot) {
         this.robot = robot;
         inst = NetworkTableInstance.getDefault();
-        if (false)
-            inst.addLogger(0, Integer.MAX_VALUE, (event) -> {
+        if (ntLogLevel > 0)
+            inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
+                if (event.logMessage.level < ntTransientLogLevel)
+                    return;
                 System.out
                         .println("NT instance log level %d message: %s(%d): %s"
                                 .formatted(event.logMessage.level,
                                         event.logMessage.filename,
                                         event.logMessage.line,
-                                        event.logMessage.message)
-                                + event.logMessage);
+                                        event.logMessage.message));
             });
 
-        timeSync = inst.getTable("TimeSynchronizer");
+        coordinator = inst.getTable("/DeepBlueSim/Coordinator");
         var pubSubOptions = new PubSubOption[] {
                 // PubSubOption.sendAll(true),
                 // PubSubOption.periodic(Double.MIN_VALUE)
         };
-        reloadRequestEntry = timeSync.getStringTopic("reloadStatus")
+        reloadStatusEntry = coordinator.getStringTopic("reloadStatus")
                 .getEntry("", PubSubOption.sendAll(true));
-        robotTimeSecEntry = timeSync.getDoubleTopic("robotTimeSec")
+        robotTimeSecPublisher = coordinator.getDoubleTopic("robotTimeSec")
                 .getEntry(-1.0, pubSubOptions);
-        simTimeSecSubscriber = timeSync.getDoubleTopic("simTimeSec")
+        simTimeSecSubscriber = coordinator.getDoubleTopic("simTimeSec")
                 .subscribe(-1.0, pubSubOptions);
     }
 
@@ -128,35 +131,33 @@ public class WebotsManager implements AutoCloseable {
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
 
-        // When the controller says it has finished reloading the world, we are ready
-        timeSync.addListener("reloadStatus",
-                EnumSet.of(Kind.kValueAll, Kind.kImmediate),
-                (table, entry, event) -> {
+        // When DeepBlueSim says that reload has completed, we are ready
+        inst.addListener(reloadStatusEntry.getTopic(),
+                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
                     final String reloadStatus =
                             event.valueData.value.getString();
                     System.out.println(
                             "In listener, reloadStatus = " + reloadStatus);
                     if (reloadStatus.equals("Completed")) {
                         System.out.println("Setting reloadStatus = ''");
-                        reloadRequestEntry.set("",
-                                reloadRequestEntry.getAtomic().serverTime
+                        reloadStatusEntry.set("",
+                                reloadStatusEntry.getAtomic().serverTime
                                         + 10000);
                         inst.flush();
-                        System.out.println("Done setting reloadStatus = ''");
                         isReadyFuture.complete(true);
-                        robotTimeSecEntry.set(robotTime.get());
+                        robotTimeSecPublisher.set(robotTime.get());
                     }
                 });
 
-        // Once the controller is running tell it to reload the world so it is in a known state. It
-        // will set this value to "In Progress" before it reloads and then to "Completed" when it
-        // finishes.
-        reloadRequestEntry.set("Requested");
+        // If DeepBlueSim is already running or when the user starts it, tell it to reload the world
+        // so it is in a known state. It will set this value to "In Progress" before it reloads and
+        // then to "Completed" when it finishes.
+        reloadStatusEntry.set("Requested");
         inst.flush();
 
-        // Wait up to 15 minutes for the controller to be ready, reminding the user every 10
-        // seconds. On GitHub's MacOS Continuous Integration servers, it can take over 8 minutes for
-        // Webots to start.
+        // Wait up to 15 minutes for DeepBlueSim to be ready, reminding the user every 10 seconds.
+        // On GitHub's MacOS Continuous Integration servers, it can take over 8 minutes for Webots
+        // to start.
         var startedWaitingTimeMs = System.currentTimeMillis();
         var isReady = false;
         while (!isReady
@@ -193,40 +194,32 @@ public class WebotsManager implements AutoCloseable {
             // We're caught up, so pause and tell the sim what our new time is so that it can
             // continue.
             SimHooks.pauseTiming();
-            System.out.println("Setting robotTimeSec = " + robotTimeSec);
-            robotTimeSecEntry.set(robotTimeSec);
+            robotTimeSecPublisher.set(robotTimeSec);
             inst.flush();
         });
 
 
-        timeSync.addListener("simTimeSec",
-                EnumSet.of(Kind.kValueAll, Kind.kImmediate),
-                new TableEventListener() {
-                    @Override
-                    public synchronized void accept(NetworkTable table,
-                            String key, NetworkTableEvent event) {
-                        double simTimeSec = event.valueData.value.getDouble();
-                        System.out.println(
-                                "In listener, simTimeSec = " + simTimeSec);
-                        double robotTimeSec = robotTime.get();
-                        // Ignore the default initial value
-                        if (simTimeSec == -1.0) {
-                            return;
-                        }
-
-                        // If we're not behind the sim time, there is nothing to do.
-                        double deltaSecs = simTimeSec - robotTimeSec;
-                        if (deltaSecs < 0.0) {
-                            return;
-                        }
-
-                        // We are behind the sim time, so run until we've caught up.
-                        // We use a Notifier instead of SimHooks.stepTiming() because
-                        // using SimHooks.stepTiming() causes accesses to sim data to block.
-                        pauser.stop();
-                        pauser.startSingle(deltaSecs);
-                        SimHooks.resumeTiming();
+        inst.addListener(simTimeSecSubscriber.getTopic(),
+                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
+                    double simTimeSec = event.valueData.value.getDouble();
+                    double robotTimeSec = robotTime.get();
+                    // Ignore the default initial value
+                    if (simTimeSec == -1.0) {
+                        return;
                     }
+
+                    // If we're not behind the sim time, there is nothing to do.
+                    double deltaSecs = simTimeSec - robotTimeSec;
+                    if (deltaSecs < 0.0) {
+                        return;
+                    }
+
+                    // We are behind the sim time, so run until we've caught up.
+                    // We use a Notifier instead of SimHooks.stepTiming() because
+                    // using SimHooks.stepTiming() causes accesses to sim data to block.
+                    pauser.stop();
+                    pauser.startSingle(deltaSecs);
+                    SimHooks.resumeTiming();
                 });
     }
 

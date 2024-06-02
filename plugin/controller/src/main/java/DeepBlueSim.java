@@ -31,12 +31,10 @@ import edu.wpi.first.math.WPIMathJNI;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
-import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTable.TableEventListener;
-import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
@@ -82,6 +80,14 @@ public class DeepBlueSim {
 
     private static final PrintStream log;
 
+    // Use these to control NetworkTables logging.
+    // - ntLoglevel = 0 means no NT logging
+    // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
+    // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
+    // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
+    private static int ntLogLevel = 0;
+    private static volatile int ntTransientLogLevel = LogMessage.kInfo;
+
     static {
         try {
             File logFile = new File("DeepBlueSim.log");
@@ -118,19 +124,21 @@ public class DeepBlueSim {
                     "wpimathjni", "ntcorejni");
         }
 
-        // Use a NetworkTables to coordinate with robot code
+        // Use the default NetworkTables instance to coordinate with robot code
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
-        if (false)
-            inst.addLogger(0, Integer.MAX_VALUE, (event) -> {
+        if (ntLogLevel > 0)
+            inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
+                if (event.logMessage.level < ntTransientLogLevel)
+                    return;
                 log.println("NT instance log level %d message: %s(%d): %s"
                         .formatted(event.logMessage.level,
                                 event.logMessage.filename,
-                                event.logMessage.line, event.logMessage.message)
-                        + event.logMessage);
+                                event.logMessage.line,
+                                event.logMessage.message));
             });
         inst.startClient4("Webots controller");
         inst.setServer("localhost");
-        NetworkTable watchedNodes = inst.getTable("WebotsSupervisor");
+        NetworkTable watchedNodes = inst.getTable("/DeepBlueSim/WatchedNodes");
 
         watchedNodes.addSubTableListener((parent, name, t) -> {
             defPathsToPublish.add(name);
@@ -200,33 +208,27 @@ public class DeepBlueSim {
 
         Timer simPauseTimer = new Timer();
 
-        NetworkTable timeSync = inst.getTable("TimeSynchronizer");
-        var pubSubOptions = new PubSubOption[] {
-                // PubSubOption.sendAll(true),
-                // PubSubOption.periodic(Double.MIN_VALUE)
-        };
+        NetworkTable coordinator = inst.getTable("/DeepBlueSim/Coordinator");
 
-        final long sleepMs = 0;
+        // Create a publisher for communicating the sim time and request that updates to it are
+        // communicated as quickly as possible.
+        DoublePublisher simTimeSecPublisher =
+                coordinator.getDoubleTopic("simTimeSec").getEntry(-1.0,
+                        PubSubOption.sendAll(true),
+                        PubSubOption.periodic(Double.MIN_VALUE));
+
         // Add a listener to handle reload requests.
-        DoubleEntry simTimeSecEntry = timeSync.getDoubleTopic("simTimeSec")
-                .getEntry(-1.0, pubSubOptions);
-        StringEntry reloadRequestEntry = timeSync.getStringTopic("reloadStatus")
+        StringEntry reloadStatusEntry =
+                coordinator.getStringTopic("reloadStatus")
                 .getEntry("", PubSubOption.sendAll(true));
-        timeSync.addListener("reloadStatus",
+        inst.addListener(reloadStatusEntry.getTopic(),
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
-                (table, key, event) -> {
+                (event) -> {
                     final String reloadStatus =
                             new String(event.valueData.value.getString());
-                    log.println("In listener, reloadStatus = " + reloadStatus);
                     switch (reloadStatus) {
                         case "Requested":
                             queuedMessages.add(() -> {
-                                try {
-                                    if (sleepMs > 0)
-                                        Thread.sleep(sleepMs);
-                                } catch (Exception ex) {
-                                    throw new RuntimeException(ex);
-                                }
                                 // Cancel the sim pause timer so that it doesn't pause the
                                 // simulation after we unpause it below.
                                 simPauseTimer.cancel();
@@ -238,20 +240,8 @@ public class DeepBlueSim {
                                 // prevent the following line from triggering this listener
                                 // directly. Instead, it should only be triggered in the new
                                 // process.
-                                long serverTime = reloadRequestEntry
-                                        .getAtomic().serverTime + 10000;
-                                log.println(
-                                        "Setting reloadstatus = In Progress at "
-                                                + serverTime);
-                                reloadRequestEntry.set("In Progress");
-                                try {
-                                    if (sleepMs > 0)
-                                        Thread.sleep(sleepMs);
-                                } catch (Exception ex) {
-                                    throw new RuntimeException(ex);
-                                }
+                                reloadStatusEntry.set("In Progress");
                                 inst.flush();
-                                log.println("Reloading world");
                                 log.flush();
                                 log.close();
                                 robot.worldReload();
@@ -261,26 +251,11 @@ public class DeepBlueSim {
                             // This should only occur after a reload because we used the
                             // kValueRemote flag.
                             queuedMessages.add(() -> {
-                                try {
-                                    Thread.sleep(200);
-                                } catch (Exception ex) {
-                                    throw new RuntimeException(ex);
-                                }
-                                long serverTime = reloadRequestEntry
-                                        .getAtomic().serverTime + 10000;
-                                log.println(
-                                        "Setting reloadstatus = Completed at "
-                                                + serverTime);
-                                simTimeSecEntry.set(0.0);
-                                reloadRequestEntry.set("Completed");
-                                try {
-                                    Thread.sleep(200);
-                                } catch (Exception ex) {
-                                    throw new RuntimeException(ex);
-                                }
+                                simTimeSecPublisher.set(0.0);
+                                ntTransientLogLevel = LogMessage.kDebug4;
+                                reloadStatusEntry.set("Completed");
                                 inst.flush();
-                                log.println(
-                                        "Done setting reloadstatus = Completed");
+                                ntTransientLogLevel = LogMessage.kInfo;
                             });
                             break;
                     }
@@ -319,14 +294,15 @@ public class DeepBlueSim {
 
         // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
         // the robot of the new sim time.
-        DoubleSubscriber robotTimeSecSubscriber = timeSync
-                .getDoubleTopic("robotTimeSec").subscribe(-1.0, pubSubOptions);
-        timeSync.addListener("robotTimeSec",
+        DoubleSubscriber robotTimeSecSubscriber =
+                coordinator.getDoubleTopic("robotTimeSec").subscribe(-1.0,
+                        PubSubOption.sendAll(true),
+                        PubSubOption.periodic(Double.MIN_VALUE));
+        inst.addListener(robotTimeSecSubscriber.getTopic(),
                 EnumSet.of(Kind.kValueAll, Kind.kImmediate),
-                (table, key, event) -> {
+                (event) -> {
                     final double robotTimeSec =
                             event.valueData.value.getDouble();
-                    log.println("In listener, robotTimeSec = " + robotTimeSec);
                     queuedMessages.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
                         // the robot time or the simulation ends.
@@ -360,9 +336,7 @@ public class DeepBlueSim {
                             }
 
                             lastStepMillis = System.currentTimeMillis();
-                            log.println(
-                                    "Setting simTimeSec = " + robot.getTime());
-                            simTimeSecEntry.set(robot.getTime());
+                            simTimeSecPublisher.set(robot.getTime());
                             inst.flush();
                             if (isDone) {
                                 isDoneFuture.complete(true);
@@ -408,5 +382,4 @@ public class DeepBlueSim {
 
         System.exit(0);
     }
-
 }

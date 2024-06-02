@@ -20,7 +20,8 @@ public class Watcher {
     Watcher(String defPath) {
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
 
-        NetworkTable table = inst.getTable("/WebotsSupervisor/" + defPath);
+        NetworkTable table =
+                inst.getTable("/DeepBlueSim/WatchedNodes/" + defPath);
         // Ask that the robot's position, rotation, and velocity be updated for us every
         // simulation step
         positionTopic = table.getDoubleArrayTopic("position");
