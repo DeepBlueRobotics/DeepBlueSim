@@ -26,6 +26,10 @@ public class Robot extends TimedRobot {
   private final Joystick m_stick = new Joystick(0);
   private final Timer m_timer = new Timer();
   private DifferentialDrive m_robotDrive;
+  private PWMMotorController m_leftMaster;
+  private PWMMotorController m_leftFollower;
+  private PWMMotorController m_rightMaster;
+  private PWMMotorController m_rightFollower;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -33,15 +37,24 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    PWMMotorController leftMaster = new PWMVictorSPX(0);
-    leftMaster.addFollower(new PWMVictorSPX(1));
+    m_leftMaster = new PWMVictorSPX(0);
+    m_leftFollower = new PWMVictorSPX(1);
+    m_leftMaster.addFollower(m_leftFollower);
+    m_rightMaster = new PWMVictorSPX(2);
+    m_rightFollower = new PWMVictorSPX(3);
+    m_rightMaster.addFollower(m_rightFollower);
 
-    PWMMotorController rightMaster = new PWMVictorSPX(2);
-    rightMaster.addFollower(new PWMVictorSPX(3));
+    m_rightMaster.setInverted(true);
 
-    rightMaster.setInverted(true);
+    m_robotDrive = new DifferentialDrive(m_leftMaster, m_rightMaster);
+  }
 
-    m_robotDrive = new DifferentialDrive(leftMaster, rightMaster);
+  public void close() {
+    System.out.println("Closing motors in Robot.close()");
+    m_leftMaster.close();
+    m_leftFollower.close();
+    m_rightMaster.close();
+    m_rightFollower.close();
   }
 
   /**
