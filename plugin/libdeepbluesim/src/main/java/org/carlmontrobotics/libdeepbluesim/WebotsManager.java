@@ -5,7 +5,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
+import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.LogMessage;
@@ -14,9 +17,14 @@ import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StringEntry;
+import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.Time;
+import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.wpilibj.simulation.SimDeviceSim;
 import edu.wpi.first.wpilibj.simulation.SimHooks;
 
 /**
@@ -69,13 +77,16 @@ public class WebotsManager implements AutoCloseable {
 
         coordinator = inst.getTable("/DeepBlueSim/Coordinator");
         var pubSubOptions = new PubSubOption[] {
-                // PubSubOption.sendAll(true),
-                // PubSubOption.periodic(Double.MIN_VALUE)
+                PubSubOption.sendAll(true),
+                PubSubOption.periodic(Double.MIN_VALUE)
         };
-        reloadStatusEntry = coordinator.getStringTopic("reloadStatus")
+        var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
+        reloadStatusTopic.setCached(false);
+        reloadStatusEntry =
+                reloadStatusTopic
                 .getEntry("", PubSubOption.sendAll(true));
         robotTimeSecPublisher = coordinator.getDoubleTopic("robotTimeSec")
-                .getEntry(-1.0, pubSubOptions);
+                .publish(pubSubOptions);
         simTimeSecSubscriber = coordinator.getDoubleTopic("simTimeSec")
                 .subscribe(-1.0, pubSubOptions);
     }
@@ -105,8 +116,11 @@ public class WebotsManager implements AutoCloseable {
      * 
      * @param worldFile the world file's path to be displayed to the user.
      * @throws TimeoutException if the world hasn't been started in time.
+     * 
+     * @return this object for chaining
      */
-    public void waitForUserToStart(String worldFile) throws TimeoutException {
+    public WebotsManager waitForUserToStart(String worldFile)
+            throws TimeoutException {
         // Tell the user to load the world file.
         String userReminder =
                 "Waiting for Webots to be ready. Please open %s in Webots."
@@ -133,20 +147,15 @@ public class WebotsManager implements AutoCloseable {
 
         // When DeepBlueSim says that reload has completed, we are ready
         inst.addListener(reloadStatusEntry.getTopic(),
-                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
+                EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final String reloadStatus =
                             event.valueData.value.getString();
                     System.out.println(
-                            "In listener, reloadStatus = " + reloadStatus);
-                    if (reloadStatus.equals("Completed")) {
-                        System.out.println("Setting reloadStatus = ''");
-                        reloadStatusEntry.set("",
-                                reloadStatusEntry.getAtomic().serverTime
-                                        + 10000);
-                        inst.flush();
-                        isReadyFuture.complete(true);
-                        robotTimeSecPublisher.set(robotTime.get());
-                    }
+                            "In listener, reloadStatus = %s"
+                                    .formatted(reloadStatus));
+                    if (!reloadStatus.equals("Completed"))
+                        return;
+                    isReadyFuture.complete(true);
                 });
 
         // If DeepBlueSim is already running or when the user starts it, tell it to reload the world
@@ -221,12 +230,54 @@ public class WebotsManager implements AutoCloseable {
                     pauser.startSingle(deltaSecs);
                     SimHooks.resumeTiming();
                 });
+
+        robotTimeSecPublisher.set(robotTime.get());
+        inst.flush();
+
+        System.out.println("Webots has started. Robot is running.");
+
+        return this;
     }
 
+    public WebotsManager runAutonomous(Measure<Time> runTime) {
+        System.out.println("Enabling in autonomous.");
+        // Simulate starting autonomous
+        DriverStationSim.setAutonomous(true);
+        DriverStationSim.setEnabled(true);
+        DriverStationSim.notifyNewData();
+        try (Notifier endNotifier = new Notifier(() -> {
+            System.out.println("Calling robot.endCompetition()");
+            robot.endCompetition();
+        })) {
+            // HAL must be initialized or SimDeviceSim.resetData() will crash and SmartDashboard
+            // might not work.
+            HAL.initialize(500, 0);
+            SimDeviceSim.resetData();
+            endNotifier.startSingle(runTime.in(Seconds));
+            robot.startCompetition();
+        } finally {
+            SimDeviceSim.resetData();
+            // HAL.shutdown();
+        }
+        return this;
+    }
+
+    public WebotsManager withNodePosition(String defPath,
+            Consumer<Translation3d> acceptor) {
+        var watcher = new Watcher(defPath);
+        var pos = watcher.getPosition();
+        acceptor.accept(pos);
+        return this;
+    }
     /**
      * Closes this instance, freeing any resources that in holds.
      */
     public void close() {
+        reloadStatusEntry.close();
+        robotTimeSecPublisher.close();
+        simTimeSecSubscriber.close();
+        inst.close();
+        inst.stopServer();
         pauser.close();
     }
 }

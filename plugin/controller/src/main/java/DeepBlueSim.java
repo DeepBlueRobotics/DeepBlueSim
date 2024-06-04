@@ -85,14 +85,14 @@ public class DeepBlueSim {
     // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
     // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
     // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
-    private static int ntLogLevel = 0;
+    private static int ntLogLevel = LogMessage.kInfo;
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
     static {
         try {
             File logFile = new File("DeepBlueSim.log");
             System.out.println("Logging to " + logFile.getAbsolutePath());
-            log = new PrintStream(new FileOutputStream(logFile), true);
+            log = new PrintStream(new FileOutputStream(logFile, true), true);
         } catch (FileNotFoundException ex) {
             throw new RuntimeException(ex);
         }
@@ -213,53 +213,36 @@ public class DeepBlueSim {
         // Create a publisher for communicating the sim time and request that updates to it are
         // communicated as quickly as possible.
         DoublePublisher simTimeSecPublisher =
-                coordinator.getDoubleTopic("simTimeSec").getEntry(-1.0,
+                coordinator.getDoubleTopic("simTimeSec").publish(
                         PubSubOption.sendAll(true),
                         PubSubOption.periodic(Double.MIN_VALUE));
 
         // Add a listener to handle reload requests.
-        StringEntry reloadStatusEntry =
-                coordinator.getStringTopic("reloadStatus")
-                .getEntry("", PubSubOption.sendAll(true));
+        var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
+        reloadStatusTopic.setCached(false);
+        var reloadStatusEntry =
+                reloadStatusTopic.getEntry("", PubSubOption.sendAll(true));
         inst.addListener(reloadStatusEntry.getTopic(),
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
                 (event) -> {
                     final String reloadStatus =
-                            new String(event.valueData.value.getString());
-                    switch (reloadStatus) {
-                        case "Requested":
-                            queuedMessages.add(() -> {
-                                // Cancel the sim pause timer so that it doesn't pause the
-                                // simulation after we unpause it below.
-                                simPauseTimer.cancel();
-                                // Unpause before reloading so that the new controller can take it's
-                                // first step.
-                                robot.simulationSetMode(usersSimulationSpeed);
+                            event.valueData.value.getString();
+                    log.println("In listener, reloadStatus = %s"
+                            .formatted(reloadStatus));
+                    if (!reloadStatus.equals("Requested"))
+                        return;
+                    queuedMessages.add(() -> {
+                        // Cancel the sim pause timer so that it doesn't pause the
+                        // simulation after we unpause it below.
+                        simPauseTimer.cancel();
+                        // Unpause before reloading so that the new controller can take it's
+                        // first step.
+                        robot.simulationSetMode(usersSimulationSpeed);
 
-                                // Note that the use of kValueRemote flag on this listener should
-                                // prevent the following line from triggering this listener
-                                // directly. Instead, it should only be triggered in the new
-                                // process.
-                                reloadStatusEntry.set("In Progress");
-                                inst.flush();
-                                log.flush();
-                                log.close();
-                                robot.worldReload();
-                            });
-                            break;
-                        case "In Progress":
-                            // This should only occur after a reload because we used the
-                            // kValueRemote flag.
-                            queuedMessages.add(() -> {
-                                simTimeSecPublisher.set(0.0);
-                                ntTransientLogLevel = LogMessage.kDebug4;
-                                reloadStatusEntry.set("Completed");
-                                inst.flush();
-                                ntTransientLogLevel = LogMessage.kInfo;
-                            });
-                            break;
-                    }
-
+                        log.flush();
+                        log.close();
+                        robot.worldReload();
+                    });
                 });
 
         // Wait until startup has completed to ensure that the Webots simulator is
@@ -347,11 +330,14 @@ public class DeepBlueSim {
                     });
                 });
 
+        simTimeSecPublisher.set(robot.getTime());
+        reloadStatusEntry.set("Completed");
+        inst.flush();
+
         // Process messages until simulation finishes
         try {
             while (isDoneFuture.getNow(false).booleanValue() == false) {
-                if (robotTimeSecSubscriber.exists()
-                        || !queuedMessages.isEmpty()) {
+                if (!queuedMessages.isEmpty()) {
                     // Either there is a message waiting or it is ok to wait for it because the
                     // robot code will tell us when to step the simulation.
                     queuedMessages.takeFirst().run();
