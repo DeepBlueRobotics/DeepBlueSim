@@ -1,5 +1,6 @@
 package org.carlmontrobotics.libdeepbluesim;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -16,7 +17,8 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.networktables.StringEntry;
+import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.StringSubscriber;
 import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.Time;
 import static edu.wpi.first.units.Units.*;
@@ -37,7 +39,8 @@ public class WebotsManager implements AutoCloseable {
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
     private final NetworkTable coordinator;
-    private final StringEntry reloadStatusEntry;
+    private final StringPublisher reloadRequestPublisher;
+    private final StringSubscriber reloadStatusSubscriber;
     private final DoublePublisher robotTimeSecPublisher;
     private final DoubleSubscriber simTimeSecSubscriber;
 
@@ -80,15 +83,28 @@ public class WebotsManager implements AutoCloseable {
                 PubSubOption.sendAll(true),
                 PubSubOption.periodic(Double.MIN_VALUE)
         };
+        var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
+        reloadRequestPublisher = reloadRequestTopic.getEntry("",
+                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        reloadRequestTopic.setCached(false);
+
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
+        reloadStatusSubscriber =
+                reloadStatusTopic.subscribe("", PubSubOption.sendAll(true));
         reloadStatusTopic.setCached(false);
-        reloadStatusEntry =
-                reloadStatusTopic
-                .getEntry("", PubSubOption.sendAll(true));
-        robotTimeSecPublisher = coordinator.getDoubleTopic("robotTimeSec")
-                .publish(pubSubOptions);
-        simTimeSecSubscriber = coordinator.getDoubleTopic("simTimeSec")
-                .subscribe(-1.0, pubSubOptions);
+
+        var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
+        robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
+        robotTimeSecTopic.setCached(false);
+
+        var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
+        simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
+        simTimeSecTopic.setCached(false);
+
+        // Run the onInited callbacks once.
+        // Note: the offset is -period so they are run before other WPILib periodic methods
+        robot.addPeriodic(this::runRobotInitedCallbacksOnce, robot.getPeriod(),
+                -robot.getPeriod());
     }
 
     /**
@@ -111,6 +127,47 @@ public class WebotsManager implements AutoCloseable {
         return new Watcher(defPath);
     }
 
+    private volatile double simTimeSec = 0.0;
+
+    private volatile int reloadCount = 0;
+
+    public WebotsManager withWorld(String worldFile) {
+        onRobotInited(() -> {
+            try {
+                waitForUserToStart(worldFile);
+                runSimulationReadyCallbacks();
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        return this;
+    }
+
+    private volatile boolean isReady = false;
+    private boolean isRobotTimeStarted = false;
+
+    /** Start the robot timing if we haven't already. */
+    private synchronized void ensureRobotTimingStarted() {
+        if (isRobotTimeStarted) {
+            return;
+        }
+        // Pause the clock so that we can step it in sync with the simulator
+        SimHooks.pauseTiming();
+
+        // Restart robot time.
+        robotTime.stop();
+        robotTime.reset();
+        robotTime.start();
+
+        var robotTimeSec = robotTime.get();
+        System.out.println("Sending initial robotTimeSec = " + robotTimeSec);
+        robotTimeSecPublisher.set(robotTimeSec);
+        inst.flush();
+
+        System.out.println("Robot is running.");
+        isRobotTimeStarted = true;
+    }
+
     /**
      * Asks the user to load and start a particular Webots world and waits until they have done so.
      * 
@@ -121,32 +178,27 @@ public class WebotsManager implements AutoCloseable {
      */
     public WebotsManager waitForUserToStart(String worldFile)
             throws TimeoutException {
+
+        // Pause the clock while we wait.
+        SimHooks.pauseTiming();
+
+        isReady = false;
+
         // Tell the user to load the world file.
         String userReminder =
                 "Waiting for Webots to be ready. Please open %s in Webots."
                         .formatted(worldFile);
         System.err.println(userReminder);
 
-        // Start robot time right before the first periodic call is made so that we ignore
-        // startup time.
-        robotTime.stop();
-        robotTime.reset();
-        // Set the offset to -period to run before other WPILib periodic methods
-        robot.addPeriodic(robotTime::start, robot.getPeriod(),
-                -robot.getPeriod());
-
-        // Reset the clock. Without this, *Periodic calls that should have
-        // occurred while we waited, will be considered behind schedule and
-        // will all happen at once.
-        SimHooks.restartTiming();
-
-        // Pause the clock so that we can step it in sync with the simulator
-        SimHooks.pauseTiming();
-
         final var isReadyFuture = new CompletableFuture<Boolean>();
 
-        // When DeepBlueSim says that reload has completed, we are ready
-        inst.addListener(reloadStatusEntry.getTopic(),
+        // Stop the server to disconnect any existing clients.
+        inst.stopServer();
+
+        reloadCount = 0;
+        // When DeepBlueSim says that reload has completed, if it's the first time then request a
+        // reload, otherwise we're ready.
+        inst.addListener(reloadStatusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final String reloadStatus =
                             event.valueData.value.getString();
@@ -155,20 +207,71 @@ public class WebotsManager implements AutoCloseable {
                                     .formatted(reloadStatus));
                     if (!reloadStatus.equals("Completed"))
                         return;
-                    isReadyFuture.complete(true);
+                    if (reloadCount++ == 0) {
+                        reloadRequestPublisher.set("Requested");
+                        inst.flush();
+                    } else {
+                        isReady = true;
+                        isReadyFuture.complete(true);
+                    }
                 });
+        pauser.setCallback(() -> {
+            System.out.println("In pauser callback");
+            double robotTimeSec = robotTime.get();
+            double deltaSecs = simTimeSec - robotTimeSec;
+            // If we still haven't caught up to the simulator, then wait longer.
+            // This would typically happen when robot time hasn't yet started.
+            System.out.println("deltaSecs = %g".formatted(deltaSecs));
+            if (deltaSecs > 0) {
+                pauser.stop();
+                pauser.startSingle(deltaSecs);
+                return;
+            }
+            // We're caught up, so pause and tell the sim what our new time is so that it
+            // can
+            // continue.
+            SimHooks.pauseTiming();
+            System.out.println("Sending robotTimeSec = " + robotTimeSec);
+            robotTimeSecPublisher.set(robotTimeSec);
+            inst.flush();
+        });
 
-        // If DeepBlueSim is already running or when the user starts it, tell it to reload the world
-        // so it is in a known state. It will set this value to "In Progress" before it reloads and
-        // then to "Completed" when it finishes.
-        reloadStatusEntry.set("Requested");
-        inst.flush();
+        inst.addListener(simTimeSecSubscriber,
+                EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
+                    // Ignore values sent before simulator said it was ready.
+                    if (!isReady)
+                        return;
+
+                    // Start the robot timing if we haven't already
+                    ensureRobotTimingStarted();
+
+                    simTimeSec = event.valueData.value.getDouble();
+                    double robotTimeSec = robotTime.get();
+                    System.out.println(
+                            "Received simTimeSec of %g when robotTimeSec is %g "
+                                    .formatted(simTimeSec, robotTimeSec));
+                    // If we're not behind the sim time, there is nothing to do.
+                    double deltaSecs = simTimeSec - robotTimeSec;
+                    if (deltaSecs < 0.0) {
+                        return;
+                    }
+
+                    // We are behind the sim time, so run until we've caught up.
+                    // We use a Notifier instead of SimHooks.stepTiming() because
+                    // using SimHooks.stepTiming() causes accesses to sim data to block.
+                    pauser.stop();
+                    pauser.startSingle(deltaSecs + robot.getPeriod());
+                    System.out.println("Calling SimHooks.resumeTiming()");
+                    SimHooks.resumeTiming();
+                    System.out.println("SimHooks.resumeTiming() returned");
+                });
+        // Restart the server so that the clients will reconnect.
+        inst.startServer();
 
         // Wait up to 15 minutes for DeepBlueSim to be ready, reminding the user every 10 seconds.
         // On GitHub's MacOS Continuous Integration servers, it can take over 8 minutes for Webots
         // to start.
         var startedWaitingTimeMs = System.currentTimeMillis();
-        var isReady = false;
         while (!isReady
                 && System.currentTimeMillis() - startedWaitingTimeMs < 900000) {
             try {
@@ -176,7 +279,7 @@ public class WebotsManager implements AutoCloseable {
                         System.currentTimeMillis() - startedWaitingTimeMs;
                 long remainingTime = 900000 - elapsedTime;
                 if (remainingTime > 0) {
-                    isReady = isReadyFuture.get(10000, TimeUnit.MILLISECONDS);
+                    isReadyFuture.get(10000, TimeUnit.MILLISECONDS);
                 } else
                     break;
             } catch (TimeoutException ex) {
@@ -189,54 +292,36 @@ public class WebotsManager implements AutoCloseable {
         if (!isReady) {
             throw new TimeoutException("Webots not ready in time");
         }
-        pauser.setCallback(() -> {
-            double simTimeSec = simTimeSecSubscriber.get();
-            double robotTimeSec = robotTime.get();
-            double deltaSecs = simTimeSec - robotTimeSec;
-            // If we still haven't caught up to the simulator, then wait longer.
-            // This would typically happen when robot time hasn't yet started.
-            if (deltaSecs > 0) {
-                pauser.stop();
-                pauser.startSingle(deltaSecs);
-                return;
-            }
-            // We're caught up, so pause and tell the sim what our new time is so that it can
-            // continue.
-            SimHooks.pauseTiming();
-            robotTimeSecPublisher.set(robotTimeSec);
-            inst.flush();
-        });
-
-
-        inst.addListener(simTimeSecSubscriber.getTopic(),
-                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
-                    double simTimeSec = event.valueData.value.getDouble();
-                    double robotTimeSec = robotTime.get();
-                    // Ignore the default initial value
-                    if (simTimeSec == -1.0) {
-                        return;
-                    }
-
-                    // If we're not behind the sim time, there is nothing to do.
-                    double deltaSecs = simTimeSec - robotTimeSec;
-                    if (deltaSecs < 0.0) {
-                        return;
-                    }
-
-                    // We are behind the sim time, so run until we've caught up.
-                    // We use a Notifier instead of SimHooks.stepTiming() because
-                    // using SimHooks.stepTiming() causes accesses to sim data to block.
-                    pauser.stop();
-                    pauser.startSingle(deltaSecs);
-                    SimHooks.resumeTiming();
-                });
-
-        robotTimeSecPublisher.set(robotTime.get());
-        inst.flush();
-
-        System.out.println("Webots has started. Robot is running.");
+        System.out.println("Webots has started.");
 
         return this;
+    }
+
+    private boolean wereRobotInitedCallbacksRun = false;
+
+    private synchronized void runRobotInitedCallbacksOnce() {
+        if (wereRobotInitedCallbacksRun) {
+            return;
+        }
+        robotInitedCallbacks.forEach((callback) -> callback.run());
+        wereRobotInitedCallbacksRun = true;
+    }
+
+    private final ArrayList<Runnable> robotInitedCallbacks = new ArrayList<>();
+
+    public void onRobotInited(Runnable callback) {
+        robotInitedCallbacks.add(callback);
+    }
+
+    private final ArrayList<Runnable> simulationReadyCallbacks =
+            new ArrayList<>();
+
+    private void onSimulationReady(Runnable callback) {
+        simulationReadyCallbacks.add(callback);
+    }
+
+    private void runSimulationReadyCallbacks() {
+        simulationReadyCallbacks.forEach((callback) -> callback.run());
     }
 
     public WebotsManager runAutonomous(Measure<Time> runTime) {
@@ -253,7 +338,10 @@ public class WebotsManager implements AutoCloseable {
             // might not work.
             HAL.initialize(500, 0);
             SimDeviceSim.resetData();
-            endNotifier.startSingle(runTime.in(Seconds));
+            onSimulationReady(() -> {
+                endNotifier.startSingle(runTime.in(Seconds));
+            });
+            SimHooks.restartTiming();
             robot.startCompetition();
         } finally {
             SimDeviceSim.resetData();
@@ -273,7 +361,8 @@ public class WebotsManager implements AutoCloseable {
      * Closes this instance, freeing any resources that in holds.
      */
     public void close() {
-        reloadStatusEntry.close();
+        reloadRequestPublisher.close();
+        reloadStatusSubscriber.close();
         robotTimeSecPublisher.close();
         simTimeSecSubscriber.close();
         inst.close();

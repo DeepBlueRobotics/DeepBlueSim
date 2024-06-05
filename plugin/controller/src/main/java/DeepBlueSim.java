@@ -39,7 +39,6 @@ import edu.wpi.first.networktables.NetworkTableEvent.Kind;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.networktables.StringEntry;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
@@ -126,6 +125,7 @@ public class DeepBlueSim {
 
         // Use the default NetworkTables instance to coordinate with robot code
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
+
         if (ntLogLevel > 0)
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
@@ -136,8 +136,6 @@ public class DeepBlueSim {
                                 event.logMessage.line,
                                 event.logMessage.message));
             });
-        inst.startClient4("Webots controller");
-        inst.setServer("localhost");
         NetworkTable watchedNodes = inst.getTable("/DeepBlueSim/WatchedNodes");
 
         watchedNodes.addSubTableListener((parent, name, t) -> {
@@ -212,24 +210,30 @@ public class DeepBlueSim {
 
         // Create a publisher for communicating the sim time and request that updates to it are
         // communicated as quickly as possible.
-        DoublePublisher simTimeSecPublisher =
-                coordinator.getDoubleTopic("simTimeSec").publish(
+        var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
+        DoublePublisher simTimeSecPublisher = simTimeSecTopic.publish(
                         PubSubOption.sendAll(true),
                         PubSubOption.periodic(Double.MIN_VALUE));
+        simTimeSecTopic.setCached(false);
+
+        var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
+        var reloadStatusPublisher =
+                reloadStatusTopic.publish(PubSubOption.sendAll(true));
+        reloadStatusTopic.setCached(false);
 
         // Add a listener to handle reload requests.
-        var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
-        reloadStatusTopic.setCached(false);
-        var reloadStatusEntry =
-                reloadStatusTopic.getEntry("", PubSubOption.sendAll(true));
-        inst.addListener(reloadStatusEntry.getTopic(),
-                EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
+        var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
+        var reloadRequestSubscriber = reloadRequestTopic.getEntry("",
+                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        reloadRequestTopic.publish(PubSubOption.sendAll(true),
+                PubSubOption.keepDuplicates(true));
+        reloadRequestTopic.setCached(false);
+        inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
-                    final String reloadStatus =
-                            event.valueData.value.getString();
-                    log.println("In listener, reloadStatus = %s"
-                            .formatted(reloadStatus));
-                    if (!reloadStatus.equals("Requested"))
+                    var reloadRequest = event.valueData.value.getString();
+                    log.println("In listener, reloadRequest = %s"
+                            .formatted(reloadRequest));
+                    if (!reloadRequest.equals("Requested"))
                         return;
                     queuedMessages.add(() -> {
                         // Cancel the sim pause timer so that it doesn't pause the
@@ -238,7 +242,9 @@ public class DeepBlueSim {
                         // Unpause before reloading so that the new controller can take it's
                         // first step.
                         robot.simulationSetMode(usersSimulationSpeed);
-
+                        inst.flush();
+                        inst.stopClient();
+                        inst.close();
                         log.flush();
                         log.close();
                         robot.worldReload();
@@ -277,15 +283,19 @@ public class DeepBlueSim {
 
         // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
         // the robot of the new sim time.
+        var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
+        robotTimeSecTopic.setCached(false);
         DoubleSubscriber robotTimeSecSubscriber =
-                coordinator.getDoubleTopic("robotTimeSec").subscribe(-1.0,
+                robotTimeSecTopic.subscribe(-1.0,
                         PubSubOption.sendAll(true),
                         PubSubOption.periodic(Double.MIN_VALUE));
-        inst.addListener(robotTimeSecSubscriber.getTopic(),
+        inst.addListener(robotTimeSecSubscriber,
                 EnumSet.of(Kind.kValueAll, Kind.kImmediate),
                 (event) -> {
                     final double robotTimeSec =
                             event.valueData.value.getDouble();
+                    log.println(
+                            "Received robotTimeSec=%g".formatted(robotTimeSec));
                     queuedMessages.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
                         // the robot time or the simulation ends.
@@ -319,7 +329,10 @@ public class DeepBlueSim {
                             }
 
                             lastStepMillis = System.currentTimeMillis();
-                            simTimeSecPublisher.set(robot.getTime());
+                            simTimeSec = robot.getTime();
+                            log.println("Sending simTimeSec of %g"
+                                    .formatted(simTimeSec));
+                            simTimeSecPublisher.set(simTimeSec);
                             inst.flush();
                             if (isDone) {
                                 isDoneFuture.complete(true);
@@ -330,9 +343,24 @@ public class DeepBlueSim {
                     });
                 });
 
-        simTimeSecPublisher.set(robot.getTime());
-        reloadStatusEntry.set("Completed");
-        inst.flush();
+        // When a connection is (re-)established with the server, tell it that we are ready.
+        // When
+        // the server sees that message, it knows that we will receive future messages.
+        inst.addConnectionListener(true, (event) -> {
+            log.println("In connection listener");
+            if (event.is(Kind.kConnected)) {
+                var simTimeSec = robot.getTime();
+                log.println("Sending initial simTimeSec of %g"
+                        .formatted(simTimeSec));
+                simTimeSecPublisher.set(simTimeSec);
+                log.println("Setting reloadStatus to Completed");
+                reloadStatusPublisher.set("Completed");
+                inst.flush();
+            }
+        });
+
+        inst.startClient4("Webots controller");
+        inst.setServer("localhost");
 
         // Process messages until simulation finishes
         try {

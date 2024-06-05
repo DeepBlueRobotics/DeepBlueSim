@@ -27,7 +27,7 @@ public class SystemTestRobot {
     @Test
     void testDrivesToLocationNewStyle() throws TimeoutException {
         try (var robot = new Robot(); var manager = new WebotsManager(robot)) {
-            manager.waitForUserToStart("example/Webots/worlds/DBSExample.wbt")
+            manager.withWorld("example/Webots/worlds/DBSExample.wbt")
                     .runAutonomous(Seconds.of(3.0))
                     .withNodePosition("ROBOT", (position) -> {
                         assertEquals(0.0,
