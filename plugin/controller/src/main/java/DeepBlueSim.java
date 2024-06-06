@@ -244,11 +244,13 @@ public class DeepBlueSim {
         DoublePublisher simTimeSecPublisher = simTimeSecTopic.publish(
                         PubSubOption.sendAll(true),
                         PubSubOption.periodic(Double.MIN_VALUE));
+        simTimeSecPublisher.set(0.0);
         simTimeSecTopic.setCached(false);
 
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
         var reloadStatusPublisher =
                 reloadStatusTopic.publish(PubSubOption.sendAll(true));
+        reloadStatusPublisher.set("");
         reloadStatusTopic.setCached(false);
 
         // Add a listener to handle reload requests.
@@ -257,6 +259,7 @@ public class DeepBlueSim {
                 PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
         reloadRequestTopic.publish(PubSubOption.sendAll(true),
                 PubSubOption.keepDuplicates(true));
+        reloadRequestSubscriber.set("");
         reloadRequestTopic.setCached(false);
         inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {

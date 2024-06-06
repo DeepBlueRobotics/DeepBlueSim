@@ -86,14 +86,13 @@ public class WebotsManager implements AutoCloseable {
                 PubSubOption.periodic(Double.MIN_VALUE)
         };
         var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
-        reloadRequestPublisher = reloadRequestTopic.getEntry("",
+        reloadRequestPublisher = reloadRequestTopic.publish(
                 PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
         reloadRequestTopic.setCached(false);
 
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
         reloadStatusSubscriber =
                 reloadStatusTopic.subscribe("", PubSubOption.sendAll(true));
-        reloadStatusTopic.setCached(false);
 
         var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
         robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
@@ -101,7 +100,6 @@ public class WebotsManager implements AutoCloseable {
 
         var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
         simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
-        simTimeSecTopic.setCached(false);
 
         // Run the onInited callbacks once.
         // Note: the offset is -period so they are run before other WPILib periodic methods
