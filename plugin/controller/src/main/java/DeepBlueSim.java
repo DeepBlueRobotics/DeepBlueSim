@@ -63,19 +63,19 @@ public class DeepBlueSim {
     private static void updateUsersSimulationSpeed(Supervisor robot) {
         usersSimulationSpeed =
                 robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE
-                        ? Supervisor.SIMULATION_MODE_REAL_TIME
+                        ? Supervisor.SIMULATION_MODE_FAST
                         : robot.simulationGetMode();
     }
 
     private static Set<String> defPathsToPublish =
             new ConcurrentSkipListSet<String>();
 
-    private static Map<String, DoubleArrayPublisher> positionPublisherByDefPath =
-            new HashMap<>();
-    private static Map<String, DoubleArrayPublisher> rotationPublisherByDefPath =
-            new HashMap<>();
-    private static Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
-            new HashMap<>();
+    // private static final HashMap<String, DoubleArrayPublisher> positionPublisherByDefPath =
+    // new HashMap<>();
+    // private static final Map<String, DoubleArrayPublisher> rotationPublisherByDefPath =
+    // new HashMap<>();
+    // private static final Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
+    // new HashMap<>();
 
     private static final PrintStream log;
 
@@ -96,6 +96,12 @@ public class DeepBlueSim {
             throw new RuntimeException(ex);
         }
     }
+
+    private static void startNetworkTablesClient(NetworkTableInstance inst) {
+        inst.startClient4("Webots controller");
+        inst.setServer("localhost");
+    }
+
     public static void main(String[] args) throws IOException {
 
         log.println("Starting log");
@@ -163,6 +169,14 @@ public class DeepBlueSim {
 
         // Regularly report the position, rotation, and/or velocity of the requested nodes
         Simulation.registerPeriodicMethod(() -> {
+            // if (!inst.isConnected()) {
+            // log.println(
+            // "NetworkTables is not connected, so starting client");
+            // startNetworkTablesClient(inst);
+            // }
+
+            // Note: we can't use watchedNodes.getSubTables() because it returns an empty array,
+            // presumably because all of the topics within the subtables are uncached?
             for (var defPath : defPathsToPublish) {
                 var node = robot.getFromDef(defPath);
                 if (node == null) {
@@ -179,27 +193,43 @@ public class DeepBlueSim {
                     continue;
                 }
                 var positionTopic = subTable.getDoubleArrayTopic("position");
+                // positionTopic.setCached(false);
                 if (positionTopic.exists()) {
-                    var publisher = positionPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> positionTopic.publish());
-                    publisher.set(node.getPosition());
+                    // var publisher = positionPublisherByDefPath.computeIfAbsent(
+                    // defPath, (key) -> positionTopic.publish());
+                    var publisher = positionTopic.publish();
+                    double[] pos = node.getPosition();
+                    log.println("Setting position of %s to [%g, %g, %g]"
+                            .formatted(positionTopic.getName(), pos[0], pos[1],
+                                    pos[2]));
+                    publisher.set(pos);
+                    // inst.flush();
+                    publisher.close();
                 }
                 var rotationTopic = subTable.getDoubleArrayTopic("rotation");
+                // rotationTopic.setCached(false);
                 if (rotationTopic.exists()) {
                     var simpleMatrix =
                             new SimpleMatrix(3, 3, true, node.getOrientation());
                     var rotation =
                             new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
-                    var publisher = rotationPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> rotationTopic.publish());
+                    // var publisher = rotationPublisherByDefPath.computeIfAbsent(
+                    // defPath, (key) -> rotationTopic.publish());
+                    var publisher = rotationTopic.publish();
                     publisher.set(new double[] {rotation.getX(),
                             rotation.getY(), rotation.getZ()});
+                    // inst.flush();
+                    publisher.close();
                 }
                 var velocityTopic = subTable.getDoubleArrayTopic("velocity");
+                // velocityTopic.setCached(false);
                 if (velocityTopic.exists()) {
-                    var publisher = velocityPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> velocityTopic.publish());
+                    // var publisher = velocityPublisherByDefPath.computeIfAbsent(
+                    // defPath, (key) -> velocityTopic.publish());
+                    var publisher = velocityTopic.publish();
                     publisher.set(node.getVelocity());
+                    // inst.flush();
+                    publisher.close();
                 }
             }
         });
@@ -242,7 +272,21 @@ public class DeepBlueSim {
                         // Unpause before reloading so that the new controller can take it's
                         // first step.
                         robot.simulationSetMode(usersSimulationSpeed);
+
+                        // positionPublisherByDefPath.values()
+                        // .forEach(p -> p.close());
+                        // positionPublisherByDefPath.clear();
+                        // rotationPublisherByDefPath.values()
+                        // .forEach(p -> p.close());
+                        // rotationPublisherByDefPath.clear();
+                        // velocityPublisherByDefPath.values()
+                        // .forEach(p -> p.close());
+                        // velocityPublisherByDefPath.clear();
+                        // // Wait a beat to ensure the flush will actually occur.
+                        // edu.wpi.first.wpilibj.Timer.delay(0.02);
                         inst.flush();
+                        // // Wait a beat to ensure the flush will actually occur.
+                        // edu.wpi.first.wpilibj.Timer.delay(0.02);
                         inst.stopClient();
                         inst.close();
                         log.flush();
@@ -301,7 +345,8 @@ public class DeepBlueSim {
                         // the robot time or the simulation ends.
                         for (;;) {
                             double simTimeSec = robot.getTime();
-                            if (simTimeSec > robotTimeSec) {
+                            if (simTimeSec > robotTimeSec
+                                    + basicTimeStep / 1000.0) {
                                 break;
                             }
                             // Unpause if necessary
@@ -359,8 +404,7 @@ public class DeepBlueSim {
             }
         });
 
-        inst.startClient4("Webots controller");
-        inst.setServer("localhost");
+        startNetworkTablesClient(inst);
 
         // Process messages until simulation finishes
         try {
@@ -380,7 +424,8 @@ public class DeepBlueSim {
                 } else {
                     // The simulation is paused and robot code isn't in control so wait a beat
                     // before checking again (so we don't suck up all the CPU)
-                    Thread.sleep(20);
+                    Simulation.runPeriodicMethods();
+                    Thread.sleep(basicTimeStep);
                     // Process any pending user interface events.
                     if (robot.step(0) == -1) {
                         break;

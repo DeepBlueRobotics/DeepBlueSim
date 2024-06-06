@@ -2,6 +2,8 @@ package org.carlmontrobotics.libdeepbluesim;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -116,6 +118,7 @@ public class WebotsManager implements AutoCloseable {
         return robotTime.get();
     }
 
+    private Set<Watcher> watchers = new HashSet<>();
     /**
      * Adds a Watcher for a Webots node.
      * 
@@ -124,7 +127,9 @@ public class WebotsManager implements AutoCloseable {
      * @return the Watcher object.
      */
     public Watcher addWatcher(String defPath) {
-        return new Watcher(defPath);
+        var w = new Watcher(defPath);
+        watchers.add(w);
+        return w;
     }
 
     private volatile double simTimeSec = 0.0;
@@ -144,7 +149,9 @@ public class WebotsManager implements AutoCloseable {
     }
 
     private volatile boolean isReady = false;
+    private volatile boolean isRobotCodeRunning = false;
     private boolean isRobotTimeStarted = false;
+    private boolean useStepTiming = true;
 
     /** Start the robot timing if we haven't already. */
     private synchronized void ensureRobotTimingStarted() {
@@ -245,6 +252,12 @@ public class WebotsManager implements AutoCloseable {
                     // Start the robot timing if we haven't already
                     ensureRobotTimingStarted();
 
+                    // Do nothing if the robot program is not rurnning
+                    if (!isRobotCodeRunning) {
+                        System.out.println(
+                                "Ignoring simTimeSec because robot code is not running.");
+                        return;
+                    }
                     simTimeSec = event.valueData.value.getDouble();
                     double robotTimeSec = robotTime.get();
                     System.out.println(
@@ -256,6 +269,31 @@ public class WebotsManager implements AutoCloseable {
                         return;
                     }
 
+                    if (useStepTiming && simTimeSec < runTimeSecs) {
+                        var timingStepped = new CompletableFuture<>();
+                        try (var timingSteppedCompleter = new Notifier(() -> {
+                            timingStepped.complete(null);
+                        })) {
+                            timingSteppedCompleter.startSingle(0);
+                            System.out.println(
+                                    "Calling SimHooks.stepTimingAsync()");
+                            SimHooks.stepTimingAsync(deltaSecs);
+                            System.out.println("Calling timingStepped.get()");
+                            timingStepped.get((long) (2 * deltaSecs + 1.0),
+                                    TimeUnit.SECONDS);
+                            System.out.println("timingStepped.get() returned");
+                        } catch (Exception ex) {
+                            throw new RuntimeException(ex);
+                        }
+                        robotTimeSec = robotTime.get();
+                        System.out.println(
+                                "Sending robotTimeSec = " + robotTimeSec);
+                        robotTimeSecPublisher.set(robotTimeSec);
+                        inst.flush();
+                        System.out
+                                .println("Returning from simTimeSec listener");
+                        return;
+                    }
                     // We are behind the sim time, so run until we've caught up.
                     // We use a Notifier instead of SimHooks.stepTiming() because
                     // using SimHooks.stepTiming() causes accesses to sim data to block.
@@ -324,7 +362,9 @@ public class WebotsManager implements AutoCloseable {
         simulationReadyCallbacks.forEach((callback) -> callback.run());
     }
 
+    private double runTimeSecs = 0.0;
     public WebotsManager runAutonomous(Measure<Time> runTime) {
+        runTimeSecs = runTime.in(Seconds);
         System.out.println("Enabling in autonomous.");
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
@@ -342,31 +382,41 @@ public class WebotsManager implements AutoCloseable {
                 endNotifier.startSingle(runTime.in(Seconds));
             });
             SimHooks.restartTiming();
+            SimHooks.resumeTiming();
+            isRobotCodeRunning = true;
             robot.startCompetition();
         } finally {
+            System.out.println("startCompetition() returned");
+            isRobotCodeRunning = false;
             SimDeviceSim.resetData();
             // HAL.shutdown();
         }
+        System.out.println("runAutonomous() returning");
         return this;
     }
 
     public WebotsManager withNodePosition(String defPath,
             Consumer<Translation3d> acceptor) {
-        var watcher = new Watcher(defPath);
-        var pos = watcher.getPosition();
-        acceptor.accept(pos);
-        return this;
+        try (var watcher = new Watcher(defPath)) {
+            var pos = watcher.getPosition();
+            acceptor.accept(pos);
+            return this;
+        }
     }
     /**
      * Closes this instance, freeing any resources that in holds.
      */
     public void close() {
+        System.out.println("Closing WebotsManager");
         reloadRequestPublisher.close();
         reloadStatusSubscriber.close();
         robotTimeSecPublisher.close();
         simTimeSecSubscriber.close();
+        watchers.forEach(w -> w.close());
+        watchers.clear();
         inst.close();
         inst.stopServer();
         pauser.close();
+        System.out.println("Done closing WebotsManager");
     }
 }
