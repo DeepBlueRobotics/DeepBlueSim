@@ -56,18 +56,18 @@ public class Watcher implements AutoCloseable {
                     }
                 });
         positionTopic = table.getDoubleArrayTopic("position");
-        positionTopic.setCached(false);
         positionEntry = positionTopic.publish();
+        positionTopic.setCached(false);
         // positionEntry = positionTopic.getEntry(null);
         positionEntry.set(new double[] {});
         rotationTopic = table.getDoubleArrayTopic("rotation");
-        rotationTopic.setCached(false);
         rotationEntry = rotationTopic.publish();
+        rotationTopic.setCached(false);
         // rotationEntry = rotationTopic.getEntry(null);
         rotationEntry.set(new double[] {});
         velocityTopic = table.getDoubleArrayTopic("velocity");
-        velocityTopic.setCached(false);
         velocityEntry = velocityTopic.publish();
+        velocityTopic.setCached(false);
         // velocityEntry = velocityTopic.getEntry(null);
         velocityEntry.set(new double[] {});
     }
