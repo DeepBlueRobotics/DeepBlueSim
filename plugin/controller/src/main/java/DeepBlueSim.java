@@ -237,8 +237,15 @@ public class DeepBlueSim {
                     var reloadRequest = event.valueData.value.getString();
                     log.println("In listener, reloadRequest = %s"
                             .formatted(reloadRequest));
-                    if (!reloadRequest.equals("Requested"))
+                    if (reloadRequest == null)
                         return;
+                    var file = new File(reloadRequest);
+                    if (!file.isFile()) {
+                        System.err.println(
+                                "ERROR: Received a request to load file that does not exist: %s"
+                                        .formatted(reloadRequest));
+                        return;
+                    }
                     queuedMessages.add(() -> {
                         // Cancel the sim pause timer so that it doesn't pause the
                         // simulation after we unpause it below.
@@ -252,7 +259,7 @@ public class DeepBlueSim {
                         inst.close();
                         log.flush();
                         log.close();
-                        robot.worldReload();
+                        robot.worldLoad(reloadRequest);
                     });
                 });
 

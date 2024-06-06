@@ -1,5 +1,8 @@
 package org.carlmontrobotics.libdeepbluesim;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -135,15 +138,23 @@ public class WebotsManager implements AutoCloseable {
     private volatile int reloadCount = 0;
 
     /**
-     * Asks the user to load and run the specified world file when the simulation is run.
+     * Load and, if necessary, ask the user to run the specified world file when the simulation is
+     * run.
      * 
-     * @param worldFile the path to the world file that the user should be prompted to load and run.
+     * @param worldFilePath the path to the world file that the user should be prompted to load and
+     *        run.
      * @return this object for chaining.
+     * @throws FileNotFoundException if the world file does not exist
      */
-    public WebotsManager withWorld(String worldFile) {
+    public WebotsManager withWorld(String worldFilePath)
+            throws FileNotFoundException {
+        var worldFile = new File(worldFilePath);
+        if (!worldFile.isFile()) {
+            throw new FileNotFoundException(worldFilePath);
+        }
         onRobotInited(() -> {
             try {
-                waitForUserToStart(worldFile);
+                waitForUserToStart(worldFile.getAbsolutePath());
                 runSimulationReadyCallbacks();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -180,14 +191,14 @@ public class WebotsManager implements AutoCloseable {
     }
 
     /**
-     * Asks the user to load and start a particular Webots world and waits until they have done so.
+     * Load a particular world file and, if necessary, wait for the user to start it.
      * 
-     * @param worldFile the world file's path to be displayed to the user.
+     * @param worldFileAbsPath the world file's absolute path to be displayed to the user.
      * @throws TimeoutException if the world hasn't been started in time.
      * 
      * @return this object for chaining
      */
-    private WebotsManager waitForUserToStart(String worldFile)
+    private WebotsManager waitForUserToStart(String worldFileAbsPath)
             throws TimeoutException {
 
         // Pause the clock while we wait.
@@ -198,7 +209,7 @@ public class WebotsManager implements AutoCloseable {
         // Tell the user to load the world file.
         String userReminder =
                 "Waiting for Webots to be ready. Please open %s in Webots."
-                        .formatted(worldFile);
+                        .formatted(worldFileAbsPath);
         System.err.println(userReminder);
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
@@ -219,7 +230,7 @@ public class WebotsManager implements AutoCloseable {
                     if (!reloadStatus.equals("Completed"))
                         return;
                     if (reloadCount++ == 0) {
-                        reloadRequestPublisher.set("Requested");
+                        reloadRequestPublisher.set(worldFileAbsPath);
                         inst.flush();
                     } else {
                         isReady = true;

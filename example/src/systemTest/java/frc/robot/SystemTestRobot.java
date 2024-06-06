@@ -6,6 +6,7 @@ import org.carlmontrobotics.libdeepbluesim.WebotsManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -16,14 +17,15 @@ import static edu.wpi.first.units.Units.*;
 public class SystemTestRobot {
 
     @Test
-    void testDrivesToLocation2() throws TimeoutException {
+    void testDrivesToLocation2()
+            throws TimeoutException, FileNotFoundException {
         testDrivesToLocation();
     }
 
     @Test
-    void testDrivesToLocation() throws TimeoutException {
+    void testDrivesToLocation() throws TimeoutException, FileNotFoundException {
         try (var robot = new Robot(); var manager = new WebotsManager(robot)) {
-            manager.withWorld("example/Webots/worlds/DBSExample.wbt")
+            manager.withWorld("Webots/worlds/DBSExample.wbt")
                     .runAutonomous(Seconds.of(3.0))
                     .withNodePosition("ROBOT", (position) -> {
                         assertEquals(0.0,
