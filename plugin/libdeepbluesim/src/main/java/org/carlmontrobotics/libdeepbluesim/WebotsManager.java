@@ -134,6 +134,12 @@ public class WebotsManager implements AutoCloseable {
 
     private volatile int reloadCount = 0;
 
+    /**
+     * Asks the user to load and run the specified world file when the simulation is run.
+     * 
+     * @param worldFile the path to the world file that the user should be prompted to load and run.
+     * @return this object for chaining.
+     */
     public WebotsManager withWorld(String worldFile) {
         onRobotInited(() -> {
             try {
@@ -181,7 +187,7 @@ public class WebotsManager implements AutoCloseable {
      * 
      * @return this object for chaining
      */
-    public WebotsManager waitForUserToStart(String worldFile)
+    private WebotsManager waitForUserToStart(String worldFile)
             throws TimeoutException {
 
         // Pause the clock while we wait.
@@ -232,8 +238,7 @@ public class WebotsManager implements AutoCloseable {
                 pauser.startSingle(deltaSecs);
                 return;
             }
-            // We're caught up, so pause and tell the sim what our new time is so that it
-            // can
+            // We're caught up, so pause and tell the sim what our new time is so that it can
             // continue.
             SimHooks.pauseTiming();
             System.out.println("Sending robotTimeSec = " + robotTimeSec);
@@ -345,7 +350,7 @@ public class WebotsManager implements AutoCloseable {
 
     private final ArrayList<Runnable> robotInitedCallbacks = new ArrayList<>();
 
-    public void onRobotInited(Runnable callback) {
+    private void onRobotInited(Runnable callback) {
         robotInitedCallbacks.add(callback);
     }
 
@@ -361,6 +366,13 @@ public class WebotsManager implements AutoCloseable {
     }
 
     private double runTimeSecs = 0.0;
+
+    /**
+     * Runs a simulation of the robot enabled in autonomous for the specified amount of time.
+     * 
+     * @param runTime how long the simulation for run for
+     * @return this object for chaining
+     */
     public WebotsManager runAutonomous(Measure<Time> runTime) {
         runTimeSecs = runTime.in(Seconds);
         System.out.println("Enabling in autonomous.");
@@ -393,6 +405,13 @@ public class WebotsManager implements AutoCloseable {
         return this;
     }
 
+    /**
+     * Passes the world position of a simulated node to a consuming functional.
+     * 
+     * @param defPath the DEF path of the simulated node of interest
+     * @param acceptor the consuming functional
+     * @return this object for chaining
+     */
     public WebotsManager withNodePosition(String defPath,
             Consumer<Translation3d> acceptor) {
         try (var watcher = new Watcher(defPath)) {

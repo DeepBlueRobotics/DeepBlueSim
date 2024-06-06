@@ -6,8 +6,6 @@ import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -30,7 +28,6 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.WPIMathJNI;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.LogMessage;
@@ -69,13 +66,6 @@ public class DeepBlueSim {
 
     private static Set<String> defPathsToPublish =
             new ConcurrentSkipListSet<String>();
-
-    // private static final HashMap<String, DoubleArrayPublisher> positionPublisherByDefPath =
-    // new HashMap<>();
-    // private static final Map<String, DoubleArrayPublisher> rotationPublisherByDefPath =
-    // new HashMap<>();
-    // private static final Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
-    // new HashMap<>();
 
     private static final PrintStream log;
 
@@ -169,12 +159,6 @@ public class DeepBlueSim {
 
         // Regularly report the position, rotation, and/or velocity of the requested nodes
         Simulation.registerPeriodicMethod(() -> {
-            // if (!inst.isConnected()) {
-            // log.println(
-            // "NetworkTables is not connected, so starting client");
-            // startNetworkTablesClient(inst);
-            // }
-
             // Note: we can't use watchedNodes.getSubTables() because it returns an empty array,
             // presumably because all of the topics within the subtables are uncached?
             for (var defPath : defPathsToPublish) {
@@ -193,43 +177,31 @@ public class DeepBlueSim {
                     continue;
                 }
                 var positionTopic = subTable.getDoubleArrayTopic("position");
-                // positionTopic.setCached(false);
                 if (positionTopic.exists()) {
-                    // var publisher = positionPublisherByDefPath.computeIfAbsent(
-                    // defPath, (key) -> positionTopic.publish());
-                    var publisher = positionTopic.publish();
-                    double[] pos = node.getPosition();
-                    log.println("Setting position of %s to [%g, %g, %g]"
-                            .formatted(positionTopic.getName(), pos[0], pos[1],
-                                    pos[2]));
-                    publisher.set(pos);
-                    // inst.flush();
-                    publisher.close();
+                    try (var publisher = positionTopic.publish()) {
+                        double[] pos = node.getPosition();
+                        log.println("Setting position of %s to [%g, %g, %g]"
+                                .formatted(positionTopic.getName(), pos[0],
+                                        pos[1], pos[2]));
+                        publisher.set(pos);
+                    }
                 }
                 var rotationTopic = subTable.getDoubleArrayTopic("rotation");
-                // rotationTopic.setCached(false);
                 if (rotationTopic.exists()) {
                     var simpleMatrix =
                             new SimpleMatrix(3, 3, true, node.getOrientation());
                     var rotation =
                             new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
-                    // var publisher = rotationPublisherByDefPath.computeIfAbsent(
-                    // defPath, (key) -> rotationTopic.publish());
-                    var publisher = rotationTopic.publish();
-                    publisher.set(new double[] {rotation.getX(),
+                    try (var publisher = rotationTopic.publish()) {
+                        publisher.set(new double[] {rotation.getX(),
                             rotation.getY(), rotation.getZ()});
-                    // inst.flush();
-                    publisher.close();
+                    }
                 }
                 var velocityTopic = subTable.getDoubleArrayTopic("velocity");
-                // velocityTopic.setCached(false);
                 if (velocityTopic.exists()) {
-                    // var publisher = velocityPublisherByDefPath.computeIfAbsent(
-                    // defPath, (key) -> velocityTopic.publish());
-                    var publisher = velocityTopic.publish();
-                    publisher.set(node.getVelocity());
-                    // inst.flush();
-                    publisher.close();
+                    try (var publisher = velocityTopic.publish()) {
+                        publisher.set(node.getVelocity());
+                    }
                 }
             }
         });
@@ -250,17 +222,16 @@ public class DeepBlueSim {
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
         var reloadStatusPublisher =
                 reloadStatusTopic.publish(PubSubOption.sendAll(true));
-        reloadStatusPublisher.set("");
         reloadStatusTopic.setCached(false);
 
         // Add a listener to handle reload requests.
         var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
-        var reloadRequestSubscriber = reloadRequestTopic.getEntry("",
+        try (var p = reloadRequestTopic.publish(PubSubOption.sendAll(true),
+                PubSubOption.keepDuplicates(true))) {
+            reloadRequestTopic.setCached(false);
+        }
+        var reloadRequestSubscriber = reloadRequestTopic.subscribe("",
                 PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
-        reloadRequestTopic.publish(PubSubOption.sendAll(true),
-                PubSubOption.keepDuplicates(true));
-        reloadRequestSubscriber.set("");
-        reloadRequestTopic.setCached(false);
         inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     var reloadRequest = event.valueData.value.getString();
@@ -276,20 +247,7 @@ public class DeepBlueSim {
                         // first step.
                         robot.simulationSetMode(usersSimulationSpeed);
 
-                        // positionPublisherByDefPath.values()
-                        // .forEach(p -> p.close());
-                        // positionPublisherByDefPath.clear();
-                        // rotationPublisherByDefPath.values()
-                        // .forEach(p -> p.close());
-                        // rotationPublisherByDefPath.clear();
-                        // velocityPublisherByDefPath.values()
-                        // .forEach(p -> p.close());
-                        // velocityPublisherByDefPath.clear();
-                        // // Wait a beat to ensure the flush will actually occur.
-                        // edu.wpi.first.wpilibj.Timer.delay(0.02);
                         inst.flush();
-                        // // Wait a beat to ensure the flush will actually occur.
-                        // edu.wpi.first.wpilibj.Timer.delay(0.02);
                         inst.stopClient();
                         inst.close();
                         log.flush();
@@ -391,8 +349,7 @@ public class DeepBlueSim {
                     });
                 });
 
-        // When a connection is (re-)established with the server, tell it that we are ready.
-        // When
+        // When a connection is (re-)established with the server, tell it that we are ready. When
         // the server sees that message, it knows that we will receive future messages.
         inst.addConnectionListener(true, (event) -> {
             log.println("In connection listener");

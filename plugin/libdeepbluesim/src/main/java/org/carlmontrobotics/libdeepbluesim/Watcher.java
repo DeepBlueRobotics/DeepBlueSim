@@ -4,7 +4,6 @@ import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.networktables.DoubleArrayEntry;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
 import edu.wpi.first.networktables.NetworkTable;
@@ -16,7 +15,8 @@ import edu.wpi.first.networktables.NetworkTableEvent.Kind;
  */
 public class Watcher implements AutoCloseable {
     private DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
-    private DoubleArrayPublisher positionEntry, rotationEntry, velocityEntry;
+    private DoubleArrayPublisher positionPublisher, rotationPublisher,
+            velocityPublisher;
     private CompletableFuture<Void> positionReady = new CompletableFuture<>();
     private Translation3d position = null;
     private CompletableFuture<Void> rotationReady = new CompletableFuture<>();
@@ -56,20 +56,17 @@ public class Watcher implements AutoCloseable {
                     }
                 });
         positionTopic = table.getDoubleArrayTopic("position");
-        positionEntry = positionTopic.publish();
+        positionPublisher = positionTopic.publish();
         positionTopic.setCached(false);
-        // positionEntry = positionTopic.getEntry(null);
-        positionEntry.set(new double[] {});
+        positionPublisher.set(new double[] {});
         rotationTopic = table.getDoubleArrayTopic("rotation");
-        rotationEntry = rotationTopic.publish();
+        rotationPublisher = rotationTopic.publish();
         rotationTopic.setCached(false);
-        // rotationEntry = rotationTopic.getEntry(null);
-        rotationEntry.set(new double[] {});
+        rotationPublisher.set(new double[] {});
         velocityTopic = table.getDoubleArrayTopic("velocity");
-        velocityEntry = velocityTopic.publish();
+        velocityPublisher = velocityTopic.publish();
         velocityTopic.setCached(false);
-        // velocityEntry = velocityTopic.getEntry(null);
-        velocityEntry.set(new double[] {});
+        velocityPublisher.set(new double[] {});
     }
 
     /**
@@ -78,7 +75,6 @@ public class Watcher implements AutoCloseable {
      * @return the node's position.
      */
     public Translation3d getPosition() {
-        // return new Translation3d(-2.6, 0, 0);
         if (!inst.isConnected()) {
             System.out.println(
                     "NetworkTables is not connected, so starting server");
@@ -94,11 +90,8 @@ public class Watcher implements AutoCloseable {
 
     @Override
     public void close() {
-        // positionEntry.unpublish();
-        positionEntry.close();
-        // rotationEntry.unpublish();
-        rotationEntry.close();
-        // velocityEntry.unpublish();
-        velocityEntry.close();
+        positionPublisher.close();
+        rotationPublisher.close();
+        velocityPublisher.close();
     }
 }
