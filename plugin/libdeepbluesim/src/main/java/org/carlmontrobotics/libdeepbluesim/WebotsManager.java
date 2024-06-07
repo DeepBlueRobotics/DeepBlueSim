@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-import java.util.logging.LogManager;
 
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -60,6 +59,7 @@ public class WebotsManager implements AutoCloseable {
     private final StringSubscriber reloadStatusSubscriber;
     private final DoublePublisher robotTimeSecPublisher;
     private final DoubleSubscriber simTimeSecSubscriber;
+    private final StringPublisher simModePublisher;
 
     // Use these to control NetworkTables logging.
     // - ntLoglevel = 0 means no NT logging
@@ -115,6 +115,12 @@ public class WebotsManager implements AutoCloseable {
 
         var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
         simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
+
+        var simModeTopic = coordinator.getStringTopic("simMode");
+        simModePublisher = simModeTopic.publish(PubSubOption.sendAll(true),
+                PubSubOption.keepDuplicates(true));
+        simModeTopic.setCached(false);
+
 
         // Run the onInited callbacks once.
         // Note: the offset is -period so they are run before other WPILib periodic methods
@@ -192,6 +198,10 @@ public class WebotsManager implements AutoCloseable {
         robotTime.stop();
         robotTime.reset();
         robotTime.start();
+
+        var mode = useStepTiming ? "Fast" : "Realtime";
+        LOG.log(Level.DEBUG, "Sending simMode = " + mode);
+        simModePublisher.set(useStepTiming ? "Fast" : "Realtime");
 
         var robotTimeSec = robotTime.get();
         LOG.log(Level.DEBUG, "Sending initial robotTimeSec = " + robotTimeSec);

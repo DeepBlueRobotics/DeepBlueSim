@@ -66,7 +66,7 @@ public class DeepBlueSim {
     private static void updateUsersSimulationSpeed(Supervisor robot) {
         usersSimulationSpeed =
                 robot.simulationGetMode() == Supervisor.SIMULATION_MODE_PAUSE
-                        ? Supervisor.SIMULATION_MODE_FAST
+                        ? Supervisor.SIMULATION_MODE_REAL_TIME
                         : robot.simulationGetMode();
     }
 
@@ -260,6 +260,35 @@ public class DeepBlueSim {
                     });
                 });
 
+        // Add a listener to handle simMode requests.
+        var simModeTopic = coordinator.getStringTopic("simMode");
+        try (var p = simModeTopic.publish(PubSubOption.sendAll(true),
+                PubSubOption.keepDuplicates(true))) {
+            simModeTopic.setCached(false);
+        }
+        var simModeSubscriber = simModeTopic.subscribe("",
+                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        inst.addListener(simModeSubscriber, EnumSet.of(Kind.kValueRemote),
+                (event) -> {
+                    var simMode = event.valueData.value.getString();
+                    LOG.log(Level.DEBUG,
+                            "In listener, simMode = %s".formatted(simMode));
+                    if (simMode == null)
+                        return;
+                    if (simMode.equals("Fast")) {
+                        usersSimulationSpeed = Supervisor.SIMULATION_MODE_FAST;
+                    } else if (simMode.equals("Realtime")) {
+                        usersSimulationSpeed =
+                                Supervisor.SIMULATION_MODE_REAL_TIME;
+                    } else {
+                        LOG.log(Level.ERROR,
+                                "Unrecognized simMode of '%s'. Must be either 'Fast' or 'Realtime'"
+                                        .formatted(simMode));
+                    }
+                    queuedMessages.add(() -> {
+                        robot.simulationSetMode(usersSimulationSpeed);
+                    });
+                });
         // Wait until startup has completed to ensure that the Webots simulator is
         // not still starting up.
         if (robot.step(0) == -1) {
