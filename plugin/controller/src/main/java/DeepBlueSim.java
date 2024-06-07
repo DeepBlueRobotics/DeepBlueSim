@@ -411,7 +411,13 @@ public class DeepBlueSim {
                     }
                 }
             }
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
+            try (var sw = new StringWriter(); var pw = new PrintWriter(sw)) {
+                ex.printStackTrace(pw);
+                LOG.log(Level.ERROR,
+                        "Exception while waiting for simulation to be done. Here is the stacktrace: %s"
+                                .formatted(sw.toString()));
+            }
             throw new RuntimeException(
                     "Exception while waiting for simulation to be done", ex);
         }
