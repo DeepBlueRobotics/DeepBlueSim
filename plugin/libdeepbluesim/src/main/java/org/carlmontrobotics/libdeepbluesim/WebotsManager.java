@@ -297,27 +297,14 @@ public class WebotsManager implements AutoCloseable {
                         return;
                     }
 
-                    if (useStepTiming && simTimeSec < runTimeSecs) {
-                        var timingStepped = new CompletableFuture<>();
-                        try (var timingSteppedCompleter = new Notifier(() -> {
-                            timingStepped.complete(null);
-                        })) {
-                            timingSteppedCompleter.startSingle(0);
-                            LOG.log(Level.DEBUG,
-                                    "Calling SimHooks.stepTimingAsync()");
-                            SimHooks.stepTimingAsync(deltaSecs);
-                            LOG.log(Level.DEBUG, "Calling timingStepped.get()");
-                            timingStepped.get((long) (2 * deltaSecs + 1.0),
-                                    TimeUnit.SECONDS);
-                            LOG.log(Level.DEBUG,
-                                    "timingStepped.get() returned");
-                        } catch (Exception ex) {
-                            throw new RuntimeException(ex);
-                        }
+                    if (useStepTiming) {
+                        LOG.log(Level.DEBUG, "Calling SimHooks.stepTiming()");
+                        SimHooks.stepTimingAsync(deltaSecs);
+                        LOG.log(Level.DEBUG, "SimHooks.stepTiming() returned");
                         robotTimeSec = robotTime.get();
                         if (LOG.isLoggable(Level.DEBUG))
                             LOG.log(Level.DEBUG,
-                                "Sending robotTimeSec = " + robotTimeSec);
+                                    "Sending robotTimeSec = " + robotTimeSec);
                         robotTimeSecPublisher.set(robotTimeSec);
                         inst.flush();
                         LOG.log(Level.DEBUG,
@@ -392,7 +379,6 @@ public class WebotsManager implements AutoCloseable {
         simulationReadyCallbacks.forEach((callback) -> callback.run());
     }
 
-    private double runTimeSecs = 0.0;
 
     /**
      * Runs a simulation of the robot enabled in autonomous for the specified amount of time.
@@ -401,7 +387,6 @@ public class WebotsManager implements AutoCloseable {
      * @return this object for chaining
      */
     public WebotsManager runAutonomous(Measure<Time> runTime) {
-        runTimeSecs = runTime.in(Seconds);
         LOG.log(Level.INFO, "Enabling in autonomous.");
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
