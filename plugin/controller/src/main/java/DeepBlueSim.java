@@ -1,8 +1,7 @@
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
@@ -43,6 +42,10 @@ import edu.wpi.first.util.WPIUtilJNI;
 // the
 // the name of the jar.
 public class DeepBlueSim {
+    // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
+    // are using the default system logger, edit the the
+    // Webots/controllers/DeepBlueSim/logging.properties file so that ".level=FINE".
+    private static Logger LOG = null;
 
     private static final BlockingDeque<Runnable> queuedMessages =
             new LinkedBlockingDeque<>();
@@ -67,8 +70,6 @@ public class DeepBlueSim {
     private static Set<String> defPathsToPublish =
             new ConcurrentSkipListSet<String>();
 
-    private static final PrintStream log;
-
     // Use these to control NetworkTables logging.
     // - ntLoglevel = 0 means no NT logging
     // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
@@ -77,24 +78,16 @@ public class DeepBlueSim {
     private static int ntLogLevel = LogMessage.kInfo;
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
-    static {
-        try {
-            File logFile = new File("DeepBlueSim.log");
-            System.out.println("Logging to " + logFile.getAbsolutePath());
-            log = new PrintStream(new FileOutputStream(logFile, true), true);
-        } catch (FileNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     private static void startNetworkTablesClient(NetworkTableInstance inst) {
         inst.startClient4("Webots controller");
         inst.setServer("localhost");
     }
 
     public static void main(String[] args) throws IOException {
-
-        log.println("Starting log");
+        System.setProperty("java.util.logging.config.file",
+                "logging.properties");
+        LOG = System.getLogger(DeepBlueSim.class.getName());
+        LOG.log(Level.DEBUG, "Starting log");
         // Set up exception handling to log to stderr and exit
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
@@ -126,7 +119,8 @@ public class DeepBlueSim {
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
-                log.println("NT instance log level %d message: %s(%d): %s"
+                LOG.log(Level.DEBUG,
+                        "NT instance log level %d message: %s(%d): %s"
                         .formatted(event.logMessage.level,
                                 event.logMessage.filename,
                                 event.logMessage.line,
@@ -144,10 +138,11 @@ public class DeepBlueSim {
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
 
         if (!robot.getSupervisor()) {
-            System.err.println(
+            LOG.log(Level.ERROR,
                     "The robot does not have supervisor=true. This is required to detect devices.");
             System.exit(1);
         }
+
         // Get the basic timestep to use for calls to robot.step()
         final int basicTimeStep = (int) Math.round(robot.getBasicTimeStep());
 
@@ -164,14 +159,14 @@ public class DeepBlueSim {
             for (var defPath : defPathsToPublish) {
                 var node = robot.getFromDef(defPath);
                 if (node == null) {
-                    System.err.println(
+                    LOG.log(Level.ERROR,
                             "Could not find node for the following DEF path: "
                                     + defPath);
                     continue;
                 }
                 var subTable = watchedNodes.getSubTable(defPath);
                 if (subTable == null) {
-                    System.err.println(
+                    LOG.log(Level.ERROR,
                             "Could not find subtable for the following DEF path: "
                                     + defPath);
                     continue;
@@ -180,7 +175,8 @@ public class DeepBlueSim {
                 if (positionTopic.exists()) {
                     try (var publisher = positionTopic.publish()) {
                         double[] pos = node.getPosition();
-                        log.println("Setting position of %s to [%g, %g, %g]"
+                        LOG.log(Level.DEBUG,
+                                "Setting position of %s to [%g, %g, %g]"
                                 .formatted(positionTopic.getName(), pos[0],
                                         pos[1], pos[2]));
                         publisher.set(pos);
@@ -235,13 +231,13 @@ public class DeepBlueSim {
         inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     var reloadRequest = event.valueData.value.getString();
-                    log.println("In listener, reloadRequest = %s"
+                    LOG.log(Level.DEBUG, "In listener, reloadRequest = %s"
                             .formatted(reloadRequest));
                     if (reloadRequest == null)
                         return;
                     var file = new File(reloadRequest);
                     if (!file.isFile()) {
-                        System.err.println(
+                        LOG.log(Level.ERROR,
                                 "ERROR: Received a request to load file that does not exist: %s"
                                         .formatted(reloadRequest));
                         return;
@@ -257,8 +253,6 @@ public class DeepBlueSim {
                         inst.flush();
                         inst.stopClient();
                         inst.close();
-                        log.flush();
-                        log.close();
                         robot.worldLoad(reloadRequest);
                     });
                 });
@@ -279,9 +273,8 @@ public class DeepBlueSim {
         try {
             wsConnection = WSConnection.connectHALSim(true);
         } catch (URISyntaxException e) {
-            System.err.println("Error occurred connecting to server:");
-            e.printStackTrace(System.err);
-            System.err.flush();
+            LOG.log(Level.ERROR,
+                    "Error occurred connecting to server:" + e.getStackTrace());
             System.exit(1);
             return;
         }
@@ -306,7 +299,7 @@ public class DeepBlueSim {
                 (event) -> {
                     final double robotTimeSec =
                             event.valueData.value.getDouble();
-                    log.println(
+                    LOG.log(Level.DEBUG,
                             "Received robotTimeSec=%g".formatted(robotTimeSec));
                     queuedMessages.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
@@ -343,7 +336,7 @@ public class DeepBlueSim {
 
                             lastStepMillis = System.currentTimeMillis();
                             simTimeSec = robot.getTime();
-                            log.println("Sending simTimeSec of %g"
+                            LOG.log(Level.DEBUG, "Sending simTimeSec of %g"
                                     .formatted(simTimeSec));
                             simTimeSecPublisher.set(simTimeSec);
                             inst.flush();
@@ -359,15 +352,20 @@ public class DeepBlueSim {
         // When a connection is (re-)established with the server, tell it that we are ready. When
         // the server sees that message, it knows that we will receive future messages.
         inst.addConnectionListener(true, (event) -> {
-            log.println("In connection listener");
+            LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 var simTimeSec = robot.getTime();
-                log.println("Sending initial simTimeSec of %g"
+                LOG.log(Level.DEBUG, "Sending initial simTimeSec of %g"
                         .formatted(simTimeSec));
                 simTimeSecPublisher.set(simTimeSec);
-                log.println("Setting reloadStatus to Completed");
+                LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
                 reloadStatusPublisher.set("Completed");
                 inst.flush();
+                LOG.log(Level.INFO,
+                        "Connected to NetworkTables server '%s' at %s:%s"
+                                .formatted(event.connInfo.remote_id,
+                                        event.connInfo.remote_ip,
+                                        event.connInfo.remote_port));
             }
         });
 
@@ -404,7 +402,7 @@ public class DeepBlueSim {
                     "Exception while waiting for simulation to be done", ex);
         }
 
-        log.println("Shutting down DeepBlueSim...");
+        LOG.log(Level.DEBUG, "Shutting down DeepBlueSim...");
 
         System.exit(0);
     }

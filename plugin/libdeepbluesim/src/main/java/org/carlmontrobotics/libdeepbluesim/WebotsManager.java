@@ -2,7 +2,8 @@ package org.carlmontrobotics.libdeepbluesim;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -12,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.logging.LogManager;
 
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -40,6 +42,16 @@ import edu.wpi.first.wpilibj.simulation.SimHooks;
  * kinematics of Webots nodes.
  */
 public class WebotsManager implements AutoCloseable {
+
+    // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
+    // are using the default system logger, edit the logging properties file specified by the
+    // java.util.logging.config.file system property so that both ".level=FINE" and
+    // "java.util.logging.ConsoleHandler.level=FINE". For tests via Gradle, the
+    // java.util.logging.config.file system property can be configured using the systemProperty of
+    // the test task.
+    private static final Logger LOG =
+            System.getLogger(WebotsManager.class.getName());
+
     private final TimedRobot robot;
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
@@ -75,8 +87,8 @@ public class WebotsManager implements AutoCloseable {
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
-                System.out
-                        .println("NT instance log level %d message: %s(%d): %s"
+                LOG.log(Level.DEBUG,
+                        "NT instance log level %d message: %s(%d): %s"
                                 .formatted(event.logMessage.level,
                                         event.logMessage.filename,
                                         event.logMessage.line,
@@ -182,11 +194,11 @@ public class WebotsManager implements AutoCloseable {
         robotTime.start();
 
         var robotTimeSec = robotTime.get();
-        System.out.println("Sending initial robotTimeSec = " + robotTimeSec);
+        LOG.log(Level.DEBUG, "Sending initial robotTimeSec = " + robotTimeSec);
         robotTimeSecPublisher.set(robotTimeSec);
         inst.flush();
 
-        System.out.println("Robot is running.");
+        LOG.log(Level.INFO, "Robot is running.");
         isRobotTimeStarted = true;
     }
 
@@ -208,9 +220,8 @@ public class WebotsManager implements AutoCloseable {
 
         // Tell the user to load the world file.
         String userReminder =
-                "Waiting for Webots to be ready. Please open %s in Webots."
+                "Waiting for Webots to be ready. Please start %s in Webots."
                         .formatted(worldFileAbsPath);
-        System.err.println(userReminder);
 
         final var isReadyFuture = new CompletableFuture<Boolean>();
 
@@ -224,7 +235,7 @@ public class WebotsManager implements AutoCloseable {
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final String reloadStatus =
                             event.valueData.value.getString();
-                    System.out.println(
+                    LOG.log(Level.DEBUG,
                             "In listener, reloadStatus = %s"
                                     .formatted(reloadStatus));
                     if (!reloadStatus.equals("Completed"))
@@ -238,12 +249,13 @@ public class WebotsManager implements AutoCloseable {
                     }
                 });
         pauser.setCallback(() -> {
-            System.out.println("In pauser callback");
+            LOG.log(Level.DEBUG, "In pauser callback");
             double robotTimeSec = robotTime.get();
             double deltaSecs = simTimeSec - robotTimeSec;
             // If we still haven't caught up to the simulator, then wait longer.
             // This would typically happen when robot time hasn't yet started.
-            System.out.println("deltaSecs = %g".formatted(deltaSecs));
+            if (LOG.isLoggable(Level.DEBUG))
+                LOG.log(Level.DEBUG, "deltaSecs = %g".formatted(deltaSecs));
             if (deltaSecs > 0) {
                 pauser.stop();
                 pauser.startSingle(deltaSecs);
@@ -252,7 +264,8 @@ public class WebotsManager implements AutoCloseable {
             // We're caught up, so pause and tell the sim what our new time is so that it can
             // continue.
             SimHooks.pauseTiming();
-            System.out.println("Sending robotTimeSec = " + robotTimeSec);
+            if (LOG.isLoggable(Level.DEBUG))
+                LOG.log(Level.DEBUG, "Sending robotTimeSec = " + robotTimeSec);
             robotTimeSecPublisher.set(robotTimeSec);
             inst.flush();
         });
@@ -268,13 +281,14 @@ public class WebotsManager implements AutoCloseable {
 
                     // Do nothing if the robot program is not rurnning
                     if (!isRobotCodeRunning) {
-                        System.out.println(
+                        LOG.log(Level.DEBUG,
                                 "Ignoring simTimeSec because robot code is not running.");
                         return;
                     }
                     simTimeSec = event.valueData.value.getDouble();
                     double robotTimeSec = robotTime.get();
-                    System.out.println(
+                    if (LOG.isLoggable(Level.DEBUG))
+                        LOG.log(Level.DEBUG,
                             "Received simTimeSec of %g when robotTimeSec is %g "
                                     .formatted(simTimeSec, robotTimeSec));
                     // If we're not behind the sim time, there is nothing to do.
@@ -289,23 +303,25 @@ public class WebotsManager implements AutoCloseable {
                             timingStepped.complete(null);
                         })) {
                             timingSteppedCompleter.startSingle(0);
-                            System.out.println(
+                            LOG.log(Level.DEBUG,
                                     "Calling SimHooks.stepTimingAsync()");
                             SimHooks.stepTimingAsync(deltaSecs);
-                            System.out.println("Calling timingStepped.get()");
+                            LOG.log(Level.DEBUG, "Calling timingStepped.get()");
                             timingStepped.get((long) (2 * deltaSecs + 1.0),
                                     TimeUnit.SECONDS);
-                            System.out.println("timingStepped.get() returned");
+                            LOG.log(Level.DEBUG,
+                                    "timingStepped.get() returned");
                         } catch (Exception ex) {
                             throw new RuntimeException(ex);
                         }
                         robotTimeSec = robotTime.get();
-                        System.out.println(
+                        if (LOG.isLoggable(Level.DEBUG))
+                            LOG.log(Level.DEBUG,
                                 "Sending robotTimeSec = " + robotTimeSec);
                         robotTimeSecPublisher.set(robotTimeSec);
                         inst.flush();
-                        System.out
-                                .println("Returning from simTimeSec listener");
+                        LOG.log(Level.DEBUG,
+                                "Returning from simTimeSec listener");
                         return;
                     }
                     // We are behind the sim time, so run until we've caught up.
@@ -313,9 +329,9 @@ public class WebotsManager implements AutoCloseable {
                     // using SimHooks.stepTiming() causes accesses to sim data to block.
                     pauser.stop();
                     pauser.startSingle(deltaSecs + robot.getPeriod());
-                    System.out.println("Calling SimHooks.resumeTiming()");
+                    LOG.log(Level.DEBUG, "Calling SimHooks.resumeTiming()");
                     SimHooks.resumeTiming();
-                    System.out.println("SimHooks.resumeTiming() returned");
+                    LOG.log(Level.DEBUG, "SimHooks.resumeTiming() returned");
                 });
         // Restart the server so that the clients will reconnect.
         inst.startServer();
@@ -335,7 +351,7 @@ public class WebotsManager implements AutoCloseable {
                 } else
                     break;
             } catch (TimeoutException ex) {
-                System.err.println(userReminder);
+                LOG.log(Level.ERROR, userReminder);
             } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(
                         "Error while waiting for Webots to be ready", e);
@@ -344,7 +360,7 @@ public class WebotsManager implements AutoCloseable {
         if (!isReady) {
             throw new TimeoutException("Webots not ready in time");
         }
-        System.out.println("Webots has started.");
+        LOG.log(Level.INFO, "Webots has started.");
 
         return this;
     }
@@ -386,13 +402,13 @@ public class WebotsManager implements AutoCloseable {
      */
     public WebotsManager runAutonomous(Measure<Time> runTime) {
         runTimeSecs = runTime.in(Seconds);
-        System.out.println("Enabling in autonomous.");
+        LOG.log(Level.INFO, "Enabling in autonomous.");
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
         DriverStationSim.setEnabled(true);
         DriverStationSim.notifyNewData();
         try (Notifier endNotifier = new Notifier(() -> {
-            System.out.println("Calling robot.endCompetition()");
+            LOG.log(Level.DEBUG, "Calling robot.endCompetition()");
             robot.endCompetition();
         })) {
             // HAL must be initialized or SimDeviceSim.resetData() will crash and SmartDashboard
@@ -407,12 +423,12 @@ public class WebotsManager implements AutoCloseable {
             isRobotCodeRunning = true;
             robot.startCompetition();
         } finally {
-            System.out.println("startCompetition() returned");
+            LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
             SimDeviceSim.resetData();
             // HAL.shutdown();
         }
-        System.out.println("runAutonomous() returning");
+        LOG.log(Level.DEBUG, "runAutonomous() returning");
         return this;
     }
 
@@ -435,7 +451,7 @@ public class WebotsManager implements AutoCloseable {
      * Closes this instance, freeing any resources that in holds.
      */
     public void close() {
-        System.out.println("Closing WebotsManager");
+        LOG.log(Level.DEBUG, "Closing WebotsManager");
         reloadRequestPublisher.close();
         reloadStatusSubscriber.close();
         robotTimeSecPublisher.close();
@@ -445,6 +461,6 @@ public class WebotsManager implements AutoCloseable {
         inst.close();
         inst.stopServer();
         pauser.close();
-        System.out.println("Done closing WebotsManager");
+        LOG.log(Level.DEBUG, "Done closing WebotsManager");
     }
 }

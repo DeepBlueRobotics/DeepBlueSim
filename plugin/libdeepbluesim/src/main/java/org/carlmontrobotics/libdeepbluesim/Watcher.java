@@ -1,5 +1,7 @@
 package org.carlmontrobotics.libdeepbluesim;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 
@@ -14,6 +16,14 @@ import edu.wpi.first.networktables.NetworkTableEvent.Kind;
  * Provides kinematic information for a Webots node.
  */
 public class Watcher implements AutoCloseable {
+    // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
+    // are using the default system logger, edit the logging properties file specified by the
+    // java.util.logging.config.file system property so that both ".level=FINE" and
+    // "java.util.logging.ConsoleHandler.level=FINE". For tests via Gradle, the
+    // java.util.logging.config.file system property can be configured using the systemProperty of
+    // the test task.
+    private static final Logger LOG = System.getLogger(Watcher.class.getName());
+
     private DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
     private DoubleArrayPublisher positionPublisher, rotationPublisher,
             velocityPublisher;
@@ -76,14 +86,16 @@ public class Watcher implements AutoCloseable {
      */
     public Translation3d getPosition() {
         if (!inst.isConnected()) {
-            System.out.println(
+            LOG.log(Level.DEBUG,
                     "NetworkTables is not connected, so starting server");
             inst.startServer();
         }
-        System.out.println("Waiting for position of %s to be ready"
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG, "Waiting for position of %s to be ready"
                 .formatted(positionTopic.getName()));
         positionReady.join();
-        System.out.println(
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG,
                 "Position of %s is ready".formatted(positionTopic.getName()));
         return position;
     }
