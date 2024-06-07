@@ -1,5 +1,7 @@
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -15,6 +17,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 import org.ejml.simple.SimpleMatrix;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
 import org.team199.wpiws.connection.ConnectionProcessor;
@@ -374,26 +377,37 @@ public class DeepBlueSim {
         // Process messages until simulation finishes
         try {
             while (isDoneFuture.getNow(false).booleanValue() == false) {
-                if (!queuedMessages.isEmpty()) {
-                    // Either there is a message waiting or it is ok to wait for it because the
-                    // robot code will tell us when to step the simulation.
-                    queuedMessages.takeFirst().run();
-                } else if (!robotTimeSecSubscriber.exists() && robot
-                        .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
-                    // The robot code isn't going to tell us when to step the simulation and the
-                    // user has unpaused it.
-                    Simulation.runPeriodicMethods();
-                    if (robot.step(basicTimeStep) == -1) {
-                        break;
+                try {
+                    if (!queuedMessages.isEmpty()) {
+                        // Either there is a message waiting or it is ok to wait for it because the
+                        // robot code will tell us when to step the simulation.
+                        queuedMessages.takeFirst().run();
+                    } else if (!robotTimeSecSubscriber.exists() && robot
+                            .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
+                        // The robot code isn't going to tell us when to step the simulation and the
+                        // user has unpaused it.
+                        Simulation.runPeriodicMethods();
+                        if (robot.step(basicTimeStep) == -1) {
+                            break;
+                        }
+                    } else {
+                        // The simulation is paused and robot code isn't in control so wait a beat
+                        // before checking again (so we don't suck up all the CPU)
+                        Simulation.runPeriodicMethods();
+                        Thread.sleep(basicTimeStep);
+                        // Process any pending user interface events.
+                        if (robot.step(0) == -1) {
+                            break;
+                        }
                     }
-                } else {
-                    // The simulation is paused and robot code isn't in control so wait a beat
-                    // before checking again (so we don't suck up all the CPU)
-                    Simulation.runPeriodicMethods();
-                    Thread.sleep(basicTimeStep);
-                    // Process any pending user interface events.
-                    if (robot.step(0) == -1) {
-                        break;
+                } catch (WebsocketNotConnectedException notConnectedException) {
+                    try (var sw = new StringWriter();
+                            var pw = new PrintWriter(sw)) {
+                        notConnectedException.printStackTrace(pw);
+                        LOG.log(Level.WARNING,
+                                "No halsim connection to the robot code. Waiting 1 second in case it is restarting. Here is the stacktrace: %s"
+                                        .formatted(sw.toString()));
+                        Thread.sleep(1000);
                     }
                 }
             }
