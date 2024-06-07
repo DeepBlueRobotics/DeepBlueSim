@@ -309,7 +309,7 @@ public class WebotsManager implements AutoCloseable {
 
                     if (useStepTiming) {
                         LOG.log(Level.DEBUG, "Calling SimHooks.stepTiming()");
-                        SimHooks.stepTimingAsync(deltaSecs);
+                        SimHooks.stepTiming(deltaSecs);
                         LOG.log(Level.DEBUG, "SimHooks.stepTiming() returned");
                         robotTimeSec = robotTime.get();
                         if (LOG.isLoggable(Level.DEBUG))
