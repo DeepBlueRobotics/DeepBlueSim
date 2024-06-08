@@ -332,8 +332,7 @@ public class DeepBlueSim {
                         // the robot time or the simulation ends.
                         for (;;) {
                             double simTimeSec = robot.getTime();
-                            if (simTimeSec > robotTimeSec
-                                    + basicTimeStep / 1000.0) {
+                            if (simTimeSec > robotTimeSec) {
                                 break;
                             }
                             // Unpause if necessary

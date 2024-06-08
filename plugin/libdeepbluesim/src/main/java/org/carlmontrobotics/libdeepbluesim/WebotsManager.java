@@ -316,7 +316,10 @@ public class WebotsManager implements AutoCloseable {
                         LOG.log(Level.DEBUG, "Calling SimHooks.stepTiming()");
                         SimHooks.stepTiming(deltaSecs);
                         LOG.log(Level.DEBUG, "SimHooks.stepTiming() returned");
-                        robotTimeSec = robotTime.get();
+                        // Due to rounding error, robot.getTime() might actually returns something
+                        // slightly less than simTimeSec. We lie and say that we've actually caught
+                        // up so that the simulator will take another step.
+                        robotTimeSec = simTimeSec;
                         if (LOG.isLoggable(Level.DEBUG))
                             LOG.log(Level.DEBUG,
                                     "Sending robotTimeSec = " + robotTimeSec);
