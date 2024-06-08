@@ -333,7 +333,7 @@ public class WebotsManager implements AutoCloseable {
                     // We use a Notifier instead of SimHooks.stepTiming() because
                     // using SimHooks.stepTiming() causes accesses to sim data to block.
                     pauser.stop();
-                    pauser.startSingle(deltaSecs + robot.getPeriod());
+                    pauser.startSingle(deltaSecs);
                     LOG.log(Level.DEBUG, "Calling SimHooks.resumeTiming()");
                     SimHooks.resumeTiming();
                     LOG.log(Level.DEBUG, "SimHooks.resumeTiming() returned");
