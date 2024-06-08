@@ -285,6 +285,12 @@ public class WebotsManager implements AutoCloseable {
         inst.addListener(simTimeSecSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     // Ignore values sent before simulator said it was ready.
+
+                    // TODO: Make the reloadStatus topic into a struct topic containing both the
+                    // Completed status and the initial simTimeSecs to avoid the remote possibility
+                    // that the server time offset changes between when reloadStatus and simTimeSec
+                    // is sent. See
+                    // https://github.com/wpilibsuite/allwpilib/discussions/6712#discussioncomment-9714930
                     if (event.valueData.value.getTime() < isReadyTimestamp) {
                         LOG.log(Level.DEBUG,
                                 "Ignoring simTimeSec because it was sent before simulator said it was ready.");
