@@ -8,12 +8,11 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import org.ejml.simple.SimpleMatrix;
 import org.java_websocket.client.WebSocketClient;
@@ -55,11 +54,6 @@ public class DeepBlueSim {
 
     private static RunningObject<WebSocketClient> wsConnection = null;
 
-    /**
-     * The time in milliseconds since the last timestep update from the robot.
-     */
-    private static volatile long lastStepMillis = 0;
-
     private static int usersSimulationSpeed = 0;
 
     // Remember the current simulation speed (default to real time if paused)
@@ -80,6 +74,8 @@ public class DeepBlueSim {
     // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
     private static int ntLogLevel = LogMessage.kInfo;
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
+
+    private static volatile boolean isWorldLoading = false;
 
     private static void startNetworkTablesClient(NetworkTableInstance inst) {
         inst.startClient4("Webots controller");
@@ -132,6 +128,8 @@ public class DeepBlueSim {
         NetworkTable watchedNodes = inst.getTable("/DeepBlueSim/WatchedNodes");
 
         watchedNodes.addSubTableListener((parent, name, t) -> {
+            LOG.log(Level.DEBUG,
+                    "Adding '%s' to defPathsToPublish".formatted(name));
             defPathsToPublish.add(name);
         });
 
@@ -169,9 +167,10 @@ public class DeepBlueSim {
                 }
                 var subTable = watchedNodes.getSubTable(defPath);
                 if (subTable == null) {
-                    LOG.log(Level.ERROR,
-                            "Could not find subtable for the following DEF path: "
-                                    + defPath);
+                    LOG.log(Level.WARNING,
+                            "Could not find subtable for DEF path '%s' so not publishing it anymore "
+                                    .formatted(defPath));
+                    defPathsToPublish.remove(defPath);
                     continue;
                 }
                 var positionTopic = subTable.getDoubleArrayTopic("position");
@@ -205,32 +204,32 @@ public class DeepBlueSim {
             }
         });
 
-        Timer simPauseTimer = new Timer();
-
         NetworkTable coordinator = inst.getTable("/DeepBlueSim/Coordinator");
 
+        var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
+                PubSubOption.keepDuplicates(true), // including duplicates
+                PubSubOption.periodic(Double.MIN_VALUE), // ASAP
+        };
         // Create a publisher for communicating the sim time and request that updates to it are
         // communicated as quickly as possible.
         var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
-        DoublePublisher simTimeSecPublisher = simTimeSecTopic.publish(
-                        PubSubOption.sendAll(true),
-                        PubSubOption.periodic(Double.MIN_VALUE));
+        DoublePublisher simTimeSecPublisher =
+                simTimeSecTopic.publish(pubSubOptions);
         simTimeSecPublisher.set(0.0);
         simTimeSecTopic.setCached(false);
 
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
         var reloadStatusPublisher =
-                reloadStatusTopic.publish(PubSubOption.sendAll(true));
+                reloadStatusTopic.publish(pubSubOptions);
         reloadStatusTopic.setCached(false);
 
         // Add a listener to handle reload requests.
         var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
-        try (var p = reloadRequestTopic.publish(PubSubOption.sendAll(true),
-                PubSubOption.keepDuplicates(true))) {
+        try (var p = reloadRequestTopic.publish(pubSubOptions)) {
             reloadRequestTopic.setCached(false);
         }
-        var reloadRequestSubscriber = reloadRequestTopic.subscribe("",
-                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        var reloadRequestSubscriber =
+                reloadRequestTopic.subscribe("", pubSubOptions);
         inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     var reloadRequest = event.valueData.value.getString();
@@ -246,28 +245,25 @@ public class DeepBlueSim {
                         return;
                     }
                     queuedMessages.add(() -> {
-                        // Cancel the sim pause timer so that it doesn't pause the
-                        // simulation after we unpause it below.
-                        simPauseTimer.cancel();
-                        // Unpause before reloading so that the new controller can take it's
-                        // first step.
-                        robot.simulationSetMode(usersSimulationSpeed);
-
                         inst.flush();
                         inst.stopClient();
                         inst.close();
+
+                        // Unpause before reloading so that the new controller can take it's
+                        // first step.
+                        updateUsersSimulationSpeed(robot);
+                        robot.simulationSetMode(usersSimulationSpeed);
+                        isWorldLoading = true;
                         robot.worldLoad(reloadRequest);
                     });
                 });
 
         // Add a listener to handle simMode requests.
         var simModeTopic = coordinator.getStringTopic("simMode");
-        try (var p = simModeTopic.publish(PubSubOption.sendAll(true),
-                PubSubOption.keepDuplicates(true))) {
+        try (var p = simModeTopic.publish(pubSubOptions)) {
             simModeTopic.setCached(false);
         }
-        var simModeSubscriber = simModeTopic.subscribe("",
-                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        var simModeSubscriber = simModeTopic.subscribe("", pubSubOptions);
         inst.addListener(simModeSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     var simMode = event.valueData.value.getString();
@@ -323,9 +319,7 @@ public class DeepBlueSim {
         var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
         robotTimeSecTopic.setCached(false);
         DoubleSubscriber robotTimeSecSubscriber =
-                robotTimeSecTopic.subscribe(-1.0,
-                        PubSubOption.sendAll(true),
-                        PubSubOption.periodic(Double.MIN_VALUE));
+                robotTimeSecTopic.subscribe(-1.0, pubSubOptions);
         inst.addListener(robotTimeSecSubscriber,
                 EnumSet.of(Kind.kValueAll, Kind.kImmediate),
                 (event) -> {
@@ -343,30 +337,10 @@ public class DeepBlueSim {
                                 break;
                             }
                             // Unpause if necessary
+                            updateUsersSimulationSpeed(robot);
                             robot.simulationSetMode(usersSimulationSpeed);
                             boolean isDone = (robot.step(basicTimeStep) == -1);
 
-                            // If that was our first step, schedule a task to pause the
-                            // simulator if it doesn't taken any steps for 1-2 seconds so it
-                            // doesn't suck up CPU.
-                            if (lastStepMillis == 0) {
-                                simPauseTimer.schedule(new TimerTask() {
-                                    @Override
-                                    public void run() {
-                                        if (System.currentTimeMillis()
-                                                - lastStepMillis > 1000) {
-                                            queuedMessages.add(() -> {
-                                                updateUsersSimulationSpeed(
-                                                        robot);
-                                                robot.simulationSetMode(
-                                                        Supervisor.SIMULATION_MODE_PAUSE);
-                                            });
-                                        }
-                                    }
-                                }, 1000, 1000);
-                            }
-
-                            lastStepMillis = System.currentTimeMillis();
                             simTimeSec = robot.getTime();
                             LOG.log(Level.DEBUG, "Sending simTimeSec of %g"
                                     .formatted(simTimeSec));
@@ -386,18 +360,28 @@ public class DeepBlueSim {
         inst.addConnectionListener(true, (event) -> {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
-                var simTimeSec = robot.getTime();
-                LOG.log(Level.DEBUG, "Sending initial simTimeSec of %g"
-                        .formatted(simTimeSec));
-                simTimeSecPublisher.set(simTimeSec);
-                LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
-                reloadStatusPublisher.set("Completed");
-                inst.flush();
+                queuedMessages.add(() -> {
+                    LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
+                    reloadStatusPublisher.set("Completed");
+                    var simTimeSec = robot.getTime();
+                    LOG.log(Level.DEBUG, "Sending initial simTimeSec of %g"
+                            .formatted(simTimeSec));
+                    simTimeSecPublisher.set(simTimeSec);
+                    inst.flush();
+                });
                 LOG.log(Level.INFO,
                         "Connected to NetworkTables server '%s' at %s:%s"
                                 .formatted(event.connInfo.remote_id,
                                         event.connInfo.remote_ip,
                                         event.connInfo.remote_port));
+            } else if (event.is(Kind.kDisconnected)) {
+                queuedMessages.add(() -> {
+                    if (isWorldLoading)
+                        return;
+                    LOG.log(Level.INFO,
+                            "Disconnected from NetworkTables server so pausing simulation.");
+                    robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
+                });
             }
         });
 
@@ -407,27 +391,46 @@ public class DeepBlueSim {
         try {
             while (isDoneFuture.getNow(false).booleanValue() == false) {
                 try {
+                    Simulation.runPeriodicMethods();
+                    // Process any pending user interface events.
+                    if (robot.step(0) == -1) {
+                        break;
+                    }
                     if (!queuedMessages.isEmpty()) {
-                        // Either there is a message waiting or it is ok to wait for it because the
-                        // robot code will tell us when to step the simulation.
+                        LOG.log(Level.DEBUG, "Processing next queued message");
                         queuedMessages.takeFirst().run();
-                    } else if (!robotTimeSecSubscriber.exists() && robot
+                    } else if (robotTimeSecSubscriber.exists()) {
+                        // We are expecting a message from the robot that will tell us when to step
+                        // the simulation.
+                        LOG.log(Level.DEBUG,
+                                "Waiting up to 1 second for a new message");
+                        var msg = queuedMessages.pollFirst(1, TimeUnit.SECONDS);
+                        if (msg == null) {
+                            LOG.log(Level.WARNING,
+                                    "No message from robot for 1 second. It might have disconnected. Pausing.");
+                            robot.simulationSetMode(
+                                    Supervisor.SIMULATION_MODE_PAUSE);
+                            continue;
+                        }
+                        msg.run();
+                    } else if (robot
                             .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
                         // The robot code isn't going to tell us when to step the simulation and the
                         // user has unpaused it.
-                        Simulation.runPeriodicMethods();
+                        LOG.log(Level.DEBUG,
+                                "Simulation is not paused and no robot code in control. Calling robot.step(basicTimeStep)");
+
                         if (robot.step(basicTimeStep) == -1) {
                             break;
                         }
+                        LOG.log(Level.DEBUG,
+                                "robot.step(basicTimeStep) returned");
                     } else {
                         // The simulation is paused and robot code isn't in control so wait a beat
                         // before checking again (so we don't suck up all the CPU)
-                        Simulation.runPeriodicMethods();
+                        LOG.log(Level.DEBUG,
+                                "Simulation is paused and no robot code in control. Sleeping for a step");
                         Thread.sleep(basicTimeStep);
-                        // Process any pending user interface events.
-                        if (robot.step(0) == -1) {
-                            break;
-                        }
                     }
                 } catch (WebsocketNotConnectedException notConnectedException) {
                     try (var sw = new StringWriter();

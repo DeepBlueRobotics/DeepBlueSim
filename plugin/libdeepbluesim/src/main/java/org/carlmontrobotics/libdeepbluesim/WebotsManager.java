@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import edu.wpi.first.hal.HAL;
@@ -97,17 +98,17 @@ public class WebotsManager implements AutoCloseable {
 
         coordinator = inst.getTable("/DeepBlueSim/Coordinator");
         var pubSubOptions = new PubSubOption[] {
-                PubSubOption.sendAll(true),
-                PubSubOption.periodic(Double.MIN_VALUE)
+                PubSubOption.sendAll(true), // Send every update
+                PubSubOption.keepDuplicates(true), // including duplicates
+                PubSubOption.periodic(Double.MIN_VALUE), // ASAP
         };
         var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
-        reloadRequestPublisher = reloadRequestTopic.publish(
-                PubSubOption.sendAll(true), PubSubOption.keepDuplicates(true));
+        reloadRequestPublisher = reloadRequestTopic.publish(pubSubOptions);
         reloadRequestTopic.setCached(false);
 
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
         reloadStatusSubscriber =
-                reloadStatusTopic.subscribe("", PubSubOption.sendAll(true));
+                reloadStatusTopic.subscribe("", pubSubOptions);
 
         var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
         robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
@@ -117,8 +118,7 @@ public class WebotsManager implements AutoCloseable {
         simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
 
         var simModeTopic = coordinator.getStringTopic("simMode");
-        simModePublisher = simModeTopic.publish(PubSubOption.sendAll(true),
-                PubSubOption.keepDuplicates(true));
+        simModePublisher = simModeTopic.publish(pubSubOptions);
         simModeTopic.setCached(false);
 
 
@@ -183,12 +183,12 @@ public class WebotsManager implements AutoCloseable {
 
     private volatile boolean isReady = false;
     private volatile boolean isRobotCodeRunning = false;
-    private boolean isRobotTimeStarted = false;
+    private AtomicBoolean isRobotTimeStarted = new AtomicBoolean(false);
     private boolean useStepTiming = true;
 
     /** Start the robot timing if we haven't already. */
-    private synchronized void ensureRobotTimingStarted() {
-        if (isRobotTimeStarted) {
+    private void ensureRobotTimingStarted() {
+        if (isRobotTimeStarted.getAndSet(true)) {
             return;
         }
         // Pause the clock so that we can step it in sync with the simulator
@@ -209,9 +209,9 @@ public class WebotsManager implements AutoCloseable {
         inst.flush();
 
         LOG.log(Level.INFO, "Robot is running.");
-        isRobotTimeStarted = true;
     }
 
+    private volatile long isReadyTimestamp = Long.MAX_VALUE;
     /**
      * Load a particular world file and, if necessary, wait for the user to start it.
      * 
@@ -227,6 +227,7 @@ public class WebotsManager implements AutoCloseable {
         SimHooks.pauseTiming();
 
         isReady = false;
+        isReadyTimestamp = Long.MAX_VALUE;
 
         // Tell the user to load the world file.
         String userReminder =
@@ -255,6 +256,7 @@ public class WebotsManager implements AutoCloseable {
                         inst.flush();
                     } else {
                         isReady = true;
+                        isReadyTimestamp = event.valueData.value.getTime();
                         isReadyFuture.complete(true);
                     }
                 });
@@ -283,8 +285,11 @@ public class WebotsManager implements AutoCloseable {
         inst.addListener(simTimeSecSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     // Ignore values sent before simulator said it was ready.
-                    if (!isReady)
+                    if (event.valueData.value.getTime() < isReadyTimestamp) {
+                        LOG.log(Level.DEBUG,
+                                "Ignoring simTimeSec because it was sent before simulator said it was ready.");
                         return;
+                    }
 
                     // Start the robot timing if we haven't already
                     ensureRobotTimingStarted();
@@ -362,14 +367,14 @@ public class WebotsManager implements AutoCloseable {
         return this;
     }
 
-    private boolean wereRobotInitedCallbacksRun = false;
+    private AtomicBoolean wereRobotInitedCallbacksRun =
+            new AtomicBoolean(false);
 
-    private synchronized void runRobotInitedCallbacksOnce() {
-        if (wereRobotInitedCallbacksRun) {
+    private void runRobotInitedCallbacksOnce() {
+        if (wereRobotInitedCallbacksRun.getAndSet(true)) {
             return;
         }
         robotInitedCallbacks.forEach((callback) -> callback.run());
-        wereRobotInitedCallbacksRun = true;
     }
 
     private final ArrayList<Runnable> robotInitedCallbacks = new ArrayList<>();
