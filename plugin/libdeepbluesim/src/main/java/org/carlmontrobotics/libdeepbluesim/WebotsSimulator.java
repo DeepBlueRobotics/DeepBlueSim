@@ -41,7 +41,7 @@ import edu.wpi.first.wpilibj.simulation.SimHooks;
  * simulator synchronized to the robot time and provides a way to add Watchers to track the
  * kinematics of Webots nodes.
  */
-public class WebotsManager implements AutoCloseable {
+public class WebotsSimulator implements AutoCloseable {
 
     // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
     // are using the default system logger, edit the logging properties file specified by the
@@ -50,7 +50,7 @@ public class WebotsManager implements AutoCloseable {
     // java.util.logging.config.file system property can be configured using the systemProperty of
     // the test task.
     private static final Logger LOG =
-            System.getLogger(WebotsManager.class.getName());
+            System.getLogger(WebotsSimulator.class.getName());
 
     private final TimedRobot robot;
     private final Timer robotTime = new Timer();
@@ -81,7 +81,7 @@ public class WebotsManager implements AutoCloseable {
      * 
      * @param robot the robot to connect to the Webots-simulated robot.
      */
-    public WebotsManager(TimedRobot robot) {
+    public WebotsSimulator(TimedRobot robot) {
         this.robot = robot;
         inst = NetworkTableInstance.getDefault();
         if (ntLogLevel > 0)
@@ -97,8 +97,7 @@ public class WebotsManager implements AutoCloseable {
             });
 
         coordinator = inst.getTable("/DeepBlueSim/Coordinator");
-        var pubSubOptions = new PubSubOption[] {
-                PubSubOption.sendAll(true), // Send every update
+        var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
         };
@@ -107,8 +106,7 @@ public class WebotsManager implements AutoCloseable {
         reloadRequestTopic.setCached(false);
 
         var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
-        reloadStatusSubscriber =
-                reloadStatusTopic.subscribe("", pubSubOptions);
+        reloadStatusSubscriber = reloadStatusTopic.subscribe("", pubSubOptions);
 
         var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
         robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
@@ -138,6 +136,7 @@ public class WebotsManager implements AutoCloseable {
     }
 
     private Set<Watcher> watchers = new HashSet<>();
+
     /**
      * Adds a Watcher for a Webots node.
      * 
@@ -164,7 +163,7 @@ public class WebotsManager implements AutoCloseable {
      * @return this object for chaining.
      * @throws FileNotFoundException if the world file does not exist
      */
-    public WebotsManager withWorld(String worldFilePath)
+    public WebotsSimulator withWorld(String worldFilePath)
             throws FileNotFoundException {
         var worldFile = new File(worldFilePath);
         if (!worldFile.isFile()) {
@@ -212,6 +211,7 @@ public class WebotsManager implements AutoCloseable {
     }
 
     private volatile long isReadyTimestamp = Long.MAX_VALUE;
+
     /**
      * Load a particular world file and, if necessary, wait for the user to start it.
      * 
@@ -220,7 +220,7 @@ public class WebotsManager implements AutoCloseable {
      * 
      * @return this object for chaining
      */
-    private WebotsManager waitForUserToStart(String worldFileAbsPath)
+    private WebotsSimulator waitForUserToStart(String worldFileAbsPath)
             throws TimeoutException {
 
         // Pause the clock while we wait.
@@ -246,9 +246,8 @@ public class WebotsManager implements AutoCloseable {
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final String reloadStatus =
                             event.valueData.value.getString();
-                    LOG.log(Level.DEBUG,
-                            "In listener, reloadStatus = %s"
-                                    .formatted(reloadStatus));
+                    LOG.log(Level.DEBUG, "In listener, reloadStatus = %s"
+                            .formatted(reloadStatus));
                     if (!reloadStatus.equals("Completed"))
                         return;
                     if (reloadCount++ == 0) {
@@ -310,8 +309,8 @@ public class WebotsManager implements AutoCloseable {
                     double robotTimeSec = robotTime.get();
                     if (LOG.isLoggable(Level.DEBUG))
                         LOG.log(Level.DEBUG,
-                            "Received simTimeSec of %g when robotTimeSec is %g "
-                                    .formatted(simTimeSec, robotTimeSec));
+                                "Received simTimeSec of %g when robotTimeSec is %g "
+                                        .formatted(simTimeSec, robotTimeSec));
                     // If we're not behind the sim time, there is nothing to do.
                     double deltaSecs = simTimeSec - robotTimeSec;
                     if (deltaSecs < 0.0) {
@@ -410,7 +409,7 @@ public class WebotsManager implements AutoCloseable {
      * @param runTime how long the simulation for run for
      * @return this object for chaining
      */
-    public WebotsManager runAutonomous(Measure<Time> runTime) {
+    public WebotsSimulator runAutonomous(Measure<Time> runTime) {
         LOG.log(Level.INFO, "Enabling in autonomous.");
         // Simulate starting autonomous
         DriverStationSim.setAutonomous(true);
@@ -448,7 +447,7 @@ public class WebotsManager implements AutoCloseable {
      * @param acceptor the consuming functional
      * @return this object for chaining
      */
-    public WebotsManager withNodePosition(String defPath,
+    public WebotsSimulator withNodePosition(String defPath,
             Consumer<Translation3d> acceptor) {
         try (var watcher = new Watcher(defPath)) {
             var pos = watcher.getPosition();
@@ -456,6 +455,7 @@ public class WebotsManager implements AutoCloseable {
             return this;
         }
     }
+
     /**
      * Closes this instance, freeing any resources that in holds.
      */
