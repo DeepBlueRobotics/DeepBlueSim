@@ -18,6 +18,9 @@ plugins {
 
     // Apply the Groovy plugin to add support for Groovy
     id 'groovy'
+
+    // Support WPILib
+    id 'edu.wpi.first.WpilibTools' version '1.3.0'
 }
 
 repositories {
