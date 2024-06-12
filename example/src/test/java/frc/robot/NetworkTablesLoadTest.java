@@ -67,49 +67,4 @@ public class NetworkTablesLoadTest {
         }
         assertTrue(isDone.get(10, TimeUnit.SECONDS));
     }
-
-    // @Test
-    public void testPublishPublishCloseClose()
-            throws InterruptedException, ExecutionException, TimeoutException {
-        var testTopicName = "testTopic";
-        var count = 200;
-        CompletableFuture<Boolean> isDone = new CompletableFuture<>();
-        var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true),
-                PubSubOption.keepDuplicates(true),
-                PubSubOption.periodic(Double.MIN_VALUE)};
-        var server = NetworkTableInstance.create();
-        server.startServer();
-        var serverTopic = server.getDoubleArrayTopic(testTopicName);
-        var subscriber = serverTopic.subscribe(new double[] {}, pubSubOptions);
-        server.addListener(subscriber, EnumSet.of(Kind.kValueRemote),
-                (event) -> {
-                    if (receivedCount.incrementAndGet() == count) {
-                        isDone.complete(true);
-                    }
-                    System.out.println("Got %d: %s"
-                            .formatted(receivedCount.get(), Arrays.toString(
-                                    event.valueData.value.getDoubleArray())));
-                });
-
-        var client = NetworkTableInstance.create();
-        client.setServer("localhost");
-        var clientName = "test client";
-        client.startClient4(clientName);
-        Thread.sleep(2000);
-        int sentCount = 0;
-        while (sentCount < count) {
-            var clientTopic = client.getDoubleArrayTopic(testTopicName);
-            var publisher = clientTopic.publish(pubSubOptions);
-            publisher.set(new double[] {sentCount, sentCount, sentCount});
-            // client.flush();
-            sentCount++;
-            var publisher2 = clientTopic.publish(pubSubOptions);
-            publisher2.set(new double[] {sentCount, sentCount, sentCount});
-            // client.flush();
-            publisher.close();
-            publisher2.close();
-            Thread.yield();
-        }
-        assertTrue(isDone.get(10, TimeUnit.SECONDS));
-    }
 }
