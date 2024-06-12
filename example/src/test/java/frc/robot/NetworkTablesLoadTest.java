@@ -2,7 +2,6 @@ package frc.robot;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
