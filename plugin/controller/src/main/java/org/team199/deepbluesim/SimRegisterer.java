@@ -6,6 +6,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
+import org.team199.deepbluesim.mediators.LimelightMediator;
 import org.team199.deepbluesim.mediators.PWMMotorMediator;
 import org.team199.deepbluesim.mediators.PlayingWithFusionTimeOfFlightMediator;
 import org.team199.deepbluesim.mediators.CANMotorMediator;
@@ -20,6 +21,7 @@ import org.team199.wpiws.devices.DutyCycleSim;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 
+import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.Device;
 import com.cyberbotics.webots.controller.DistanceSensor;
 import com.cyberbotics.webots.controller.Gyro;
@@ -51,6 +53,8 @@ public class SimRegisterer {
                         case "Encoder":
                             connectEncoder((PositionSensor) device);
                             break;
+                        case "Limelight":
+                            connectLimelight((Camera) device);
                         case "Motor":
                             connectMotor((Motor) device);
                             break;
@@ -167,7 +171,20 @@ public class SimRegisterer {
         }
     }
 
-    public static void connectMotor(Motor device, Supervisor robot) {
+    public static void connectLimelight(Camera device) {
+        String[] nameParts = device.getName().split("_", 8);
+        double cameraFOVRad = Double.parseDouble(nameParts[2]);
+        int cameraWidthPx = Integer.parseInt(nameParts[3]);
+        int cameraHeightPx = Integer.parseInt(nameParts[4]);
+        int defaultPipeline = Integer.parseInt(nameParts[5]);
+        int numPipelines = Integer.parseInt(nameParts[6]);
+        String name = nameParts[7];
+
+        new LimelightMediator(device, name + "-sim", cameraFOVRad,
+                cameraWidthPx, cameraHeightPx, defaultPipeline, numPipelines);
+    }
+
+    public static void connectMotor(Motor device) {
         String[] nameParts = device.getName().split("_");
         String controllerType = nameParts[2];
         int port = Integer.parseInt(nameParts[3]);
