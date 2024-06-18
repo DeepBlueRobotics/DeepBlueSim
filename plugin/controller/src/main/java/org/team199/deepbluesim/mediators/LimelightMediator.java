@@ -84,13 +84,13 @@ public class LimelightMediator implements Runnable {
     public void run() {
         long requestedPipeline = pipeline.getInteger(defaultPipeline);
         if (requestedPipeline != lastPipeline) {
+            lastPipeline = requestedPipeline;
             if (requestedPipeline < 0
                     || requestedPipeline > (numPipelines - 1)) {
                 requestedPipeline = defaultPipeline;
             }
             selectedPipeline.setSFInt32(Math.toIntExact(requestedPipeline));
             actualPipeline.setInteger(requestedPipeline);
-            lastPipeline = requestedPipeline;
         }
 
         // Update Targeting Results
