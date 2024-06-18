@@ -49,14 +49,14 @@ public class SimRegisterer {
                     String type = name.split("_")[1];
                     switch (type) {
                         case "Encoder":
-                            connectEncoder((PositionSensor) device, robot);
+                            connectEncoder((PositionSensor) device);
                             break;
                         case "Motor":
-                            connectMotor((Motor) device, robot);
+                            connectMotor((Motor) device);
                             break;
                         case "PlayingWithFusionTimeOfFlight":
                             connectPlayingWithFusionTimeOfFlight(
-                                    (DistanceSensor) device, robot);
+                                    (DistanceSensor) device);
                             break;
                     }
                 } catch (Exception e) {
@@ -84,15 +84,13 @@ public class SimRegisterer {
     public static void tryBindEncoders() {
         if(unboundEncoders.isEmpty()) return;
 
-        Supervisor robot = Simulation.getSupervisor();
-
         PositionSensor[] unboundEncodersCopy =
                 unboundEncoders.toArray(new PositionSensor[0]);
         unboundEncoders.clear();
 
         for (PositionSensor device : unboundEncodersCopy) {
             try {
-                connectEncoder(device, robot);
+                connectEncoder(device);
             } catch (Exception e) {
                 System.err.println("Error occurred connecting to device "
                         + device.getName() + ":");
@@ -102,8 +100,8 @@ public class SimRegisterer {
         }
     }
 
-    public static void connectEncoder(PositionSensor device, Supervisor robot) {
-        Node node = robot.getFromDevice(device);
+    public static void connectEncoder(PositionSensor device) {
+        Node node = Simulation.getSupervisor().getFromDevice(device);
 
         String[] nameParts = device.getName().split("_");
         boolean isOnMotorShaft = Boolean.parseBoolean(nameParts[2]);
@@ -192,7 +190,7 @@ public class SimRegisterer {
     }
 
     public static void connectPlayingWithFusionTimeOfFlight(
-            DistanceSensor device, Supervisor robot) {
+            DistanceSensor device) {
         String port = device.getName().split("_")[2];
 
         String baseDeviceName =
