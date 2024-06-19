@@ -8,17 +8,14 @@ EXTERNPROTO "../protos/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 
 WorldInfo {
-  coordinateSystem "NUE"
 }
 Viewpoint {
-  orientation -0.8834893720712308 0.4661205108595913 0.04667117732793667 1.8807004037332389
-  position -2.6740863046422008 1.5141266883477473 2.0717807684941976
+  orientation -0.17483905906784158 -0.1007392188381911 0.9794298919331301 4.169165907224898
+  position 1.742990312035277 3.046841469870379 1.4226819047141128
 }
 DEF Field Group {
   children [
     RectangleArena {
-      translation 0 0.01 0
-      rotation 1 0 0 -1.5707953071795862
       name "rectangle arena(1)"
       floorSize 20 20
       floorTileSize 20 20
@@ -30,8 +27,8 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 DEF ROBOT Robot {
-  translation -1.5672499690951603e-12 0.06929667254627217 1.1402531555035887e-07
-  rotation 0.9999999999994709 1.0234514950603424e-06 1.054961357222813e-07 1.0472091725023527e-06
+  translation -8.000411853504155e-08 0.06914638371366336 0.0592928837522033
+  rotation 0 0 1 0
   children [
     Solid {
       children [
@@ -48,8 +45,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 0.1669999999999989 -2.4730714204904136e-06 0.23200000000253404
-            rotation 0.9999999748139617 -4.98403937699204e-10 -0.00022443724243920477 5.307156870259904e-06
+            translation 0.16699999999999576 -0.23200000000253404 -2.4730714204904136e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -67,9 +64,9 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 8.919282517793818e-11
-            axis 0 0 -1
-            anchor 0.167 0 0.232
+            position 0
+            axis 0 -1 0
+            anchor 0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
@@ -87,8 +84,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation -0.16700000000000098 -2.4730714204834747e-06 0.232000000002534
-            rotation 0.9999999838397753 -3.9064444371707457e-10 -0.00017977888988938742 5.307156870259904e-06
+            translation -0.1670000000000024 -0.232000000002534 -2.4730714204834747e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -106,9 +103,9 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 4.150378260475315e-11
-            axis 0 0 -1
-            anchor -0.167 0 0.232
+            position 0
+            axis 0 -1 0
+            anchor -0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
@@ -126,8 +123,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 0.16700000000000323 -2.47307141028677e-06 -0.231999999997466
-            rotation 0.9999998281251962 1.296624959703654e-09 0.0005863016100932187 5.307156870259904e-06
+            translation 0.1670000000000422 0.231999999997466 -2.47307141028677e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -145,9 +142,9 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 9.225294324560214e-11
-            axis 0 0 1
-            anchor 0.167 0 -0.232
+            position 1.5461423473694862e-08
+            axis 0 1 0
+            anchor 0.167 0.232 0
           }
         }
         PoweredHingeJoint {
@@ -164,8 +161,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation -0.1670000000000021 -2.473071410269423e-06 -0.23199999999746604
-            rotation 0.9999999999957659 -1.5114783490239782e-10 2.9099830654518306e-06 5.307156870259904e-06
+            translation -0.1669999999999658 0.23199999999746604 -2.473071410269423e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -183,18 +180,18 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position -4.1511655620378363e-11
-            axis 0 0 1
-            anchor -0.167 0 -0.232
+            position 0
+            axis 0 1 0
+            anchor -0.167 0.232 0
           }
         }
         Gyro {
         }
         HingeJoint {
           jointParameters HingeJointParameters {
-            position 8.919282517793818e-11
-            axis 0 0 -1
-            anchor 0.167 0 0.232
+            position 0
+            axis 0 1 0
+            anchor 0.167 -0.232 0
           }
           device [
             MiniCIMMotor {
@@ -211,7 +208,7 @@ DEF ROBOT Robot {
           appearance PBRAppearance {
           }
           geometry DEF Base Box {
-            size 0.46101 0.05 0.45085
+            size 0.46101 0.45085 0.05
           }
         }
       ]
@@ -220,8 +217,8 @@ DEF ROBOT Robot {
       }
     }
     Pen {
-      translation 0 0.001 0
-      rotation -1 0 0 1.5707963267948966
+      translation 0 0 0.001
+      rotation 0 0 1 0
       inkColor 1 0 0
       inkDensity 1
       leadSize 0.1
@@ -234,6 +231,6 @@ DEF ROBOT Robot {
   }
   controller "DeepBlueSim"
   supervisor TRUE
-  linearVelocity 1.809152902427044e-11 4.3220382958373945e-06 2.6856562400292097e-10
-  angularVelocity 9.921710062231101e-12 4.970941483132485e-16 6.939801325381416e-12
+  linearVelocity 0 0 0
+  angularVelocity 0 0 0
 }
