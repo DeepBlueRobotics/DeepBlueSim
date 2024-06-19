@@ -9,11 +9,13 @@ PROTO Limelight [
     field SFString{"Limelight 1","Limelight 2(+)","Limelight 3","Limelight 3G"} model "Limelight 3G"
 
     # Camera parameters
-    unconnectedField MFColor{} pipelines [1 1 1]
+    unconnectedField MFColor{} pipelines [0 1 0]
     unconnectedField SFInt32 defaultPipeline 0
     field SFFloat    exposure            1.0
     field SFFloat    ambientOcclusionRadius 0
-    field SFNode{Recognition{}} recognition Recognition{}
+    field SFNode{Recognition{}} recognition Recognition{
+        frameThickness 3
+    }
 
     # Expose fields from Solid and Pose
     field SFVec3f    translation         0 0 0

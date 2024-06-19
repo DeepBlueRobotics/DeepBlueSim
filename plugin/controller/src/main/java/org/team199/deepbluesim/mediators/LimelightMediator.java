@@ -12,7 +12,6 @@ import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.CameraRecognitionObject;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
@@ -36,10 +35,9 @@ public class LimelightMediator implements Runnable {
     // fiducial_id_filters_set
 
     // Targeting Response Data
-    private final BooleanPublisher hasTarget;
-    private final DoublePublisher targetX, targetY, targetXNC, targetYNC,
-            targetArea, targetShortSide, targetLongSide, targetHorizontalSide,
-            targetVerticalSide, actualPipeline, heartbeat;
+    private final DoublePublisher hasTarget, targetX, targetY, targetXNC,
+            targetYNC, targetArea, targetShortSide, targetLongSide,
+            targetHorizontalSide, targetVerticalSide, actualPipeline, heartbeat;
     private final StringPublisher targetClass;
     private final DoubleArrayPublisher targetColor, targetCorners, rawTargets;
     // Not Implemented: tl, cl, json, hw, apriltag/3d-data, rawfiducials
@@ -80,7 +78,7 @@ public class LimelightMediator implements Runnable {
         ntTable = NetworkTableInstance.getDefault().getTable(ntTableName);
         pipeline =
                 ntTable.getDoubleTopic("pipeline").subscribe(defaultPipeline);
-        hasTarget = ntTable.getBooleanTopic("tv").publish();
+        hasTarget = ntTable.getDoubleTopic("tv").publish();
         targetX = ntTable.getDoubleTopic("tx").publish();
         targetY = ntTable.getDoubleTopic("ty").publish();
         targetXNC = ntTable.getDoubleTopic("txnc").publish();
@@ -195,7 +193,7 @@ public class LimelightMediator implements Runnable {
                         (int) Math.round(averageColor[2]), null);
 
         // Publish results
-        hasTarget.set(true);
+        hasTarget.set(1);
         targetX.set(tx);
         targetY.set(ty);
         // While real cameras have a primary pixel that's not the center, this is a simulation, so
@@ -279,7 +277,7 @@ public class LimelightMediator implements Runnable {
     }
 
     private void setNoTargets() {
-        hasTarget.set(false);
+        hasTarget.set(0);
         targetX.set(0);
         targetY.set(0);
         targetXNC.set(0);
