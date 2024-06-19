@@ -11,6 +11,7 @@ import org.team199.deepbluesim.Simulation;
 import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.CameraRecognitionObject;
 import com.cyberbotics.webots.controller.Field;
+import com.cyberbotics.webots.controller.Node;
 
 import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
@@ -23,10 +24,10 @@ import edu.wpi.first.networktables.StringPublisher;
 public class LimelightMediator implements Runnable {
 
     private final Camera camera;
+    private final Field availablePipelines;
     private final Field selectedPipeline;
     private final NetworkTable ntTable;
-    private final int cameraWidthPx, cameraHeightPx, defaultPipeline,
-            numPipelines;
+    private final int cameraWidthPx, cameraHeightPx, defaultPipeline;
     private final double viewPlaneHalfWidth, viewPlaneHalfHeight, cameraAreaPx2;
 
     private double lastPipeline = -1;
@@ -48,19 +49,19 @@ public class LimelightMediator implements Runnable {
 
     public LimelightMediator(Camera camera, String ntTableName,
             double cameraFOVRad, int cameraWidthPx, int cameraHeightPx,
-            int defaultPipeline, int numPipelines) {
+            int defaultPipeline) {
         this.camera = camera;
         camera.recognitionEnable(Constants.sensorTimestep);
 
-        selectedPipeline = Simulation.getSupervisor().getFromDevice(camera)
-                .getField("selectedPipeline");
+        Node node = Simulation.getSupervisor().getFromDevice(camera);
+        availablePipelines = node.getField("pipelines");
+        selectedPipeline = node.getProtoField("recognition");
 
         this.cameraWidthPx = cameraWidthPx;
         this.cameraHeightPx = cameraHeightPx;
-        this.defaultPipeline =
-                defaultPipeline < 0 || defaultPipeline > (numPipelines - 1) ? 0
-                        : defaultPipeline;
-        this.numPipelines = numPipelines;
+        this.defaultPipeline = defaultPipeline;
+        if (defaultPipeline >= 0)
+            setPipeline(availablePipelines.getMFNode(defaultPipeline));
 
         // This is the code you get if you just follow the math in the docs, but we can optimize it
         // by shifting the order of operations
@@ -99,14 +100,7 @@ public class LimelightMediator implements Runnable {
         targetCorners = ntTable.getDoubleArrayTopic("tcornxy").publish();
         rawTargets = ntTable.getDoubleArrayTopic("rawtargets").publish();
 
-        if (numPipelines == 0) {
-            // No available pipeline. We can't do anything :/
-            setNoTargets();
-            actualPipeline.set(0);
-            Simulation.registerPeriodicMethod(this::updateHeartbeat);
-        } else {
-            Simulation.registerPeriodicMethod(this);
-        }
+        Simulation.registerPeriodicMethod(this);
     }
 
     @Override
@@ -114,13 +108,17 @@ public class LimelightMediator implements Runnable {
         double requestedPipeline = pipeline.get();
         if (requestedPipeline != lastPipeline) {
             lastPipeline = requestedPipeline;
+            Node newPipeline;
             if ((int) requestedPipeline != requestedPipeline
                     || requestedPipeline < 0
-                    || requestedPipeline > (numPipelines - 1)) {
+                    || (newPipeline = availablePipelines
+                            .getMFNode((int) requestedPipeline)) == null) {
+                // If the requested pipeline doesn't exist, fallback on the default
                 requestedPipeline = defaultPipeline;
+                newPipeline = availablePipelines.getMFNode(defaultPipeline);
             }
-            selectedPipeline.setSFInt32((int) requestedPipeline);
-            actualPipeline.set((int) requestedPipeline);
+            setPipeline(newPipeline);
+            actualPipeline.set(requestedPipeline);
         }
 
 
@@ -247,6 +245,20 @@ public class LimelightMediator implements Runnable {
         updateHeartbeat();
     }
 
+    private double[] getNormalizedPositionOfObject(int[] objectPosition,
+            int[] objectSize) {
+
+        // Modified from Limelight Docs: From Pixels to Angles
+        // https://docs.limelightvision.io/docs/docs-limelight/pipeline-retro/retro-theory#from-pixels-to-angles
+
+        double px = objectPosition[0] + (objectSize[0] / 2.0);
+        double py = objectPosition[1] + (objectSize[1] / 2.0);
+        double nx = (2.0 / cameraWidthPx) * (px - ((cameraWidthPx - 1) / 2.0));
+        double ny =
+                (2.0 / cameraHeightPx) * (((cameraHeightPx - 1) / 2.0) - py);
+        return new double[] {nx, ny};
+    }
+
     private void setNoTargets() {
         hasTarget.set(false);
         targetX.set(0);
@@ -264,24 +276,19 @@ public class LimelightMediator implements Runnable {
         rawTargets.set(new double[9]);
     }
 
+    private void setPipeline(Node newPipeline) {
+        if (newPipeline == null) {
+            selectedPipeline.importSFNodeFromString("NULL");
+            return;
+        }
+
+        selectedPipeline.importSFNodeFromString(newPipeline.exportString());
+    }
+
     private void updateHeartbeat() {
         heartbeatValue++;
         heartbeatValue %= 2e9;
         heartbeat.set(heartbeatValue);
-    }
-
-    private double[] getNormalizedPositionOfObject(int[] objectPosition,
-            int[] objectSize) {
-
-        // Modified from Limelight Docs: From Pixels to Angles
-        // https://docs.limelightvision.io/docs/docs-limelight/pipeline-retro/retro-theory#from-pixels-to-angles
-
-        double px = objectPosition[0] + (objectSize[0] / 2.0);
-        double py = objectPosition[1] + (objectSize[1] / 2.0);
-        double nx = (2.0 / cameraWidthPx) * (px - ((cameraWidthPx - 1) / 2.0));
-        double ny =
-                (2.0 / cameraHeightPx) * (((cameraHeightPx - 1) / 2.0) - py);
-        return new double[] {nx, ny};
     }
 
 }

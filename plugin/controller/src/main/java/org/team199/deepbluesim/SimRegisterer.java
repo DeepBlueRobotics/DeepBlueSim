@@ -177,11 +177,10 @@ public class SimRegisterer {
         int cameraWidthPx = Integer.parseInt(nameParts[3]);
         int cameraHeightPx = Integer.parseInt(nameParts[4]);
         int defaultPipeline = Integer.parseInt(nameParts[5]);
-        int numPipelines = Integer.parseInt(nameParts[6]);
-        String name = nameParts[7];
+        String name = nameParts[6];
 
         new LimelightMediator(device, name + "-sim", cameraFOVRad,
-                cameraWidthPx, cameraHeightPx, defaultPipeline, numPipelines);
+                cameraWidthPx, cameraHeightPx, defaultPipeline);
     }
 
     public static void connectMotor(Motor device) {
