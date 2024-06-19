@@ -18,6 +18,7 @@ DEF Field Group {
     RectangleArena {
       name "rectangle arena(1)"
       floorSize 20 20
+      floorTileSize 20 20
     }
   ]
 }
@@ -27,7 +28,7 @@ TexturedBackgroundLight {
 }
 DEF ROBOT Robot {
   translation -8.000411853504155e-08 0.06914638371366336 0.0592928837522033
-  rotation 0.9999999999999932 8.567558688178127e-08 7.835264435621766e-08 1.5708055937512002
+  rotation 0 0 1 0
   children [
     Solid {
       children [
@@ -44,8 +45,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 0.16699999999999576 -2.4730714204904136e-06 0.23200000000253404
-            rotation 0 0 1 0
+            translation 0.16699999999999576 -0.23200000000253404 -2.4730714204904136e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -64,8 +65,8 @@ DEF ROBOT Robot {
           }
           jointParameters HingeJointParameters {
             position 0
-            axis 0 0 -1
-            anchor 0.167 0 0.232
+            axis 0 1 0
+            anchor 0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
@@ -83,8 +84,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation -0.1670000000000024 -2.4730714204834747e-06 0.232000000002534
-            rotation 0 0 1 0
+            translation -0.1670000000000024 -0.232000000002534 -2.4730714204834747e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -103,8 +104,8 @@ DEF ROBOT Robot {
           }
           jointParameters HingeJointParameters {
             position 0
-            axis 0 0 -1
-            anchor -0.167 0 0.232
+            axis 0 1 0
+            anchor -0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
@@ -122,8 +123,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 0.1670000000000422 -2.47307141028677e-06 -0.231999999997466
-            rotation 0.9999936899404019 9.167598969236932e-09 0.00355247510601545 5.307156870259904e-06
+            translation 0.1670000000000422 0.231999999997466 -2.47307141028677e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -142,8 +143,8 @@ DEF ROBOT Robot {
           }
           jointParameters HingeJointParameters {
             position 1.5461423473694862e-08
-            axis 0 0 1
-            anchor 0.167 0 -0.232
+            axis 0 -1 0
+            anchor 0.167 0.232 0
           }
         }
         PoweredHingeJoint {
@@ -160,8 +161,8 @@ DEF ROBOT Robot {
             }
           ]
           endPoint Solid {
-            translation -0.1669999999999658 -2.473071410269423e-06 -0.23199999999746604
-            rotation 0 0 1 0
+            translation -0.1669999999999658 0.23199999999746604 -2.473071410269423e-06
+            rotation 1 0 0 1.5708
             children [
               Shape {
                 appearance PBRAppearance {
@@ -180,17 +181,17 @@ DEF ROBOT Robot {
           }
           jointParameters HingeJointParameters {
             position 0
-            axis 0 0 1
-            anchor -0.167 0 -0.232
+            axis 0 -1 0
+            anchor -0.167 0.232 0
           }
         }
         Gyro {
         }
         HingeJoint {
           jointParameters HingeJointParameters {
-            position 8.919282517793818e-11
-            axis 0 0 -1
-            anchor 0.167 0 0.232
+            position 0
+            axis 0 1 0
+            anchor 0.167 -0.232 0
           }
           device [
             MiniCIMMotor {
@@ -207,7 +208,7 @@ DEF ROBOT Robot {
           appearance PBRAppearance {
           }
           geometry DEF Base Box {
-            size 0.46101 0.05 0.45085
+            size 0.46101 0.45085 0.05
           }
         }
       ]
@@ -216,8 +217,8 @@ DEF ROBOT Robot {
       }
     }
     Pen {
-      translation 0 0.001 0
-      rotation -1 0 0 1.5707963267948966
+      translation 0 0 0.001
+      rotation 0 0 1 0
       inkColor 1 0 0
       inkDensity 1
       leadSize 0.1
