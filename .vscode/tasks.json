@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Controller",
+            "type": "shell",
+            "windows": {
+                "command": "./gradlew.bat"
+            },
+            "osx": {
+                "command": "./gradlew"
+            },
+            "linux": {
+                "command": "./gradlew"
+            },
+            "args": [
+                ":plugin:controller:build"
+            ]
+        }
+    ]
+}
