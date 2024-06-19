@@ -1,21 +1,49 @@
 {
     "version": "2.0.0",
+    "windows": {
+        "command": "./gradlew.bat"
+    },
+    "osx": {
+        "command": "./gradlew"
+    },
+    "linux": {
+        "command": "./gradlew"
+    },
     "tasks": [
         {
             "label": "Build Controller",
             "type": "shell",
-            "windows": {
-                "command": "./gradlew.bat"
-            },
-            "osx": {
-                "command": "./gradlew"
-            },
-            "linux": {
-                "command": "./gradlew"
-            },
             "args": [
                 ":plugin:controller:build"
-            ]
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Update example/Webots directory",
+            "type": "shell",
+            "args": [
+                "build",
+                ":example:installDeepBlueSim",
+                "-x",
+                ":example:systemTest",
+                "-x",
+                ":plugin:check"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Update example/Webots directory (Watch)",
+            "type": "shell",
+            "args": [
+                "build",
+                ":example:installDeepBlueSim",
+                "-x",
+                ":example:systemTest",
+                "-x",
+                ":plugin:check",
+                "--continuous"
+            ],
+            "problemMatcher": []
         }
     ]
 }
