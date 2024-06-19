@@ -10,9 +10,8 @@ import org.team199.deepbluesim.Simulation;
 
 import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.CameraRecognitionObject;
-import com.cyberbotics.webots.controller.Field;
-import com.cyberbotics.webots.controller.Node;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
@@ -23,15 +22,13 @@ import edu.wpi.first.networktables.StringPublisher;
 
 public class LimelightMediator implements Runnable {
 
+    public static final double ACCURACY_THRESHOLD = 3.0 / 255.0;
+
     private final Camera camera;
-    private final Field availablePipelines;
-    private final Field selectedPipeline;
+    private final double[][] availablePipelines;
     private final NetworkTable ntTable;
     private final int cameraWidthPx, cameraHeightPx, defaultPipeline;
     private final double viewPlaneHalfWidth, viewPlaneHalfHeight, cameraAreaPx2;
-
-    private double lastPipeline = -1;
-    private double heartbeatValue = 0;
 
     // Camera Controls
     private final DoubleSubscriber pipeline;
@@ -47,21 +44,21 @@ public class LimelightMediator implements Runnable {
     private final DoubleArrayPublisher targetColor, targetCorners, rawTargets;
     // Not Implemented: tl, cl, json, hw, apriltag/3d-data, rawfiducials
 
+    private double lastPipeline = -1;
+    private double heartbeatValue = 0;
+    private double[] activePipeline = new double[3];
+
     public LimelightMediator(Camera camera, String ntTableName,
             double cameraFOVRad, int cameraWidthPx, int cameraHeightPx,
-            int defaultPipeline) {
+            double[][] availablePipelines, int defaultPipeline) {
         this.camera = camera;
         camera.recognitionEnable(Constants.sensorTimestep);
 
-        Node node = Simulation.getSupervisor().getFromDevice(camera);
-        availablePipelines = node.getField("pipelines");
-        selectedPipeline = node.getProtoField("recognition");
-
         this.cameraWidthPx = cameraWidthPx;
         this.cameraHeightPx = cameraHeightPx;
-        this.defaultPipeline = defaultPipeline;
-        if (defaultPipeline >= 0)
-            setPipeline(availablePipelines.getMFNode(defaultPipeline));
+        this.availablePipelines = availablePipelines;
+        this.defaultPipeline = MathUtil.clamp(defaultPipeline, 0,
+                availablePipelines.length - 1);
 
         // This is the code you get if you just follow the math in the docs, but we can optimize it
         // by shifting the order of operations
@@ -100,7 +97,13 @@ public class LimelightMediator implements Runnable {
         targetCorners = ntTable.getDoubleArrayTopic("tcornxy").publish();
         rawTargets = ntTable.getDoubleArrayTopic("rawtargets").publish();
 
-        Simulation.registerPeriodicMethod(this);
+        if (availablePipelines.length == 0) {
+            // There are no available pipelines, so we can't do anything :(
+            setNoTargets();
+            Simulation.registerPeriodicMethod(this::updateHeartbeat);
+        } else {
+            Simulation.registerPeriodicMethod(this);
+        }
     }
 
     @Override
@@ -108,16 +111,14 @@ public class LimelightMediator implements Runnable {
         double requestedPipeline = pipeline.get();
         if (requestedPipeline != lastPipeline) {
             lastPipeline = requestedPipeline;
-            Node newPipeline;
             if ((int) requestedPipeline != requestedPipeline
                     || requestedPipeline < 0
-                    || (newPipeline = availablePipelines
-                            .getMFNode((int) requestedPipeline)) == null) {
-                // If the requested pipeline doesn't exist, fallback on the default
+                    || requestedPipeline >= availablePipelines.length - 1) {
+                // The pipeline should always be an int, but Limelight docs say to use a double.
+                // If it's not an int, or it's out of range, fallback on the default
                 requestedPipeline = defaultPipeline;
-                newPipeline = availablePipelines.getMFNode(defaultPipeline);
             }
-            setPipeline(newPipeline);
+            activePipeline = availablePipelines[(int) requestedPipeline];
             actualPipeline.set(requestedPipeline);
         }
 
@@ -126,19 +127,37 @@ public class LimelightMediator implements Runnable {
         // Update Primary Target Results
 
         // Get targets
-        CameraRecognitionObject[] objects = camera.getRecognitionObjects();
+        CameraRecognitionObject[] objects =
+                Arrays.stream(camera.getRecognitionObjects()).filter(object -> {
+                    double[] objectColors = object.getColors();
+                    for (int i = 0; i < objectColors.length; i++) {
+                        if (Math.abs(activePipeline[0]
+                                - objectColors[i + 0]) < ACCURACY_THRESHOLD
+                                && Math.abs(activePipeline[1] - objectColors[i
+                                        + 1]) < ACCURACY_THRESHOLD
+                                && Math.abs(activePipeline[2] - objectColors[i
+                                        + 2]) < ACCURACY_THRESHOLD)
+                            return true;
+                    }
+                    return false;
+                })
+                        // Limelight always chooses the largest object
+                        // It also has some code to try to focus on one object if two have a similar
+                        // size
+                        // (to prevent flipping), but I think that that is unnecessary in this
+                        // simple implementation
+                        .sorted(Comparator
+                                .comparing(
+                                        CameraRecognitionObject::getSizeOnImage,
+                                        Comparator.comparingInt(
+                                                size -> size[0] * size[1]))
+                                .reversed())
+                        .toArray(CameraRecognitionObject[]::new);
         if (objects.length == 0) {
             setNoTargets();
             updateHeartbeat();
             return;
         }
-        // Limelight always chooses the largest object
-        // It also has some code to try to focus on one object if two have a similar size
-        // (to prevent flipping), but I think that that is unnecessary in this simple implementation
-        Arrays.sort(objects,
-                Comparator.comparing(CameraRecognitionObject::getSizeOnImage,
-                        Comparator.comparingInt(size -> size[0] * size[1]))
-                        .reversed());
 
         CameraRecognitionObject primaryObject = objects[0];
 
@@ -274,15 +293,6 @@ public class LimelightMediator implements Runnable {
         targetColor.set(new double[3]);
         targetCorners.set(new double[8]);
         rawTargets.set(new double[9]);
-    }
-
-    private void setPipeline(Node newPipeline) {
-        if (newPipeline == null) {
-            selectedPipeline.importSFNodeFromString("NULL");
-            return;
-        }
-
-        selectedPipeline.importSFNodeFromString(newPipeline.exportString());
     }
 
     private void updateHeartbeat() {

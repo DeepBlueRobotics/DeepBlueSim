@@ -3,6 +3,7 @@ package org.team199.deepbluesim;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.IntStream;
 
 import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
@@ -24,6 +25,7 @@ import org.team199.wpiws.devices.PWMSim;
 import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.Device;
 import com.cyberbotics.webots.controller.DistanceSensor;
+import com.cyberbotics.webots.controller.Field;
 import com.cyberbotics.webots.controller.Gyro;
 import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Node;
@@ -173,6 +175,8 @@ public class SimRegisterer {
     }
 
     public static void connectLimelight(Camera device) {
+        Node node = Simulation.getSupervisor().getFromDevice(device);
+
         String[] nameParts = device.getName().split("_", 8);
         double cameraFOVRad = Double.parseDouble(nameParts[2]);
         int cameraWidthPx = Integer.parseInt(nameParts[3]);
@@ -180,8 +184,13 @@ public class SimRegisterer {
         int defaultPipeline = Integer.parseInt(nameParts[5]);
         String name = nameParts[6];
 
+        Field pipelinesField = node.getField("pipelines");
+        int numPipelines = pipelinesField.getCount();
+        double[][] pipelines = IntStream.range(0, numPipelines)
+                .mapToObj(pipelinesField::getMFColor).toArray(double[][]::new);
+
         new LimelightMediator(device, name + "-sim", cameraFOVRad,
-                cameraWidthPx, cameraHeightPx, defaultPipeline);
+                cameraWidthPx, cameraHeightPx, pipelines, defaultPipeline);
     }
 
     public static void connectMotor(Motor device) {
