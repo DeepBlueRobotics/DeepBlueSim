@@ -10,13 +10,6 @@
             "request": "launch",
             "mainClass": "DeepBlueSim",
             "projectName": "controller"
-        },
-        {
-            "type": "java",
-            "name": "WPILibWebSocketsToWebots",
-            "request": "launch",
-            "mainClass": "WPILibWebSocketsToWebots",
-            "projectName": "WPILibWebSocketsToWebots"
         }
     ]
 }
