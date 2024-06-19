@@ -194,7 +194,7 @@ public class SystemTestRobot {
                     DriverStationSim.notifyNewData();
 
                     Vector<N3> expectedPos = new Vector<N3>(new SimpleMatrix(3,
-                            1, true, new double[] {-2.6, 0, 0}));
+                            1, true, new double[] {2.6, 0, 0}));
 
                     double[] position = positionTopic.subscribe(null).get();
                     System.out.println(
