@@ -12,6 +12,7 @@ import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.CameraRecognitionObject;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
@@ -30,6 +31,8 @@ public class LimelightMediator implements Runnable {
     private final double viewPlaneHalfWidth, viewPlaneHalfHeight, cameraAreaPx2;
 
     // Camera Controls
+    // Note: streamEnabled is not part of the standard limelight API.
+    private final BooleanSubscriber streamEnabled;
     private final DoubleSubscriber pipeline;
     // Not Implemented: ledMode, stream, crop, camerapose_robotspace_set, robot_orientation_set,
     // fiducial_id_filters_set
@@ -42,6 +45,7 @@ public class LimelightMediator implements Runnable {
     private final DoubleArrayPublisher targetColor, targetCorners, rawTargets;
     // Not Implemented: tl, cl, json, hw, apriltag/3d-data, rawfiducials
 
+    private boolean streamCurrentlyEnabled;
     private double lastPipeline = -1;
     private double heartbeatValue = 0;
     private double[] activePipeline = new double[3];
@@ -76,6 +80,8 @@ public class LimelightMediator implements Runnable {
         cameraAreaPx2 = cameraWidthPx * cameraHeightPx;
 
         ntTable = NetworkTableInstance.getDefault().getTable(ntTableName);
+        streamEnabled =
+                ntTable.getBooleanTopic("streamEnabled").subscribe(false);
         pipeline =
                 ntTable.getDoubleTopic("pipeline").subscribe(defaultPipeline);
         hasTarget = ntTable.getDoubleTopic("tv").publish();
@@ -106,6 +112,16 @@ public class LimelightMediator implements Runnable {
 
     @Override
     public void run() {
+        // Update Values from Controls
+        if (streamEnabled.get() != streamCurrentlyEnabled) {
+            streamCurrentlyEnabled = !streamCurrentlyEnabled;
+            if (streamCurrentlyEnabled) {
+                camera.enable(Constants.sensorTimestep);
+            } else {
+                camera.disable();
+            }
+        }
+
         double requestedPipeline = pipeline.get();
         if (requestedPipeline != lastPipeline) {
             lastPipeline = requestedPipeline;
