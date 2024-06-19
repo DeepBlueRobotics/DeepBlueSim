@@ -55,6 +55,7 @@ public class SimRegisterer {
                             break;
                         case "Limelight":
                             connectLimelight((Camera) device);
+                            break;
                         case "Motor":
                             connectMotor((Motor) device);
                             break;

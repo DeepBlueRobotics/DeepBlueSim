@@ -61,7 +61,7 @@ PROTO Limelight [
 
         # General
         name        %<= `"DBSim_Limelight_${cameraFOVRad}_${cameraWidthPx}_${cameraHeightPx}_${fields.defaultPipeline.value}_${fields.name.value}"` >%
-        description %<= `"DeepBlueSim ${fields.model.value} with NT name: \\"${fields.name.value}\\""` >%
+        description %<= `"DeepBlueSim ${fields.model.value} with NT name: \\"${fields.name.value}-sim\\""` >%
         model IS model
 
         # Model
