@@ -69,31 +69,31 @@ PROTO Limelight [
         # Model
         boundingObject Pose {
             %< if (modelId === '1') { >%
-                translation -0.011 -0.02675 0
+                translation -0.011 0 -0.02675
                 children [
                     Box {
                         size 0.022 0.095599 0.095599
                     }
                 ]
             %< } else if (modelId === '2') { >%
-                translation -0.0125 -0.00964 0
+                translation -0.0125 0 -0.00964
                 children [
                     Box {
-                        size 0.025 0.05622 0.097
+                        size 0.025 0.097 0.05622
                     }
                 ]
             %< } else if (modelId === '3') { >%
-                translation -0.01473 -0.0091145 0
+                translation -0.01473 0 -0.0091145
                 children [
                     Box {
-                        size 0.02946 0.048613 0.080613
+                        size 0.02946 0.080613 0.048613
                     }
                 ]
             %< } else if (modelId === '3G') { >%
-                translation -0.01473 -0.0088745 0
+                translation -0.01473 0 -0.0088745
                 children [
                     Box {
-                        size 0.02946 0.048105 0.080105
+                        size 0.02946 0.080105 0.048105
                     }
                 ]
             %< } >%
@@ -101,17 +101,17 @@ PROTO Limelight [
         children [
             Pose {
                 %< if (modelId === '1') { >%
-                    translation -0.014 -0.006 0.000499981
-                    rotation 0.707105 0.707108 0 3.14159
+                    translation -0.014 -0.000499981 -0.006
+                    rotation 0.577351 0.57735 0.57735 -2.0944
                 %< } else if (modelId === '2') { >%
-                    translation 0.005 -0.0145 -0.0085
-                    rotation -0.577351 -0.577351 0.577349 -2.0944
+                    translation 0.005 0.0085 -0.0145
+                    rotation 0.707107 0.707107 0 3.14159
                 %< } else if (modelId === '3') { >%
-                    translation -0.021 0.0125 0.0835
-                    rotation -0.577351 -0.577351 0.577349 -2.0944
+                    translation -0.021 -0.0835 0.0125
+                    rotation 0.707107 0.707107 0 3.14159
                 %< } else if (modelId === '3G') { >%
-                    translation -0.021 0.0125 0.0835
-                    rotation -0.577351 -0.577351 0.577349 -2.0944
+                    translation -0.021 -0.0835 0.0125
+                    rotation 0.707107 0.707107 0 3.14159
                 %< } >%
                 children [
                     Shape {
