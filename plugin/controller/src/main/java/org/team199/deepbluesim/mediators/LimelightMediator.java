@@ -184,9 +184,10 @@ public class LimelightMediator implements Runnable {
         // Modified from Limelight Docs: From Pixels to Angles
         // https://docs.limelightvision.io/docs/docs-limelight/pipeline-retro/retro-theory#from-pixels-to-angles
         double tx =
-                Math.atan2(1, normalizedObjectPosition[0] * viewPlaneHalfWidth);
-        double ty = Math.atan2(1,
-                normalizedObjectPosition[1] * viewPlaneHalfHeight);
+                Math.toDegrees(Math.atan2(
+                        normalizedObjectPosition[0] * viewPlaneHalfWidth, 1));
+        double ty = Math.toDegrees(Math
+                .atan2(normalizedObjectPosition[1] * viewPlaneHalfHeight, 1));
         double ta = (objectSize[0] * objectSize[1]) / cameraAreaPx2;
 
         // Determine Target Colors
@@ -206,9 +207,9 @@ public class LimelightMediator implements Runnable {
         averageColor[2] /= numberOfColors;
         // HSV is the same as HSB
         float[] averageColorHSV =
-                Color.RGBtoHSB((int) Math.round(averageColor[0]),
-                        (int) Math.round(averageColor[1]),
-                        (int) Math.round(averageColor[2]), null);
+                Color.RGBtoHSB((int) Math.round(averageColor[0] * 255),
+                        (int) Math.round(averageColor[1] * 255),
+                        (int) Math.round(averageColor[2] * 255), null);
 
         // Publish results
         hasTarget.set(1);
@@ -261,7 +262,7 @@ public class LimelightMediator implements Runnable {
         }
 
         // Same for the third largest
-        if (objects.length > 1) {
+        if (objects.length > 2) {
             CameraRecognitionObject object3 = objects[2];
             int[] object3Position = object3.getPositionOnImage();
             int[] object3Size = object3.getSizeOnImage();
