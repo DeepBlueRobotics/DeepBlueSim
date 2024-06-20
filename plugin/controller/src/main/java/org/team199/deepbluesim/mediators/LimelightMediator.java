@@ -127,7 +127,7 @@ public class LimelightMediator implements Runnable {
             lastPipeline = requestedPipeline;
             if ((int) requestedPipeline != requestedPipeline
                     || requestedPipeline < 0
-                    || requestedPipeline >= availablePipelines.length - 1) {
+                    || requestedPipeline >= availablePipelines.length) {
                 // The pipeline should always be an int, but Limelight docs say to use a double.
                 // If it's not an int, or it's out of range, fallback on the default
                 requestedPipeline = defaultPipeline;
@@ -144,7 +144,7 @@ public class LimelightMediator implements Runnable {
         CameraRecognitionObject[] objects =
                 Arrays.stream(camera.getRecognitionObjects()).filter(object -> {
                     double[] objectColors = object.getColors();
-                    for (int i = 0; i < objectColors.length; i++) {
+                    for (int i = 0; i < objectColors.length; i += 3) {
                         if (Math.abs(activePipeline[0]
                                 - objectColors[i + 0]) < ACCURACY_THRESHOLD
                                 && Math.abs(activePipeline[1] - objectColors[i
