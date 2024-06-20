@@ -25,6 +25,8 @@
                 "build",
                 ":example:installDeepBlueSim",
                 "-x",
+                ":example:extractReleaseNative",
+                "-x",
                 ":example:systemTest",
                 "-x",
                 ":plugin:check"
@@ -37,6 +39,8 @@
             "args": [
                 "build",
                 ":example:installDeepBlueSim",
+                "-x",
+                ":example:extractReleaseNative",
                 "-x",
                 ":example:systemTest",
                 "-x",
