@@ -191,7 +191,9 @@ public class LimelightMediator implements Runnable {
 
         // Determine Target Colors
         double[] objectColors = primaryObject.getColors();
-        int numberOfColors = primaryObject.getNumberOfColors();
+        // See https://github.com/cyberbotics/webots/pull/6564
+        // int numberOfColors = primaryObject.getNumberOfColors();
+        int numberOfColors = 1;
 
         double[] averageColor = new double[3];
         for (int i = 0; i < objectColors.length; i += 3) {
