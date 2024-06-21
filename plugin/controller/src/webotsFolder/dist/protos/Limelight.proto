@@ -63,6 +63,8 @@ PROTO Limelight [
 
         # General
         name        %<= `"DBSim_Limelight_${cameraFOVRad}_${cameraWidthPx}_${cameraHeightPx}_${fields.defaultPipeline.value}_${fields.name.value}"` >%
+        # The "-sim" addition is implemented in SimRegisterer.java. It's added to prevent conflicts with actual limelight tables
+        # (See https://github.com/DeepBlueRobotics/lib199/issues/102#issuecomment-2150499942)
         description %<= `"DeepBlueSim ${fields.model.value} with NT name: \\"${fields.name.value}-sim\\""` >%
         model IS model
 

@@ -189,6 +189,8 @@ public class SimRegisterer {
         double[][] pipelines = IntStream.range(0, numPipelines)
                 .mapToObj(pipelinesField::getMFColor).toArray(double[][]::new);
 
+        // The "-sim" is added to prevent conflicts with actual limelight tables
+        // (See https://github.com/DeepBlueRobotics/lib199/issues/102#issuecomment-2150499942)
         new LimelightMediator(device, name + "-sim", cameraFOVRad,
                 cameraWidthPx, cameraHeightPx, pipelines, defaultPipeline);
     }
