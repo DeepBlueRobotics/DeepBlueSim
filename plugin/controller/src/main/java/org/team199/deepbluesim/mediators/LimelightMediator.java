@@ -132,11 +132,11 @@ public class LimelightMediator implements Runnable {
         double requestedPipeline = pipeline.get();
         if (requestedPipeline != lastPipeline) {
             lastPipeline = requestedPipeline;
+            // The pipeline should always be an int, but Limelight docs say to use a double.
+            // If it's not an int, or it's out of range, fallback on the default
             if ((int) requestedPipeline != requestedPipeline
                     || requestedPipeline < 0
                     || requestedPipeline >= availablePipelines.length) {
-                // The pipeline should always be an int, but Limelight docs say to use a double.
-                // If it's not an int, or it's out of range, fallback on the default
                 requestedPipeline = defaultPipeline;
             }
             activePipeline = availablePipelines[(int) requestedPipeline];
@@ -164,8 +164,7 @@ public class LimelightMediator implements Runnable {
                 })
                         // Limelight always chooses the largest object
                         // It also has some code to try to focus on one object if two have a similar
-                        // size
-                        // (to prevent flipping), but I think that that is unnecessary in this
+                        // size (to prevent flipping), but I think that that is unnecessary in this
                         // simple implementation
                         .sorted(Comparator
                                 .comparing(
