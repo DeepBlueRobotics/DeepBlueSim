@@ -20,6 +20,12 @@ import edu.wpi.first.networktables.StringPublisher;
 
 public class LimelightMediator implements Runnable {
 
+    /**
+     * The "distance" between the actual and expected R, G, and B values within which a target will
+     * be considered to be of the desired color (in %). Note: For a target to be considered, it must
+     * have a recognition color whose R, G, and B are all (independently) within this range of the
+     * expected R, G, and B.
+     */
     public static final double ACCURACY_THRESHOLD = 3.0 / 255.0;
 
     private final Camera camera;
@@ -184,9 +190,8 @@ public class LimelightMediator implements Runnable {
 
         // Modified from Limelight Docs: From Pixels to Angles
         // https://docs.limelightvision.io/docs/docs-limelight/pipeline-retro/retro-theory#from-pixels-to-angles
-        double tx =
-                Math.toDegrees(Math.atan2(
-                        normalizedObjectPosition[0] * viewPlaneHalfWidth, 1));
+        double tx = Math.toDegrees(Math
+                .atan2(normalizedObjectPosition[0] * viewPlaneHalfWidth, 1));
         double ty = Math.toDegrees(Math
                 .atan2(normalizedObjectPosition[1] * viewPlaneHalfHeight, 1));
         double ta = (objectSize[0] * objectSize[1]) / cameraAreaPx2;
