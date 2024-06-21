@@ -29,7 +29,10 @@ public class LimelightMediator implements Runnable {
     private final double viewPlaneHalfWidth, viewPlaneHalfHeight, cameraAreaPx2;
 
     // Camera Controls
-    // Note: streamEnabled is not part of the standard limelight API.
+    // Note: streamEnabled is not part of the standard limelight API. It can be set to "true" to
+    // enable the camera overlay in Webots. Make sure that Overlays > Hide All Camera Overlays is
+    // disabled and (Right click on robot in scene tree) > Overlays > Camera Devices >
+    // <limelight name> is enabled
     private final BooleanSubscriber streamEnabled;
     private final DoubleSubscriber pipeline;
     // Not Implemented: ledMode, stream, crop, camerapose_robotspace_set, robot_orientation_set,
