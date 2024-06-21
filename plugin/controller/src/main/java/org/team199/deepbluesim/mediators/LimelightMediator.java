@@ -283,9 +283,9 @@ public class LimelightMediator implements Runnable {
         targetHorizontalSide.set(0);
         targetVerticalSide.set(0);
         targetClass.set("");
-        targetColor.set(new double[3]);
-        targetCorners.set(new double[8]);
-        rawTargets.set(new double[9]);
+        targetColor.set(new double[0]);
+        targetCorners.set(new double[0]);
+        rawTargets.set(new double[0]);
     }
 
     private void updateHeartbeat() {
