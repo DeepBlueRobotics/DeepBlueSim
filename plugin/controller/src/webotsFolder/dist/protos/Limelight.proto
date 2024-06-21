@@ -69,37 +69,73 @@ PROTO Limelight [
         model IS model
 
         # Model
-        boundingObject Pose {
-            %< if (modelId === '1') { >%
+        %< if (modelId === '1') { >%
+            boundingObject Pose {
                 translation -0.011 0 -0.02675
                 children [
                     Box {
                         size 0.022 0.095599 0.095599
                     }
                 ]
-            %< } else if (modelId === '2') { >%
+            }
+        %< } else if (modelId === '2') { >%
+            boundingObject Pose {
                 translation -0.0125 0 -0.00964
                 children [
                     Box {
                         size 0.025 0.097 0.05622
                     }
                 ]
-            %< } else if (modelId === '3') { >%
-                translation -0.01473 0 -0.0091145
+            }
+        %< } else if (modelId === '3') { >%
+            boundingObject Group {
                 children [
-                    Box {
-                        size 0.02946 0.080613 0.048613
+                    Pose {
+                        translation -0.01606 0 -0.0088145
+                        children [
+                            Box {
+                                size 0.026 0.080613 0.048613
+                            }
+                        ]
+                    }
+                    Pose {
+                        translation -.00113 0 0
+                        rotation 0 1 0 1.5708
+                        children [
+                            Cylinder {
+                                bottom FALSE
+                                height 0.00346
+                                radius 0.007
+                            }
+                        ]
                     }
                 ]
-            %< } else if (modelId === '3G') { >%
-                translation -0.01473 0 -0.0088745
+            }
+        %< } else if (modelId === '3G') { >%
+            boundingObject Group {
                 children [
-                    Box {
-                        size 0.02946 0.080105 0.048105
+                    Pose {
+                        translation -0.01573 0 -0.0088745
+                        children [
+                            Box {
+                                size 0.026 0.080105 0.048105
+                            }
+                        ]
+                    }
+                    Pose {
+                        translation -.00113 0 0
+                        rotation 0 1 0 1.5708
+                        children [
+                            Cylinder {
+                                bottom FALSE
+                                height 0.00346
+                                radius 0.007
+                            }
+                        ]
                     }
                 ]
-            %< } >%
-        }
+            }
+        %< } >%
         children [
             Pose {
                 %< if (modelId === '1') { >%
@@ -109,10 +145,10 @@ PROTO Limelight [
                     translation 0.005 0.0085 -0.0145
                     rotation 0.707107 0.707107 0 3.14159
                 %< } else if (modelId === '3') { >%
-                    translation -0.021 -0.0835 0.0125
+                    translation -0.0208 -0.0835 0.0123
                     rotation 0.707107 0.707107 0 3.14159
                 %< } else if (modelId === '3G') { >%
-                    translation -0.021 -0.0835 0.0125
+                    translation -0.0208 -0.0835 0.0123
                     rotation 0.707107 0.707107 0 3.14159
                 %< } >%
                 children [
