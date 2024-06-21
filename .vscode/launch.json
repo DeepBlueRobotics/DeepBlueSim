@@ -6,11 +6,17 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch Extern Controller",
+            "name": "Launch DeepBlueSim",
             "request": "launch",
             "mainClass": "DeepBlueSim",
-            "projectName": "controller",
-            "preLaunchTask": "Build Controller"
+            "projectName": "controller"
+        },
+        {
+            "type": "java",
+            "name": "WPILibWebSocketsToWebots",
+            "request": "launch",
+            "mainClass": "WPILibWebSocketsToWebots",
+            "projectName": "WPILibWebSocketsToWebots"
         }
     ]
 }
