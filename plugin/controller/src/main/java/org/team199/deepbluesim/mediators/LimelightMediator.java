@@ -1,7 +1,5 @@
 package org.team199.deepbluesim.mediators;
 
-import java.awt.Color;
-
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -190,26 +188,28 @@ public class LimelightMediator implements Runnable {
                 .atan2(normalizedObjectPosition[1] * viewPlaneHalfHeight, 1));
         double ta = (objectSize[0] * objectSize[1]) / cameraAreaPx2;
 
-        // Determine Target Colors
-        double[] objectColors = primaryObject.getColors();
-        // See https://github.com/cyberbotics/webots/pull/6564
-        // int numberOfColors = primaryObject.getNumberOfColors();
-        int numberOfColors = 1;
+        // Old code used for determining tc as an average of the object recognition colors.
+        // For the moment, I've decided to just send the actual color that was detected
+        // (which is approximated by actualPipeline) because, imo, this makes more sense. If it's
+        // desireable to restore the averaging functionality, this code can be uncommented (and the
+        // inner comment on numberOfColors removed?) and targetColor (below) can be set to
+        // objectColors
 
-        double[] averageColor = new double[3];
-        for (int i = 0; i < objectColors.length; i += 3) {
-            averageColor[0] += objectColors[i + 0]; // r
-            averageColor[1] += objectColors[i + 1]; // g
-            averageColor[2] += objectColors[i + 2]; // b
-        }
-        averageColor[0] /= numberOfColors;
-        averageColor[1] /= numberOfColors;
-        averageColor[2] /= numberOfColors;
-        // HSV is the same as HSB
-        float[] averageColorHSV =
-                Color.RGBtoHSB((int) Math.round(averageColor[0] * 255),
-                        (int) Math.round(averageColor[1] * 255),
-                        (int) Math.round(averageColor[2] * 255), null);
+        // // Determine Average Target Color
+        // double[] objectColors = primaryObject.getColors();
+        // // See https://github.com/cyberbotics/webots/pull/6564
+        // // int numberOfColors = primaryObject.getNumberOfColors();
+        // int numberOfColors = 1;
+
+        // double[] averageColor = new double[3];
+        // for (int i = 0; i < objectColors.length; i += 3) {
+        // averageColor[0] += objectColors[i + 0]; // r
+        // averageColor[1] += objectColors[i + 1]; // g
+        // averageColor[2] += objectColors[i + 2]; // b
+        // }
+        // averageColor[0] /= numberOfColors;
+        // averageColor[1] /= numberOfColors;
+        // averageColor[2] /= numberOfColors;
 
         // Publish results
         hasTarget.set(1);
@@ -225,8 +225,7 @@ public class LimelightMediator implements Runnable {
         targetHorizontalSide.set(objectSize[0]);
         targetVerticalSide.set(objectSize[1]);
         targetClass.set(primaryObject.getModel());
-        targetColor.set(new double[] {averageColorHSV[0], averageColorHSV[1],
-                averageColorHSV[2]});
+        targetColor.set(activePipeline);
         targetCorners.set(new double[] {
                 // Top Left
                 objectPosition[0], objectPosition[1],
