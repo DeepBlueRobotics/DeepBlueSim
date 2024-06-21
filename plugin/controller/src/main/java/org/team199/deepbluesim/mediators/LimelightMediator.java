@@ -241,38 +241,15 @@ public class LimelightMediator implements Runnable {
 
 
         // Update Raw Target Results
-        double[] rawTargetData = new double[9];
-
-        // The primary object always exists
-        rawTargetData[0] = normalizedObjectPosition[0];
-        rawTargetData[1] = normalizedObjectPosition[1];
-        rawTargetData[2] = ta;
-
-        // If there's a second largest object, send data for that too
-        if (objects.length > 1) {
-            CameraRecognitionObject object2 = objects[1];
-            int[] object2Position = object2.getPositionOnImage();
-            int[] object2Size = object2.getSizeOnImage();
-            double[] normalizedObject2Position =
-                    getNormalizedPositionOfObject(object2Position, object2Size);
-            rawTargetData[3] = normalizedObject2Position[0];
-            rawTargetData[4] = normalizedObject2Position[1];
-            rawTargetData[5] =
-                    (object2Size[0] * object2Size[1]) / cameraAreaPx2;
-        }
-
-        // Same for the third largest
-        if (objects.length > 2) {
-            CameraRecognitionObject object3 = objects[2];
-            int[] object3Position = object3.getPositionOnImage();
-            int[] object3Size = object3.getSizeOnImage();
-            double[] normalizedObject3Position =
-                    getNormalizedPositionOfObject(object3Position, object3Size);
-            rawTargetData[6] = normalizedObject3Position[0];
-            rawTargetData[7] = normalizedObject3Position[1];
-            rawTargetData[8] =
-                    (object3Size[0] * object3Size[1]) / cameraAreaPx2;
-        }
+        double[] rawTargetData = Arrays.stream(objects).map(object -> {
+            int[] targetPosition = object.getPositionOnImage();
+            int[] targetSize = object.getSizeOnImage();
+            double[] normalizedTargetPosition =
+                    getNormalizedPositionOfObject(targetPosition, targetSize);
+            double targetArea = (targetSize[0] * targetSize[1]) / cameraAreaPx2;
+            return new double[] {normalizedTargetPosition[0],
+                    normalizedTargetPosition[1], targetArea};
+        }).flatMapToDouble(Arrays::stream).toArray();
 
         rawTargets.set(rawTargetData);
 
