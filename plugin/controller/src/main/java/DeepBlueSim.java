@@ -138,7 +138,8 @@ public class DeepBlueSim {
 
     private static CommandLine parseCMDArgs(String[] args) {
         Options options = new Options();
-        options.addOption("h", "help", false, "Display this help message");
+        options.addOption("h", "help", false,
+                "Display this help message and exit");
         options.addOption(null, "no-network-tables", false,
                 "Do not attempt to connect to Network Tables");
         options.addOption(null, "no-robot-code", false,
