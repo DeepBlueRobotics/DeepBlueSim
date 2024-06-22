@@ -11,6 +11,15 @@
             "mainClass": "DeepBlueSim",
             "projectName": "controller",
             "preLaunchTask": "Build Controller"
+        },
+        {
+            "type": "java",
+            "name": "Launch Extern Controller (No Robot Code)",
+            "request": "launch",
+            "mainClass": "DeepBlueSim",
+            "projectName": "controller",
+            "preLaunchTask": "Build Controller",
+            "args": "--no-robot-code"
         }
     ]
 }

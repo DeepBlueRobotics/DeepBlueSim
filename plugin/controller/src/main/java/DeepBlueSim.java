@@ -12,6 +12,7 @@ import org.team199.wpiws.connection.WSConnection;
 import com.cyberbotics.webots.controller.Supervisor;
 
 import edu.wpi.first.math.WPIMathJNI;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
@@ -47,6 +48,21 @@ public class DeepBlueSim {
                     "wpimathjni", "ntcorejni");
         }
 
+
+        // Parse Arguments
+        boolean connectToRobotCode = true;
+        {
+            for (String arg : args) {
+                if (arg.equals("--no-robot-code")) {
+                    connectToRobotCode = false;
+                } else {
+                    System.out.printf(
+                            "Found unknown argument \"%s\"! It will be ignored.%n",
+                            arg);
+                }
+            }
+        }
+
         final Supervisor robot = new Supervisor();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
 
@@ -66,7 +82,9 @@ public class DeepBlueSim {
             inst.setServer("localhost");
         }
 
-        WebotsSupervisor.init(robot, basicTimeStep);
+        if (connectToRobotCode) {
+            WebotsSupervisor.init(robot, basicTimeStep);
+        }
 
         // Wait until startup has completed to ensure that the Webots simulator is
         // not still starting up.
@@ -76,12 +94,12 @@ public class DeepBlueSim {
 
         SimRegisterer.connectDevices();
 
-        // Pause the simulation until either the robot code tells us to proceed or the
-        // user does.
-        robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
+        if (connectToRobotCode) {
+            // Pause the simulation until either the robot code tells us to proceed or the
+            // user does.
+            robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
 
-        // Connect to the robot code
-        {
+            // Connect to the robot code
             try {
                 wsConnection = WSConnection.connectHALSim(true);
             } catch (URISyntaxException e) {
@@ -101,8 +119,16 @@ public class DeepBlueSim {
         }
 
         try {
-            // Process incoming messages until simulation finishes
-            WebotsSupervisor.runUntilTermination(robot, basicTimeStep);
+            if (connectToRobotCode) {
+                // Process incoming messages until simulation finishes
+                WebotsSupervisor.runUntilTermination(robot, basicTimeStep);
+            } else {
+                // No robot code to synchronize against. Step the simulation and run periodic
+                // methods until told to terminate
+                while (robot.step(basicTimeStep) != -1) {
+                    Simulation.runPeriodicMethods();
+                }
+            }
         } catch (Exception ex) {
             throw new RuntimeException("Exception while waiting for simulation to be done", ex);
         }
