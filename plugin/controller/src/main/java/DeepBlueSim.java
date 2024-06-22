@@ -17,6 +17,13 @@ import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
 // the name of the jar.
 public class DeepBlueSim {
@@ -50,18 +57,8 @@ public class DeepBlueSim {
 
 
         // Parse Arguments
-        boolean connectToRobotCode = true;
-        {
-            for (String arg : args) {
-                if (arg.equals("--no-robot-code")) {
-                    connectToRobotCode = false;
-                } else {
-                    System.out.printf(
-                            "Found unknown argument \"%s\"! It will be ignored.%n",
-                            arg);
-                }
-            }
-        }
+        CommandLine cmd = parseCMDArgs(args);
+        boolean connectToRobotCode = !cmd.hasOption("no-robot-code");
 
         final Supervisor robot = new Supervisor();
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
@@ -76,7 +73,7 @@ public class DeepBlueSim {
         Simulation.init(robot, robot.getBasicTimeStep());
 
         // Connect to Network Tables
-        {
+        if (!cmd.hasOption("no-network-tables")) {
             NetworkTableInstance inst = NetworkTableInstance.getDefault();
             inst.startClient4("Webots controller");
             inst.setServer("localhost");
@@ -137,6 +134,35 @@ public class DeepBlueSim {
         System.out.flush();
 
         System.exit(0);
+    }
+
+    private static CommandLine parseCMDArgs(String[] args) {
+        Options options = new Options();
+        options.addOption("h", "help", false, "Display this help message");
+        options.addOption(null, "no-network-tables", false,
+                "Do not attempt to connect to Network Tables");
+        options.addOption(null, "no-robot-code", false,
+                "Do not attempt to connect to the HALSim Server");
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        String cmdLineSyntax = "DeepBlueSim.jar [options]";
+
+        try {
+            CommandLine cmd = parser.parse(options, args);
+
+            if (cmd.hasOption("h")) {
+                formatter.printHelp(cmdLineSyntax, options);
+                System.exit(0);
+            }
+
+            return cmd;
+        } catch (ParseException ex) {
+            System.err.println(ex.getMessage());
+            formatter.printHelp(cmdLineSyntax, options);
+            System.exit(1);
+            return null;
+        }
     }
 
 }
