@@ -379,7 +379,7 @@ public class WebotsSimulator implements AutoCloseable {
                     escb.accept(simState);
                 }
             });
-            LOG.log(Level.DEBUG, "Handling atSecs() callbacks");
+            LOG.log(Level.DEBUG, "Handling atSec() callbacks");
             var oscb = oneShotCallbacks.poll();
             while (oscb != null) {
                 if (LOG.isLoggable(Level.DEBUG))
@@ -408,10 +408,10 @@ public class WebotsSimulator implements AutoCloseable {
             oneShotCallbacks.clear();
             everyStepCallbacks.clear();
         } finally {
-            LOG.log(Level.DEBUG, "Done handling atSecs() callbacks");
+            LOG.log(Level.DEBUG, "Done handling atSec() callbacks");
             if (oneShotCallbacks.isEmpty()) {
                 LOG.log(Level.DEBUG,
-                        "Ran last atSecs() callback so scheduling end of run.");
+                        "Ran last atSec() callback so scheduling end of run.");
                 endNotifier.startSingle(0.0);
                 LOG.log(Level.DEBUG, "Done scheduling end of run.");
             }
@@ -488,6 +488,22 @@ public class WebotsSimulator implements AutoCloseable {
         }
 
         /**
+         * Gets the velocity of a specific node in the simulated world.
+         * 
+         * @param defPath the DEF path to the Webots node to get the position of.
+         * @return the velocity of the requested node (in world coordinates)
+         */
+        public Translation3d velocity(String defPath) {
+            // ntTransientLogLevel = LogMessage.kDebug4;
+            try {
+                var watcher = Watcher.getByDefPath(defPath);
+                return watcher.getVelocity();
+            } finally {
+                ntTransientLogLevel = LogMessage.kInfo;
+            }
+        }
+
+        /**
          * Gets the rotation of a specific node in the simulated world.
          * 
          * @param defPath the DEF path to the Webots node to get the position of.
@@ -498,6 +514,22 @@ public class WebotsSimulator implements AutoCloseable {
             try {
                 var watcher = Watcher.getByDefPath(defPath);
                 return watcher.getRotation();
+            } finally {
+                ntTransientLogLevel = LogMessage.kInfo;
+            }
+        }
+
+        /**
+         * Gets the angular velocity of a specific node in the simulated world.
+         * 
+         * @param defPath the DEF path to the Webots node to get the position of.
+         * @return the angular velocity of the requested node.
+         */
+        public Rotation3d angularVelocity(String defPath) {
+            // ntTransientLogLevel = LogMessage.kDebug4;
+            try {
+                var watcher = Watcher.getByDefPath(defPath);
+                return watcher.getAngularVelocity();
             } finally {
                 ntTransientLogLevel = LogMessage.kInfo;
             }
@@ -520,9 +552,19 @@ public class WebotsSimulator implements AutoCloseable {
     private PriorityBlockingQueue<OneShotCallback> oneShotCallbacks =
             new PriorityBlockingQueue<>();
 
+    /**
+     * Register a callback to be called at a particular time during the simulation.
+     * 
+     * @param timeSecs the time (in seconds) at which the callback should be called
+     * @param simulationStateConsumer the callback to call. It will be passed a SimulationState
+     *        object.
+     * 
+     * @return this object for chaining
+     */
     public WebotsSimulator atSec(double timeSecs,
-            Consumer<SimulationState> simulationConsumer) {
-        oneShotCallbacks.add(new OneShotCallback(timeSecs, simulationConsumer));
+            Consumer<SimulationState> simulationStateConsumer) {
+        oneShotCallbacks
+                .add(new OneShotCallback(timeSecs, simulationStateConsumer));
         return this;
     }
 
@@ -530,9 +572,17 @@ public class WebotsSimulator implements AutoCloseable {
             new ArrayList<>();
 
 
+    /**
+     * Register a callback to be called at every step of the simulation.
+     * 
+     * @param simulationStateConsumer the callback to call. It will be passed a SimulationState
+     *        object.
+     * 
+     * @return this object for chaining
+     */
     public WebotsSimulator everyStep(
-            Consumer<SimulationState> simulationConsumer) {
-        everyStepCallbacks.add(simulationConsumer);
+            Consumer<SimulationState> simulationStateConsumer) {
+        everyStepCallbacks.add(simulationStateConsumer);
         return this;
     }
 

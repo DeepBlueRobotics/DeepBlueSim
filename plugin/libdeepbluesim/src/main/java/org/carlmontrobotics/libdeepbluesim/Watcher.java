@@ -37,8 +37,8 @@ class Watcher {
             new CompletableFuture<>();
     private volatile CompletableFuture<Void> velocityReady =
             new CompletableFuture<>();
-    private volatile Translation3d position = null;
-    private volatile Rotation3d rotation = null;
+    private volatile Translation3d position = null, velocity = null;
+    private volatile Rotation3d rotation = null, angularVelocity = null;
     private final NetworkTableInstance inst;
     private final String defPath;
     private final NetworkTable table;
@@ -101,6 +101,12 @@ class Watcher {
                         break;
 
                     case "velocity":
+                        double[] velAsArray =
+                                value.valueData.value.getDoubleArray();
+                        velocity = new Translation3d(velAsArray[0],
+                                velAsArray[1], velAsArray[2]);
+                        angularVelocity = new Rotation3d(velAsArray[3],
+                                velAsArray[4], velAsArray[5]);
                         velocityReady.complete(null);
                         break;
                 }
@@ -158,6 +164,26 @@ class Watcher {
     }
 
     /**
+     * Gets the current velocity of the node.
+     * 
+     * @return the node's velocity.
+     */
+    Translation3d getVelocity() {
+        if (!inst.isConnected()) {
+            LOG.log(Level.DEBUG,
+                    "NetworkTables is not connected, so starting server");
+            inst.startServer();
+        }
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG, "Waiting for velocity of %s to be ready"
+                    .formatted(defPath));
+        velocityReady.join();
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG, "Position of %s is ready".formatted(defPath));
+        return velocity;
+    }
+
+    /**
      * Gets the current rotation of the node.
      * 
      * @return the node's rotation.
@@ -175,5 +201,25 @@ class Watcher {
         if (LOG.isLoggable(Level.DEBUG))
             LOG.log(Level.DEBUG, "Rotation of %s is ready".formatted(defPath));
         return rotation;
+    }
+
+    /**
+     * Gets the current angular velocity of the node.
+     * 
+     * @return the node's angular velocity.
+     */
+    Rotation3d getAngularVelocity() {
+        if (!inst.isConnected()) {
+            LOG.log(Level.DEBUG,
+                    "NetworkTables is not connected, so starting server");
+            inst.startServer();
+        }
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG, "Waiting for velocity of %s to be ready"
+                    .formatted(defPath));
+        rotationReady.join();
+        if (LOG.isLoggable(Level.DEBUG))
+            LOG.log(Level.DEBUG, "Velocity of %s is ready".formatted(defPath));
+        return angularVelocity;
     }
 }
