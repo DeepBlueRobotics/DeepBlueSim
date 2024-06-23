@@ -41,6 +41,18 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
 
 ## Details
 
+## Command Line Options
+The controller provides some command line options that can be used to configure
+different features. These can be specified through the `controllerArgs` field in
+Webots or on the command line (if run as an external controller). They are primarily
+intended for debugging. For the majority of cases, the default settings should be sufficient.
+
+At the moment, the following options are supported:
+```
+--no-network-tables   Do not attempt to connect to Network Tables
+--no-robot-code       Do not attempt to connect to the HALSim Server
+```
+
 ### Time synchronization
 
 By default, the robot code and Webots run at their own speeds so their clocks
@@ -69,3 +81,20 @@ symbols from `WPIWebSockets`. This is because VSCode's Language Support for Java
 doesn't currently handle dependencies in Gradle "included builds". The workaround
 is to run `gradlew :WPIWebSockets:publishToMavenLocal` and then tell VSCode to
 "Java: Clean Language Server Workspace".
+
+For debugging, the controller can be run externally. To do this, set the robot's
+controller in Webots to `<extern>`, and in VSCode go to
+`Run and Debug > Launch Extern Controller` or press `F5`. This will launch the
+controller and connect it to VSCode's debugger. There is also a
+`Launch Extern Controller (No Robot Code)` configuration which passes the
+`--no-robot-code` argument to the controller so that controller-specific behavior
+can be tested.
+
+In addition to these features, there is an `Update example/Webots directory` task
+which will build the plugin and install it to the `example/Webots` directory
+without running additional tests. This is helpful for debugging Webots specific
+features (such as PROTOs). There is also a `(Watch)` variant which scans for
+changes in the plugin code and updates the directory automatically. Note that
+any time the directory is updated, `DBSExample.wbt` is overwritten. The recommended
+way to work around this is to keep Webots open while the directory is reloaded and
+then Save and Reload the world to preserve any changes to the world file.

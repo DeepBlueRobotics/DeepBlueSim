@@ -3,9 +3,11 @@ package org.team199.deepbluesim;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.IntStream;
 
 import org.team199.deepbluesim.mediators.AnalogInputEncoderMediator;
 import org.team199.deepbluesim.mediators.GyroMediator;
+import org.team199.deepbluesim.mediators.LimelightMediator;
 import org.team199.deepbluesim.mediators.PWMMotorMediator;
 import org.team199.deepbluesim.mediators.PlayingWithFusionTimeOfFlightMediator;
 import org.team199.deepbluesim.mediators.CANMotorMediator;
@@ -20,8 +22,10 @@ import org.team199.wpiws.devices.DutyCycleSim;
 import org.team199.wpiws.devices.EncoderSim;
 import org.team199.wpiws.devices.PWMSim;
 
+import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.Device;
 import com.cyberbotics.webots.controller.DistanceSensor;
+import com.cyberbotics.webots.controller.Field;
 import com.cyberbotics.webots.controller.Gyro;
 import com.cyberbotics.webots.controller.Motor;
 import com.cyberbotics.webots.controller.Node;
@@ -49,14 +53,17 @@ public class SimRegisterer {
                     String type = name.split("_")[1];
                     switch (type) {
                         case "Encoder":
-                            connectEncoder((PositionSensor) device, robot);
+                            connectEncoder((PositionSensor) device);
+                            break;
+                        case "Limelight":
+                            connectLimelight((Camera) device);
                             break;
                         case "Motor":
-                            connectMotor((Motor) device, robot);
+                            connectMotor((Motor) device);
                             break;
                         case "PlayingWithFusionTimeOfFlight":
                             connectPlayingWithFusionTimeOfFlight(
-                                    (DistanceSensor) device, robot);
+                                    (DistanceSensor) device);
                             break;
                     }
                 } catch (Exception e) {
@@ -84,15 +91,13 @@ public class SimRegisterer {
     public static void tryBindEncoders() {
         if(unboundEncoders.isEmpty()) return;
 
-        Supervisor robot = Simulation.getSupervisor();
-
         PositionSensor[] unboundEncodersCopy =
                 unboundEncoders.toArray(new PositionSensor[0]);
         unboundEncoders.clear();
 
         for (PositionSensor device : unboundEncodersCopy) {
             try {
-                connectEncoder(device, robot);
+                connectEncoder(device);
             } catch (Exception e) {
                 System.err.println("Error occurred connecting to device "
                         + device.getName() + ":");
@@ -102,8 +107,8 @@ public class SimRegisterer {
         }
     }
 
-    public static void connectEncoder(PositionSensor device, Supervisor robot) {
-        Node node = robot.getFromDevice(device);
+    public static void connectEncoder(PositionSensor device) {
+        Node node = Simulation.getSupervisor().getFromDevice(device);
 
         String[] nameParts = device.getName().split("_");
         boolean isOnMotorShaft = Boolean.parseBoolean(nameParts[2]);
@@ -169,7 +174,28 @@ public class SimRegisterer {
         }
     }
 
-    public static void connectMotor(Motor device, Supervisor robot) {
+    public static void connectLimelight(Camera device) {
+        Node node = Simulation.getSupervisor().getFromDevice(device);
+
+        String[] nameParts = device.getName().split("_", 8);
+        double cameraFOVRad = Double.parseDouble(nameParts[2]);
+        int cameraWidthPx = Integer.parseInt(nameParts[3]);
+        int cameraHeightPx = Integer.parseInt(nameParts[4]);
+        int defaultPipeline = Integer.parseInt(nameParts[5]);
+        String name = nameParts[6];
+
+        Field pipelinesField = node.getField("pipelines");
+        int numPipelines = pipelinesField.getCount();
+        double[][] pipelines = IntStream.range(0, numPipelines)
+                .mapToObj(pipelinesField::getMFColor).toArray(double[][]::new);
+
+        // The "-sim" is added to prevent conflicts with actual limelight tables
+        // (See https://github.com/DeepBlueRobotics/lib199/issues/102#issuecomment-2150499942)
+        new LimelightMediator(device, name + "-sim", cameraFOVRad,
+                cameraWidthPx, cameraHeightPx, pipelines, defaultPipeline);
+    }
+
+    public static void connectMotor(Motor device) {
         String[] nameParts = device.getName().split("_");
         String controllerType = nameParts[2];
         int port = Integer.parseInt(nameParts[3]);
@@ -192,7 +218,7 @@ public class SimRegisterer {
     }
 
     public static void connectPlayingWithFusionTimeOfFlight(
-            DistanceSensor device, Supervisor robot) {
+            DistanceSensor device) {
         String port = device.getName().split("_")[2];
 
         String baseDeviceName =

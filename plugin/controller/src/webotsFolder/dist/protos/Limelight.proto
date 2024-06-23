@@ -1,0 +1,198 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+# license: WPILib BSD
+# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+
+PROTO Limelight [
+    unconnectedField SFString name "limelight"
+    field SFString{"Limelight 1","Limelight 2(+)","Limelight 3","Limelight 3G"} model "Limelight 3G"
+
+    # Camera parameters
+    unconnectedField MFColor{} pipelines [0 1 0]
+    unconnectedField SFInt32 defaultPipeline 0
+    field SFFloat    exposure            1.0
+    field SFFloat    ambientOcclusionRadius 0
+    field SFNode{Recognition{}} recognition Recognition{
+        frameThickness 3
+    }
+
+    # Expose fields from Solid and Pose
+    field SFVec3f    translation         0 0 0
+    field SFRotation rotation            0 0 1 0
+    field SFFloat    translationStep     0.01
+    field SFFloat    rotationStep        0.261799387
+    field SFNode{Appearance{},PBRAppearance{}} appearance PBRAppearance {
+        baseColor 0 0 0
+        metalness 0
+    }
+    field SFNode{Physics{}} physics      NULL
+    field SFBool     locked              FALSE
+    field SFString   contactMaterial     "default"
+    field MFNode{ImmersionProperties{}} immersionProperties []
+    field SFFloat    radarCrossSection   0.0
+    field MFColor    recognitionColors   []
+]
+{
+    Camera {
+        %<
+            let modelId = fields.model.value.substring(10).replace('(+)', '');
+            if (!['1', '2', '3', '3G'].includes(modelId)) {
+                console.error('Invalid model on Limelight "' + fields.name.value + '": "' + fields.model.value + '"');
+            }
+
+            if (fields.pipelines.value.length === 0) {
+                console.error('Limelight "' + fields.name.value + '" has no pipelines assigned to it! It needs at least one to be used by the simulator.');
+            }
+            if (fields.defaultPipeline.value < 0 || fields.defaultPipeline.value >= fields.pipelines.value.length) {
+                console.error('Limelight "' + fields.name.value + '" has a default value corresponding to a nonexistant pipeline!');
+            }
+
+            let cameraFOVRad, cameraWidthPx, cameraHeightPx;
+            if (modelId === '3G') {
+                cameraFOVRad   =    1.43117;
+                cameraWidthPx  = 1280;
+                cameraHeightPx =  800;
+            } else {
+                cameraFOVRad   =    1.090831;
+                cameraWidthPx  =  640;
+                cameraHeightPx =  480;
+            }
+        >%
+
+
+        # General
+        name        %<= `"DBSim_Limelight_${cameraFOVRad}_${cameraWidthPx}_${cameraHeightPx}_${fields.defaultPipeline.value}_${fields.name.value}"` >%
+        # The "-sim" addition is implemented in SimRegisterer.java. It's added to prevent conflicts with actual limelight tables
+        # (See https://github.com/DeepBlueRobotics/lib199/issues/102#issuecomment-2150499942)
+        description %<= `"DeepBlueSim ${fields.model.value} with NT name: \\"${fields.name.value}-sim\\""` >%
+        model IS model
+
+        # Model
+        %< if (modelId === '1') { >%
+            boundingObject Pose {
+                translation -0.011 0 -0.02675
+                children [
+                    Box {
+                        size 0.022 0.095599 0.095599
+                    }
+                ]
+            }
+        %< } else if (modelId === '2') { >%
+            boundingObject Pose {
+                translation -0.0125 0 -0.00964
+                children [
+                    Box {
+                        size 0.025 0.097 0.05622
+                    }
+                ]
+            }
+        %< } else if (modelId === '3') { >%
+            boundingObject Group {
+                children [
+                    Pose {
+                        translation -0.01606 0 -0.0088145
+                        children [
+                            Box {
+                                size 0.026 0.080613 0.048613
+                            }
+                        ]
+                    }
+                    Pose {
+                        translation -.00113 0 0
+                        rotation 0 1 0 1.5708
+                        children [
+                            Cylinder {
+                                bottom FALSE
+                                height 0.00346
+                                radius 0.007
+                            }
+                        ]
+                    }
+                ]
+            }
+        %< } else if (modelId === '3G') { >%
+            boundingObject Group {
+                children [
+                    Pose {
+                        translation -0.01573 0 -0.0088745
+                        children [
+                            Box {
+                                size 0.026 0.080105 0.048105
+                            }
+                        ]
+                    }
+                    Pose {
+                        translation -.00113 0 0
+                        rotation 0 1 0 1.5708
+                        children [
+                            Cylinder {
+                                bottom FALSE
+                                height 0.00346
+                                radius 0.007
+                            }
+                        ]
+                    }
+                ]
+            }
+        %< } >%
+        children [
+            Pose {
+                %< if (modelId === '1') { >%
+                    translation -0.014 -0.000499981 -0.006
+                    rotation 0.577351 0.57735 0.57735 -2.0944
+                %< } else if (modelId === '2') { >%
+                    translation 0.005 0.0085 -0.0145
+                    rotation 0.707107 0.707107 0 3.14159
+                %< } else if (modelId === '3') { >%
+                    translation -0.0208 -0.0835 0.0123
+                    rotation 0.707107 0.707107 0 3.14159
+                %< } else if (modelId === '3G') { >%
+                    translation -0.0208 -0.0835 0.0123
+                    rotation 0.707107 0.707107 0 3.14159
+                %< } >%
+                children [
+                    Shape {
+                        appearance IS appearance
+                        castShadows FALSE # Even after exporting on coarse quality, the models have too many triangles to cast shadows
+                        geometry Mesh {
+                            url %<= `"../models/Limelight${modelId}.stl"` >%
+                        }
+                    }
+                ]
+            }
+        ]
+
+        # Camera
+        fieldOfView            %<= cameraFOVRad   >%
+        width                  %<= cameraWidthPx  >%
+        height                 %<= cameraHeightPx >%
+        projection             "planar"
+        near                   0.001
+        far                    0.0
+        exposure               IS exposure
+        antiAliasing           FALSE
+        ambientOcclusionRadius IS ambientOcclusionRadius
+        bloomThreshold         -1.0
+        motionBlur             0.0
+        noise                  0.0
+        noiseMaskUrl           ""
+        lens                   NULL
+        focus                  NULL
+        zoom                   NULL
+        lensFlare              NULL
+        recognition            IS recognition
+
+        # Misc
+        translation IS translation
+        rotation IS rotation
+        translationStep IS translationStep
+        rotationStep IS rotationStep
+        physics IS physics
+        locked IS locked
+        contactMaterial IS contactMaterial
+        immersionProperties IS immersionProperties
+        radarCrossSection IS radarCrossSection
+        recognitionColors IS recognitionColors
+    }
+}

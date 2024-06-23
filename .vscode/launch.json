@@ -6,17 +6,20 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch DeepBlueSim",
+            "name": "Launch Extern Controller",
             "request": "launch",
             "mainClass": "DeepBlueSim",
-            "projectName": "controller"
+            "projectName": "controller",
+            "preLaunchTask": "Build Controller"
         },
         {
             "type": "java",
-            "name": "WPILibWebSocketsToWebots",
+            "name": "Launch Extern Controller (No Robot Code)",
             "request": "launch",
-            "mainClass": "WPILibWebSocketsToWebots",
-            "projectName": "WPILibWebSocketsToWebots"
+            "mainClass": "DeepBlueSim",
+            "projectName": "controller",
+            "preLaunchTask": "Build Controller",
+            "args": "--no-robot-code"
         }
     ]
 }

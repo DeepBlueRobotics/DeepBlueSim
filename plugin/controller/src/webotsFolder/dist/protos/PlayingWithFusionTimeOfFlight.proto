@@ -13,7 +13,7 @@ PROTO PlayingWithFusionTimeOfFlight [
 
     # Expose fields from Solid and Pose
     field SFVec3f    translation         0 0 0
-    field SFRotation rotation            1 0 0 -1.5708
+    field SFRotation rotation            0 0 1 0
     field SFFloat    translationStep     0.01
     field SFFloat    rotationStep        0.261799387
     field SFNode{Appearance{},PBRAppearance{}} appearance PBRAppearance {

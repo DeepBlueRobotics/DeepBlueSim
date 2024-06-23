@@ -26,10 +26,10 @@ public class SystemTestRobot {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(3.0, s -> {
-                        assertEquals(0.0,
-                        s.position("ROBOT").getDistance(
-                                        new Translation3d(-2.6, 0, 0)),
-                                1.0, "Robot close to target position");
+                assertEquals(0.0,
+                        s.position("ROBOT")
+                                .getDistance(new Translation3d(2.6, 0, 0)),
+                        1.0, "Robot close to target position");
             }).run(robot);
         }
     }
@@ -46,11 +46,11 @@ public class SystemTestRobot {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);
                 DriverStationSim.setJoystickAxis(0, 1, 0.0);
-                DriverStationSim.setJoystickAxis(0, 0, -0.15);
+                DriverStationSim.setJoystickAxis(0, 0, 0.15);
                 DriverStationSim.notifyNewData();
             }).everyStep(s -> {
                 var yawDegrees =
-                        Units.radiansToDegrees(s.rotation("ROBOT").getY());
+                        Units.radiansToDegrees(s.rotation("ROBOT").getZ());
                 if (yawDegrees > 45 && !stoppedTryingToTurn) {
                     DriverStationSim.setJoystickAxis(0, 1, 0.0);
                     DriverStationSim.setJoystickAxis(0, 0, 0.0);
@@ -59,7 +59,7 @@ public class SystemTestRobot {
                 }
             }).atSec(4.0, s -> {
                 assertEquals(45.0,
-                        Units.radiansToDegrees(s.rotation("ROBOT").getY()), 2.0,
+                        Units.radiansToDegrees(s.rotation("ROBOT").getZ()), 2.0,
                         "Robot close to target rotation");
             }).run(robot);
         }

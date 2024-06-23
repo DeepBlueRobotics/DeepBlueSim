@@ -87,6 +87,8 @@ dependencies {
 
     implementation group: "org.ejml", name: "ejml-simple", version: wpi.versions.ejmlVersion.get()
     implementation group: "us.hebi.quickbuf", name: "quickbuf-runtime", version: wpi.versions.quickbufVersion.get();
+
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.8.0'
 }
 
 // Configure the building of the fat jar
