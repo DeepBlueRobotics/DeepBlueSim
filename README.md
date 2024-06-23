@@ -53,25 +53,16 @@ At the moment, the following options are supported:
 --no-robot-code       Do not attempt to connect to the HALSim Server
 ```
 
-### Time synchronization
+### Time synchronization and writing tests
 
-By default, the robot code and Webots run at their own speeds so their clocks
-will not necessarily match. This can be particularly problematic when trying to
-write tests which should be as deterministic as possible. To synchronize the
-clocks, the robot code can create a `SimDeviceSim` named `TimeSynchronizer` with
-2 `double` values: `robotTimeSec` (output direction) and `simTimeSec` (input
-direction). To start the synchronization and force Webots to reload the world
-(so that it is in a known state with time = 0), the robot code should set
-`robotTimeSec` to -2. The simulator will respond by setting `simTimeSec` to -2.
-At that point the robot code can set `robotTimeSec` to the current robot time
-and the simulator will run until it's time is greater than that. As it runs, it
-will also updae `simTimeSec`. The robot code can ensure that it doesn't get
-ahead of the simulator by using `SimHooks.pauseTiming()` to pause the robot code
-when the robot time is ahead of the simulation time and
-`SimHooks.resumeTiming()` when it is not. See the `webotsInit()` method of the
-example's
-[`SystemTestRobot.java`](example/src/systemTest/java/frc/robot/SystemTestRobot.java)
-for an example implementation.
+By default, the robot code and Webots run at their own speeds so their clocks will not necessarily
+match. This can be particularly problematic when trying to write tests which should be as
+deterministic as possible. To synchronize the clocks, tests should use the
+`org.carlmontrobotics.libdeepbluesim.WebotsSimulator` class as demonstrated in the example's
+[`SystemTestRobot.java`](example/src/systemTest/java/frc/robot/SystemTestRobot.java). In addition to
+synchronizing the clocks, the `WebotsSimulator` class provides methods for accessing the state of
+the simulation at every time step and at specific times, as well as methods to enable the robot in
+autonomous and teleop.
 
 ## Contributing
 
