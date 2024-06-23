@@ -6,9 +6,10 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
@@ -66,7 +68,7 @@ public class WebotsSimulator implements AutoCloseable {
     private final StringPublisher simModePublisher;
 
     // We'll use this to run all NT listener callbacks sequentially on a single separate thread.
-    private final Executor listenerCallbackExecutor =
+    private final ExecutorService listenerCallbackExecutor =
             Executors.newSingleThreadExecutor();
 
     // Use these to control NetworkTables logging.
@@ -97,8 +99,9 @@ public class WebotsSimulator implements AutoCloseable {
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
-                LOG.log(Level.DEBUG,
-                        "NT instance log level %d message: %s(%d): %s"
+                if (LOG.isLoggable(Level.DEBUG))
+                    LOG.log(Level.DEBUG,
+                            "NT instance log level %d message: %s(%d): %s"
                                 .formatted(event.logMessage.level,
                                         event.logMessage.filename,
                                         event.logMessage.line,
@@ -190,8 +193,6 @@ public class WebotsSimulator implements AutoCloseable {
 
     private volatile long isReadyTimestamp = Long.MAX_VALUE;
 
-    private Object callbackMutex = new Object();
-
     /**
      * Load a particular world file and, if necessary, wait for the user to start it.
      * 
@@ -224,19 +225,19 @@ public class WebotsSimulator implements AutoCloseable {
         // reload, otherwise we're ready.
         inst.addListener(reloadStatusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
+                    final var eventValue = event.valueData.value.getString();
+                    final var eventTimeStamp = event.valueData.value.getTime();
                     listenerCallbackExecutor.execute(() -> {
-                        final String reloadStatus =
-                                event.valueData.value.getString();
                         LOG.log(Level.DEBUG, "In listener, reloadStatus = %s"
-                                .formatted(reloadStatus));
-                        if (!reloadStatus.equals("Completed"))
+                                .formatted(eventValue));
+                        if (!eventValue.equals("Completed"))
                             return;
                         if (reloadCount++ == 0) {
                             reloadRequestPublisher.set(worldFileAbsPath);
                             inst.flush();
                         } else {
                             isReady = true;
-                            isReadyTimestamp = event.valueData.value.getTime();
+                            isReadyTimestamp = eventTimeStamp;
                             isReadyFuture.complete(true);
                         }
                     });
@@ -265,6 +266,8 @@ public class WebotsSimulator implements AutoCloseable {
 
         inst.addListener(simTimeSecSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
+                    final var eventTime = event.valueData.value.getTime();
+                    final var eventValue = event.valueData.value.getDouble();
                     listenerCallbackExecutor.execute(() -> {
                         // Ignore values sent before simulator said it was ready.
 
@@ -273,8 +276,7 @@ public class WebotsSimulator implements AutoCloseable {
                         // possibility that the server time offset changes between when reloadStatus
                         // and simTimeSec is sent. See
                         // https://github.com/wpilibsuite/allwpilib/discussions/6712#discussioncomment-9714930
-                        if (event.valueData.value
-                                .getTime() < isReadyTimestamp) {
+                        if (eventTime < isReadyTimestamp) {
                             LOG.log(Level.DEBUG,
                                     "Ignoring simTimeSec because it was sent before simulator said it was ready.");
                             return;
@@ -289,7 +291,7 @@ public class WebotsSimulator implements AutoCloseable {
                                     "Ignoring simTimeSec because robot code is not running.");
                             return;
                         }
-                        simTimeSec = event.valueData.value.getDouble();
+                        simTimeSec = eventValue;
                         double robotTimeSec = robotTime.get();
                         if (LOG.isLoggable(Level.DEBUG))
                             LOG.log(Level.DEBUG,
@@ -297,41 +299,7 @@ public class WebotsSimulator implements AutoCloseable {
                                             .formatted(simTimeSec,
                                                     robotTimeSec));
 
-                        // Run all the callbacks up to the new sim time.
-                        LOG.log(Level.DEBUG, "Handling atSecs() callbacks");
-                        var oscb = oneShotCallbacks.poll();
-                        while (oscb != null) {
-                            if (LOG.isLoggable(Level.DEBUG))
-                                LOG.log(Level.DEBUG,
-                                        "Checking callback with time = %g at simTimeSecs = %g"
-                                                .formatted(oscb.timeSecs,
-                                                        simTimeSec));
-                            if (oscb.timeSecs > simTimeSec) {
-                                oneShotCallbacks.add(oscb); // Put it back
-                                break;
-                            }
-                            var cb = oscb.callback();
-                            if (cb == null)
-                                continue;
-                            try (var simView = new SimulationState()) {
-                                // Callbacks might not be thread safe, so run them one at a time.
-                                LOG.log(Level.DEBUG, "Waiting for mutex");
-                                synchronized (callbackMutex) {
-                                    LOG.log(Level.DEBUG, "Calling callback");
-                                    oscb.callback().accept(simView);
-                                    LOG.log(Level.DEBUG, "Callback returned");
-                                }
-                            }
-                            oscb = oneShotCallbacks.poll();
-                        }
-                        LOG.log(Level.DEBUG,
-                                "Done handling atSecs() callbacks");
-                        if (oneShotCallbacks.isEmpty()) {
-                            LOG.log(Level.DEBUG,
-                                    "Ran last atSecs() callback so scheduling end of run.");
-                            endNotifier.startSingle(0.0);
-                            LOG.log(Level.DEBUG, "Done scheduling end of run.");
-                        }
+                        runAllCallbacks();
 
                         // If we're not behind the sim time, there is nothing else to do.
                         double deltaSecs = simTimeSec - robotTimeSec;
@@ -403,6 +371,54 @@ public class WebotsSimulator implements AutoCloseable {
         return this;
     }
 
+    private void runAllCallbacks() {
+        try {
+            // Run all the callbacks up to the new sim time.
+            everyStepCallbacks.forEach((escb) -> {
+                try (var simState = new SimulationState()) {
+                    escb.accept(simState);
+                }
+            });
+            LOG.log(Level.DEBUG, "Handling atSecs() callbacks");
+            var oscb = oneShotCallbacks.poll();
+            while (oscb != null) {
+                if (LOG.isLoggable(Level.DEBUG))
+                    LOG.log(Level.DEBUG,
+                            "Checking callback with time = %g at simTimeSecs = %g"
+                                    .formatted(oscb.timeSecs, simTimeSec));
+                if (oscb.timeSecs > simTimeSec) {
+                    oneShotCallbacks.add(oscb); // Put it back
+                    break;
+                }
+                var cb = oscb.callback();
+                if (cb == null)
+                    continue;
+                try (var simState = new SimulationState()) {
+                    LOG.log(Level.DEBUG, "Calling callback");
+                    oscb.callback().accept(simState);
+                    LOG.log(Level.DEBUG, "Callback returned");
+                }
+                oscb = oneShotCallbacks.poll();
+            }
+        } catch (Throwable throwable) {
+            // One of the callbacks threw an error, so remember it and then stop the run by clearing
+            // the callbacks so that the endNotifier will be scheduled to run immediately in the
+            // finally clause below.
+            runExitThrowable = throwable;
+            oneShotCallbacks.clear();
+            everyStepCallbacks.clear();
+        } finally {
+            LOG.log(Level.DEBUG, "Done handling atSecs() callbacks");
+            if (oneShotCallbacks.isEmpty()) {
+                LOG.log(Level.DEBUG,
+                        "Ran last atSecs() callback so scheduling end of run.");
+                endNotifier.startSingle(0.0);
+                LOG.log(Level.DEBUG, "Done scheduling end of run.");
+            }
+        }
+
+    }
+
     private AtomicBoolean wereRobotInitedCallbacksRun =
             new AtomicBoolean(false);
 
@@ -425,12 +441,23 @@ public class WebotsSimulator implements AutoCloseable {
     public static class SimulationState implements AutoCloseable {
 
         /**
-         * Simulates enables the robot in autonomous from the driver's station.
+         * Simulates enabling the robot in autonomous from the driver's station.
          */
         public void enableAutonomous() {
             LOG.log(Level.INFO, "Enabling in autonomous.");
             // Simulate starting autonomous
             DriverStationSim.setAutonomous(true);
+            DriverStationSim.setEnabled(true);
+            DriverStationSim.notifyNewData();
+        }
+
+        /**
+         * Simulates enabling the robot in teleop from the driver's station.
+         */
+        public void enableTeleop() {
+            LOG.log(Level.INFO, "Enabling in teleop.");
+            // Simulate starting teleop
+            DriverStationSim.setAutonomous(false);
             DriverStationSim.setEnabled(true);
             DriverStationSim.notifyNewData();
         }
@@ -448,11 +475,31 @@ public class WebotsSimulator implements AutoCloseable {
          * Gets the position of a specific node in the simulated world.
          * 
          * @param defPath the DEF path to the Webots node to get the position of.
-         * @return the world coordinates of the requested noded.
+         * @return the world coordinates of the requested node.
          */
         public Translation3d position(String defPath) {
-            try (var watcher = new Watcher(defPath)) {
+            // ntTransientLogLevel = LogMessage.kDebug4;
+            try {
+                var watcher = Watcher.getByDefPath(defPath);
                 return watcher.getPosition();
+            } finally {
+                ntTransientLogLevel = LogMessage.kInfo;
+            }
+        }
+
+        /**
+         * Gets the rotation of a specific node in the simulated world.
+         * 
+         * @param defPath the DEF path to the Webots node to get the position of.
+         * @return the rotation of the requested node.
+         */
+        public Rotation3d rotation(String defPath) {
+            // ntTransientLogLevel = LogMessage.kDebug4;
+            try {
+                var watcher = Watcher.getByDefPath(defPath);
+                return watcher.getRotation();
+            } finally {
+                ntTransientLogLevel = LogMessage.kInfo;
             }
         }
 
@@ -479,6 +526,17 @@ public class WebotsSimulator implements AutoCloseable {
         return this;
     }
 
+    private List<Consumer<SimulationState>> everyStepCallbacks =
+            new ArrayList<>();
+
+
+    public WebotsSimulator everyStep(
+            Consumer<SimulationState> simulationConsumer) {
+        everyStepCallbacks.add(simulationConsumer);
+        return this;
+    }
+
+    Throwable runExitThrowable = null;
     /**
      * Runs the simulation of using the specified WPILib robot.
      * 
@@ -486,6 +544,7 @@ public class WebotsSimulator implements AutoCloseable {
      * 
      */
     public void run(TimedRobot robot) {
+        runExitThrowable = null;
         if (oneShotCallbacks.isEmpty()) {
             LOG.log(Level.WARNING,
                     "WebotsSimulator.atSec() was never called so planning to enable in autonomous for 15 seconds.");
@@ -515,44 +574,33 @@ public class WebotsSimulator implements AutoCloseable {
             SimHooks.resumeTiming();
             isRobotCodeRunning = true;
             robot.startCompetition();
+            if (runExitThrowable != null) {
+                throw new RuntimeException(runExitThrowable);
+            }
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
             SimDeviceSim.resetData();
             // HAL.shutdown();
+            LOG.log(Level.DEBUG, "run() returning");
         }
-        LOG.log(Level.DEBUG, "run() returning");
     }
 
     private Notifier endNotifier = null;
-    /**
-     * Passes the world position of a simulated node to a consuming functional.
-     * 
-     * @param defPath the DEF path of the simulated node of interest
-     * @param acceptor the consuming functional
-     * @return this object for chaining
-     */
-    public WebotsSimulator withNodePosition(String defPath,
-            Consumer<Translation3d> acceptor) {
-        try (var watcher = new Watcher(defPath)) {
-            var pos = watcher.getPosition();
-            acceptor.accept(pos);
-            return this;
-        }
-    }
 
     /**
      * Closes this instance, freeing any resources that in holds.
      */
     public void close() {
-        LOG.log(Level.DEBUG, "Closing WebotsManager");
+        LOG.log(Level.DEBUG, "Closing WebotsSimulator");
         reloadRequestPublisher.close();
         reloadStatusSubscriber.close();
         robotTimeSecPublisher.close();
         simTimeSecSubscriber.close();
+        Watcher.closeAll();
         inst.close();
         inst.stopServer();
         pauser.close();
-        LOG.log(Level.DEBUG, "Done closing WebotsManager");
+        LOG.log(Level.DEBUG, "Done closing WebotsSimulator");
     }
 }
