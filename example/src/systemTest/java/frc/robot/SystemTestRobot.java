@@ -14,7 +14,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 
-@Timeout(value = 30, unit = TimeUnit.MINUTES)
+@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public class SystemTestRobot {
 
     @Test
