@@ -31,11 +31,14 @@ class Watcher {
     private DoubleArrayTopic positionTopic, rotationTopic, velocityTopic;
     private DoubleArrayPublisher positionPublisher, rotationPublisher,
             velocityPublisher;
-    private CompletableFuture<Void> positionReady = new CompletableFuture<>();
+    private volatile CompletableFuture<Void> positionReady =
+            new CompletableFuture<>();
+    private volatile CompletableFuture<Void> rotationReady =
+            new CompletableFuture<>();
+    private volatile CompletableFuture<Void> velocityReady =
+            new CompletableFuture<>();
     private volatile Translation3d position = null;
     private volatile Rotation3d rotation = null;
-    private CompletableFuture<Void> rotationReady = new CompletableFuture<>();
-    private CompletableFuture<Void> velocityReady = new CompletableFuture<>();
     private final NetworkTableInstance inst;
     private final String defPath;
     private final NetworkTable table;
@@ -59,9 +62,11 @@ class Watcher {
      *        of the node to watch.
      */
     static Watcher getByDefPath(String defPath) {
-        return watcherByDefPath.computeIfAbsent(defPath, (dp) -> {
+        var watcher = watcherByDefPath.computeIfAbsent(defPath, (dp) -> {
             return new Watcher(dp);
         });
+        watcher.reset();
+        return watcher;
     }
 
     /**
@@ -101,11 +106,17 @@ class Watcher {
                 }
             }
                 });
-        var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
+    }
+
+    private void reset() {
+        synchronized (Watcher.class) {
+            positionReady = new CompletableFuture<>();
+            rotationReady = new CompletableFuture<>();
+            velocityReady = new CompletableFuture<>();
+            var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
-        };
-        synchronized (Watcher.class) {
+            };
             positionTopic = table.getDoubleArrayTopic("position");
             positionPublisher = positionTopic.publish(pubSubOptions);
             positionTopic.setCached(false);

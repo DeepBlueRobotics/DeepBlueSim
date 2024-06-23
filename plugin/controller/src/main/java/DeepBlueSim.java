@@ -50,7 +50,6 @@ import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches
-// the
 // the name of the jar.
 public class DeepBlueSim {
     // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
@@ -341,10 +340,6 @@ public class DeepBlueSim {
                                 break;
                             }
                             Simulation.runPeriodicMethods();
-                            // Regularly report the position, rotation, and/or velocity of the
-                            // requested nodes
-                            reportKinematicsForAllWatchedNodes(watchedNodes,
-                                    robot);
                         }
                     });
                 });
