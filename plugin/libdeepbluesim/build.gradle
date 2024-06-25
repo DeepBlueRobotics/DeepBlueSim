@@ -45,29 +45,21 @@ dependencies {
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
-    // TODO: Update
-    // api libs.commons.math3
+    // These dependencies are exported to consumers, that is to say found on their compile classpath.
+    api wpilibTools.deps.wpilibJava("wpimath")
+    api wpi.java.deps.wpilib()
 
     // These dependencies are used internally, and not exposed to consumers on their own compile classpath.
-    implementation wpilibTools.deps.wpilibJava("wpimath")
     implementation wpilibTools.deps.wpilibJava("wpiutil")
     implementation wpilibTools.deps.wpilibJava("wpinet")
     implementation wpilibTools.deps.wpilibJava("ntcore")
 
-    // TODO: Are these needed?
-    implementation wpi.java.deps.wpilib()
-    implementation wpi.java.vendor.java()
 
     implementation group: "com.fasterxml.jackson.core", name: "jackson-annotations", version: wpi.versions.jacksonVersion.get()
     implementation group: "com.fasterxml.jackson.core", name: "jackson-core", version: wpi.versions.jacksonVersion.get()
     implementation group: "com.fasterxml.jackson.core", name: "jackson-databind", version: wpi.versions.jacksonVersion.get()
 
     implementation group: "org.ejml", name: "ejml-simple", version: wpi.versions.ejmlVersion.get()
-
-    // TODO: Is this needed?
-    implementation group: "us.hebi.quickbuf", name: "quickbuf-runtime", version: wpi.versions.quickbufVersion.get();
-
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
