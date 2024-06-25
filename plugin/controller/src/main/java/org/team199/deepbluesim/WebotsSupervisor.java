@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 
 import org.ejml.simple.SimpleMatrix;
 import org.team199.wpiws.connection.ConnectionProcessor;
@@ -120,9 +121,11 @@ public final class WebotsSupervisor {
 
         ConnectionProcessor.setThreadExecutor(queuedMessages::add);
 
-        NetworkTable watchedNodes = inst.getTable("/DeepBlueSim/WatchedNodes");
+        NetworkTable watchedNodes =
+                inst.getTable(NTConstants.WATCHED_NODES_TABLE_NAME);
         var multiSubscriber = new MultiSubscriber(inst,
-                new String[] {"/DeepBlueSim/WatchedNodes/"}, pubSubOptions);
+                new String[] {NTConstants.WATCHED_NODES_TABLE_NAME + "/"},
+                pubSubOptions);
         inst.addListener(multiSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     queuedMessages.add(() -> {
@@ -142,13 +145,13 @@ public final class WebotsSupervisor {
                             return;
                         }
                         switch (name) {
-                            case "position":
+                            case NTConstants.POSITION_TOPIC_NAME:
                                 reportPositionFor(node, subTable);
                                 break;
-                            case "rotation":
+                            case NTConstants.ROTATION_TOPIC_NAME:
                                 reportRotationFor(node, subTable);
                                 break;
-                            case "velocity":
+                            case NTConstants.VELOCITY_TOPIC_NAME:
                                 reportVelocityFor(node, subTable);
                                 break;
                             default:
@@ -163,10 +166,12 @@ public final class WebotsSupervisor {
         final CompletableFuture<Boolean> isDoneFuture =
                 new CompletableFuture<Boolean>();
 
-        NetworkTable coordinator = inst.getTable("/DeepBlueSim/Coordinator");
+        NetworkTable coordinator =
+                inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
 
         // Add a listener to handle reload requests.
-        var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
+        var reloadRequestTopic = coordinator
+                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
         try (var p = reloadRequestTopic.publish(pubSubOptions)) {
             reloadRequestTopic.setCached(false);
         }
@@ -202,7 +207,8 @@ public final class WebotsSupervisor {
                 });
 
         // Add a listener to handle simMode requests.
-        var simModeTopic = coordinator.getStringTopic("simMode");
+        var simModeTopic =
+                coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
         try (var p = simModeTopic.publish(pubSubOptions)) {
             simModeTopic.setCached(false);
         }
@@ -214,9 +220,10 @@ public final class WebotsSupervisor {
                             "In listener, simMode = %s".formatted(simMode));
                     if (simMode == null)
                         return;
-                    if (simMode.equals("Fast")) {
+                    if (simMode.equals(NTConstants.SIM_MODE_FAST_VALUE)) {
                         usersSimulationSpeed = Supervisor.SIMULATION_MODE_FAST;
-                    } else if (simMode.equals("Realtime")) {
+                    } else if (simMode
+                            .equals(NTConstants.SIM_MODE_REALTIME_VALUE)) {
                         usersSimulationSpeed =
                                 Supervisor.SIMULATION_MODE_REAL_TIME;
                     } else {
@@ -231,7 +238,8 @@ public final class WebotsSupervisor {
 
         // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
         // the robot of the new sim time.
-        var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
+        var robotTimeSecTopic = coordinator
+                .getDoubleTopic(NTConstants.ROBOT_TIME_SEC_TOPIC_NAME);
         robotTimeSecTopic.setCached(false);
         robotTimeSecSubscriber =
                 robotTimeSecTopic.subscribe(-1.0, pubSubOptions);
@@ -281,19 +289,22 @@ public final class WebotsSupervisor {
             if (event.is(Kind.kConnected)) {
                 queuedMessages.add(() -> {
                     var reloadStatusTopic =
-                            coordinator.getStringTopic("reloadStatus");
+                            coordinator.getStringTopic(
+                                    NTConstants.RELOAD_STATUS_TOPIC_NAME);
                     reloadStatusPublisher =
                             reloadStatusTopic.publish(pubSubOptions);
                     reloadStatusTopic.setCached(false);
                     LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
-                    reloadStatusPublisher.set("Completed");
+                    reloadStatusPublisher
+                            .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
                     var simTimeSec = robot.getTime();
 
                     // Create a publisher for communicating the sim time and request that updates to
                     // it are
                     // communicated as quickly as possible.
                     var simTimeSecTopic =
-                            coordinator.getDoubleTopic("simTimeSec");
+                            coordinator.getDoubleTopic(
+                                    NTConstants.SIM_TIME_SEC_TOPIC_NAME);
                     simTimeSecPublisher =
                             simTimeSecTopic.publish(pubSubOptions);
                     LOG.log(Level.DEBUG, "Sending initial simTimeSec of %g"
@@ -458,14 +469,16 @@ public final class WebotsSupervisor {
     }
 
     private static void reportVelocityFor(Node node, NetworkTable subTable) {
-        var velocityTopic = subTable.getDoubleArrayTopic("velocity");
+        var velocityTopic =
+                subTable.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
         var publisher = getPublisherByTopic(velocityTopic);
         publisher.set(node.getVelocity().clone());
         inst.flush();
     }
 
     private static void reportRotationFor(Node node, NetworkTable subTable) {
-        var rotationTopic = subTable.getDoubleArrayTopic("rotation");
+        var rotationTopic =
+                subTable.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
         var nodeOrientation = node.getOrientation();
         var simpleMatrix = new SimpleMatrix(3, 3, true, nodeOrientation);
         var rotation = new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
@@ -493,7 +506,8 @@ public final class WebotsSupervisor {
     }
 
     private static void reportPositionFor(Node node, NetworkTable subTable) {
-        var positionTopic = subTable.getDoubleArrayTopic("position");
+        var positionTopic =
+                subTable.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
         var publisher = getPublisherByTopic(positionTopic);
         double[] pos = node.getPosition().clone();
         if (LOG.isLoggable(Level.DEBUG)) {

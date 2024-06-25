@@ -17,6 +17,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
+
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -108,26 +110,31 @@ public class WebotsSimulator implements AutoCloseable {
                                         event.logMessage.message));
             });
 
-        coordinator = inst.getTable("/DeepBlueSim/Coordinator");
+        coordinator = inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
         var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
         };
-        var reloadRequestTopic = coordinator.getStringTopic("reloadRequest");
+        var reloadRequestTopic = coordinator
+                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
         reloadRequestPublisher = reloadRequestTopic.publish(pubSubOptions);
         reloadRequestTopic.setCached(false);
 
-        var reloadStatusTopic = coordinator.getStringTopic("reloadStatus");
+        var reloadStatusTopic = coordinator
+                .getStringTopic(NTConstants.RELOAD_STATUS_TOPIC_NAME);
         reloadStatusSubscriber = reloadStatusTopic.subscribe("", pubSubOptions);
 
-        var robotTimeSecTopic = coordinator.getDoubleTopic("robotTimeSec");
+        var robotTimeSecTopic = coordinator
+                .getDoubleTopic(NTConstants.ROBOT_TIME_SEC_TOPIC_NAME);
         robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
         robotTimeSecTopic.setCached(false);
 
-        var simTimeSecTopic = coordinator.getDoubleTopic("simTimeSec");
+        var simTimeSecTopic =
+                coordinator.getDoubleTopic(NTConstants.SIM_TIME_SEC_TOPIC_NAME);
         simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
 
-        var simModeTopic = coordinator.getStringTopic("simMode");
+        var simModeTopic =
+                coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
         simModePublisher = simModeTopic.publish(pubSubOptions);
         simModeTopic.setCached(false);
     }
@@ -179,9 +186,10 @@ public class WebotsSimulator implements AutoCloseable {
         robotTime.reset();
         robotTime.start();
 
-        var mode = useStepTiming ? "Fast" : "Realtime";
+        var mode = useStepTiming ? NTConstants.SIM_MODE_FAST_VALUE
+                : NTConstants.SIM_MODE_REALTIME_VALUE;
         LOG.log(Level.DEBUG, "Sending simMode = " + mode);
-        simModePublisher.set(useStepTiming ? "Fast" : "Realtime");
+        simModePublisher.set(mode);
 
         var robotTimeSec = robotTime.get();
         LOG.log(Level.DEBUG, "Sending initial robotTimeSec = " + robotTimeSec);
@@ -230,7 +238,8 @@ public class WebotsSimulator implements AutoCloseable {
                     listenerCallbackExecutor.execute(() -> {
                         LOG.log(Level.DEBUG, "In listener, reloadStatus = %s"
                                 .formatted(eventValue));
-                        if (!eventValue.equals("Completed"))
+                        if (!eventValue.equals(
+                                NTConstants.RELOAD_STATUS_COMPLETED_VALUE))
                             return;
                         if (reloadCount++ == 0) {
                             reloadRequestPublisher.set(worldFileAbsPath);

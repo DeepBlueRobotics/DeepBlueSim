@@ -71,6 +71,7 @@ repositories {
 dependencies {
     // See comment in repositories section if VSCode can't resolve WPIWebSockets.
     implementation 'org.carlmontrobotics:WPIWebSockets:unspecified'
+    implementation project(':libdeepbluesim')
     testImplementation 'junit:junit:4.13'
 
     implementation wpilibTools.deps.wpilibJava("wpimath")

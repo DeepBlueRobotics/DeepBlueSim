@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
+
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
@@ -78,13 +80,14 @@ class Watcher {
     private Watcher(String defPath) {
         this.defPath = defPath;
         inst = NetworkTableInstance.getDefault();
-        table = inst.getTable("/DeepBlueSim/WatchedNodes/" + defPath);
+        table = inst
+                .getTable(NTConstants.WATCHED_NODES_TABLE_NAME + "/" + defPath);
         // Ask that the robot's position, rotation, and velocity be updated for us every
         // simulation step
         table.addListener(EnumSet.of(Kind.kValueRemote), (t, key, value) -> {
             synchronized (Watcher.class) {
                 switch (key) {
-                    case "position":
+                    case NTConstants.POSITION_TOPIC_NAME:
                         double[] posAsArray =
                                 value.valueData.value.getDoubleArray();
                         position = new Translation3d(posAsArray[0],
@@ -92,7 +95,7 @@ class Watcher {
                         positionReady.complete(null);
                         break;
 
-                    case "rotation":
+                    case NTConstants.ROTATION_TOPIC_NAME:
                         double[] rotAsArray =
                                 value.valueData.value.getDoubleArray();
                         rotation = new Rotation3d(rotAsArray[0], rotAsArray[1],
@@ -100,7 +103,7 @@ class Watcher {
                         rotationReady.complete(null);
                         break;
 
-                    case "velocity":
+                    case NTConstants.VELOCITY_TOPIC_NAME:
                         double[] velAsArray =
                                 value.valueData.value.getDoubleArray();
                         velocity = new Translation3d(velAsArray[0],
@@ -123,15 +126,18 @@ class Watcher {
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
             };
-            positionTopic = table.getDoubleArrayTopic("position");
+            positionTopic =
+                    table.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
             positionPublisher = positionTopic.publish(pubSubOptions);
             positionTopic.setCached(false);
             positionPublisher.set(dummyPosition);
-            rotationTopic = table.getDoubleArrayTopic("rotation");
+            rotationTopic =
+                    table.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
             rotationPublisher = rotationTopic.publish(pubSubOptions);
             rotationTopic.setCached(false);
             rotationPublisher.set(dummyRotation);
-            velocityTopic = table.getDoubleArrayTopic("velocity");
+            velocityTopic =
+                    table.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
             velocityPublisher = velocityTopic.publish(pubSubOptions);
             velocityTopic.setCached(false);
             velocityPublisher.set(dummyVelocity);
