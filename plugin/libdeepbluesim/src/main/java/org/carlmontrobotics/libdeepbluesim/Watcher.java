@@ -214,7 +214,7 @@ class Watcher {
         }
         LOG.log(Level.DEBUG, "Waiting for angular velocity of {0} to be ready",
                 defPath);
-        rotationReady.join();
+        velocityReady.join();
         LOG.log(Level.DEBUG, "Angular velocity of {0} is ready", defPath);
         return angularVelocity;
     }
