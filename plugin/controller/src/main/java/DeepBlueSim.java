@@ -53,8 +53,16 @@ public class DeepBlueSim {
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
                 @Override
-                public void uncaughtException(Thread arg0, Throwable arg1) {
-                    arg1.printStackTrace(System.err);
+                public void uncaughtException(Thread arg0, Throwable t) {
+                    try (var sw = new StringWriter();
+                            var pw = new PrintWriter(sw)) {
+                        t.printStackTrace(pw);
+                        LOG.log(Level.ERROR,
+                                "Uncaught exception. Here is the stacktrace: %s"
+                                        .formatted(sw.toString()));
+                    } catch (IOException ioEx) {
+                        t.printStackTrace(System.err);
+                    }
                     System.err.flush();
                     System.exit(1);
                 }

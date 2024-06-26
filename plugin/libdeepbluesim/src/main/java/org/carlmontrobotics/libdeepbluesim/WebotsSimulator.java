@@ -78,7 +78,7 @@ public class WebotsSimulator implements AutoCloseable {
     // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
     // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
     // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
-    private static int ntLogLevel = 0;
+    private static final int NT_LOG_LEVEL = 0;
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
     @SuppressWarnings("resource")
@@ -97,8 +97,8 @@ public class WebotsSimulator implements AutoCloseable {
     public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
-        if (ntLogLevel > 0)
-            inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
+        if (NT_LOG_LEVEL > 0)
+            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
                 if (LOG.isLoggable(Level.DEBUG))
@@ -389,8 +389,8 @@ public class WebotsSimulator implements AutoCloseable {
                 }
             });
             LOG.log(Level.DEBUG, "Handling atSec() callbacks");
-            var oscb = oneShotCallbacks.poll();
-            while (oscb != null) {
+            OneShotCallback oscb;
+            while ((oscb = oneShotCallbacks.poll()) != null) {
                 if (LOG.isLoggable(Level.DEBUG))
                     LOG.log(Level.DEBUG,
                             "Checking callback with time = %g at simTimeSecs = %g"
@@ -407,7 +407,6 @@ public class WebotsSimulator implements AutoCloseable {
                     oscb.callback().accept(simState);
                     LOG.log(Level.DEBUG, "Callback returned");
                 }
-                oscb = oneShotCallbacks.poll();
             }
         } catch (Throwable throwable) {
             // One of the callbacks threw an error, so remember it and then stop the run by clearing
@@ -448,7 +447,6 @@ public class WebotsSimulator implements AutoCloseable {
      * The current state of the simulation.
      */
     public static class SimulationState implements AutoCloseable {
-
         /**
          * Simulates enabling the robot in autonomous from the driver's station.
          */
