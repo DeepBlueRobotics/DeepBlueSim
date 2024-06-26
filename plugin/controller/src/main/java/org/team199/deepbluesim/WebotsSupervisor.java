@@ -62,7 +62,7 @@ public final class WebotsSupervisor {
     // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
     // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
     // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
-    private static int ntLogLevel = LogMessage.kInfo;
+    private static final int NT_LOG_LEVEL = LogMessage.kInfo;
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
     private static volatile boolean isWorldLoading = false;
@@ -105,8 +105,8 @@ public final class WebotsSupervisor {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
-        if (ntLogLevel > 0) {
-            inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
+        if (NT_LOG_LEVEL > 0) {
+            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
                 LOG.log(Level.DEBUG,
@@ -188,6 +188,8 @@ public final class WebotsSupervisor {
                         return;
                     }
                     queuedEvents.add(() -> {
+                        // Ensure we don't leave any watchers waiting for values they requested
+                        // before requesting a new world.
                         closePublishers();
                         waitUntilFlushed();
                         inst.stopClient();
@@ -243,8 +245,8 @@ public final class WebotsSupervisor {
                 EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
                     final double robotTimeSec =
                             event.valueData.value.getDouble();
-                    LOG.log(Level.DEBUG,
-                            "Received robotTimeSec={0}", robotTimeSec);
+                    LOG.log(Level.DEBUG, "Received robotTimeSec={0}",
+                            robotTimeSec);
                     queuedEvents.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
                         // the robot time or the simulation ends.
@@ -283,9 +285,8 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 queuedEvents.add(() -> {
-                    var reloadStatusTopic =
-                            coordinator.getStringTopic(
-                                    NTConstants.RELOAD_STATUS_TOPIC_NAME);
+                    var reloadStatusTopic = coordinator.getStringTopic(
+                            NTConstants.RELOAD_STATUS_TOPIC_NAME);
                     reloadStatusPublisher =
                             reloadStatusTopic.publish(pubSubOptions);
                     reloadStatusTopic.setCached(false);
@@ -297,9 +298,8 @@ public final class WebotsSupervisor {
                     // Create a publisher for communicating the sim time and request that updates to
                     // it are
                     // communicated as quickly as possible.
-                    var simTimeSecTopic =
-                            coordinator.getDoubleTopic(
-                                    NTConstants.SIM_TIME_SEC_TOPIC_NAME);
+                    var simTimeSecTopic = coordinator.getDoubleTopic(
+                            NTConstants.SIM_TIME_SEC_TOPIC_NAME);
                     simTimeSecPublisher =
                             simTimeSecTopic.publish(pubSubOptions);
                     LOG.log(Level.DEBUG, "Sending initial simTimeSec of {0}",
@@ -321,11 +321,14 @@ public final class WebotsSupervisor {
                     closePublishers();
                     waitUntilFlushed();
                     inst.stopClient();
+                    robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
+
+                    // The current NT implementation makes the next 4 lines unnecessary. They are
+                    // here in case that implementation changes.
                     inst.close();
                     inst = NetworkTableInstance.getDefault();
                     inst.startClient4("Webots controller");
                     inst.setServer("localhost");
-                    robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
                 });
             }
         });
@@ -407,35 +410,10 @@ public final class WebotsSupervisor {
         publisherByTopic.clear();
     }
 
-    private static void reportKinematicsForAllWatchedNodes(
-            NetworkTable watchedNodes, final Supervisor robot) {
-        // Note: we can't use watchedNodes.getSubTables() because it returns an empty array,
-        // presumably because all of the topics within the subtables are uncached?
-        for (var defPath : defPathsToPublish) {
-            var node = robot.getFromDef(defPath);
-            if (node == null) {
-                LOG.log(Level.ERROR,
-                        "Could not find node for the following DEF path: {0}",
-                        defPath);
-                continue;
-            }
-            var subTable = watchedNodes.getSubTable(defPath);
-            if (subTable == null) {
-                LOG.log(Level.WARNING,
-                        "Could not find subtable for DEF path '{0}' so not publishing it anymore",
-                        defPath);
-                defPathsToPublish.remove(defPath);
-                continue;
-            }
-            reportKinematicsFor(node, subTable);
-        }
-    }
-
     private static void reportKinematicsFor(Node node, NetworkTable subTable) {
         reportPositionFor(node, subTable);
         reportRotationFor(node, subTable);
         reportVelocityFor(node, subTable);
-
     }
 
     private static void waitUntilFlushed() {
