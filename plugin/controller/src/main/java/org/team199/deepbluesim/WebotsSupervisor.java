@@ -463,8 +463,10 @@ public final class WebotsSupervisor {
                     defPath, Arrays.toString(xyzArray),
                     Arrays.toString(nodeOrientation));
         }
-        LOG.log(Level.DEBUG, "Setting rotation of {0} to {1}",
-                defPathForTopic(rotationTopic), Arrays.toString(xyzArray));
+        if (LOG.isLoggable(Level.DEBUG)) {
+            LOG.log(Level.DEBUG, "Setting rotation of {0} to {1}",
+                    defPathForTopic(rotationTopic), Arrays.toString(xyzArray));
+        }
         publisher.set(xyzArray);
         inst.flush();
     }
@@ -474,8 +476,10 @@ public final class WebotsSupervisor {
                 subTable.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
         var publisher = getPublisherByTopic(positionTopic);
         double[] pos = node.getPosition().clone();
-        LOG.log(Level.DEBUG, "Setting position of {0} to {1}",
-                defPathForTopic(positionTopic), Arrays.toString(pos));
+        if (LOG.isLoggable(Level.DEBUG)) {
+            LOG.log(Level.DEBUG, "Setting position of {0} to {1}",
+                    defPathForTopic(positionTopic), Arrays.toString(pos));
+        }
         publisher.set(pos);
         inst.flush();
     }
