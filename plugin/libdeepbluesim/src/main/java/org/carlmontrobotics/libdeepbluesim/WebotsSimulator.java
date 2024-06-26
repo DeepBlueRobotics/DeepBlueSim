@@ -97,7 +97,7 @@ public class WebotsSimulator implements AutoCloseable {
     public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
-        if (ntLogLevel > 0)
+        if (ntLogLevel > 0) {
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
@@ -106,6 +106,7 @@ public class WebotsSimulator implements AutoCloseable {
                         event.logMessage.level, event.logMessage.filename,
                         event.logMessage.line, event.logMessage.message);
             });
+        }
 
         coordinator = inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
         var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update

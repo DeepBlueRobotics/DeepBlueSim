@@ -64,9 +64,7 @@ class Watcher {
      *        of the node to watch.
      */
     static Watcher getByDefPath(String defPath) {
-        var watcher = watcherByDefPath.computeIfAbsent(defPath, (dp) -> {
-            return new Watcher(dp);
-        });
+        var watcher = watcherByDefPath.computeIfAbsent(defPath, Watcher::new);
         watcher.reset();
         return watcher;
     }

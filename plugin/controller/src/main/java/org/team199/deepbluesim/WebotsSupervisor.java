@@ -74,7 +74,7 @@ public final class WebotsSupervisor {
             };
 
 
-    private static final BlockingDeque<Runnable> queuedMessages =
+    private static final BlockingDeque<Runnable> queuedEvents =
             new LinkedBlockingDeque<>();
 
     private static int usersSimulationSpeed = 0;
@@ -105,7 +105,7 @@ public final class WebotsSupervisor {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
-        if (ntLogLevel > 0)
+        if (ntLogLevel > 0) {
             inst.addLogger(ntLogLevel, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
@@ -114,17 +114,18 @@ public final class WebotsSupervisor {
                         event.logMessage.level, event.logMessage.filename,
                         event.logMessage.line, event.logMessage.message);
             });
+        }
 
-        ConnectionProcessor.setThreadExecutor(queuedMessages::add);
+        ConnectionProcessor.setThreadExecutor(queuedEvents::add);
 
         NetworkTable watchedNodes =
                 inst.getTable(NTConstants.WATCHED_NODES_TABLE_NAME);
-        var multiSubscriber = new MultiSubscriber(inst,
+        var watchedNodesSubscriber = new MultiSubscriber(inst,
                 new String[] {NTConstants.WATCHED_NODES_TABLE_NAME + "/"},
                 pubSubOptions);
-        inst.addListener(multiSubscriber, EnumSet.of(Kind.kValueRemote),
+        inst.addListener(watchedNodesSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         var pathComponents =
                                 event.valueData.getTopic().getName().split("/");
                         var name = pathComponents[pathComponents.length - 1];
@@ -186,7 +187,7 @@ public final class WebotsSupervisor {
                                 reloadRequest);
                         return;
                     }
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         closePublishers();
                         waitUntilFlushed();
                         inst.stopClient();
@@ -226,7 +227,7 @@ public final class WebotsSupervisor {
                                 "Unrecognized simMode of '{0}'. Must be either 'Fast' or 'Realtime'",
                                 simMode);
                     }
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         robot.simulationSetMode(usersSimulationSpeed);
                     });
                 });
@@ -244,7 +245,7 @@ public final class WebotsSupervisor {
                             event.valueData.value.getDouble();
                     LOG.log(Level.DEBUG,
                             "Received robotTimeSec={0}", robotTimeSec);
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
                         // the robot time or the simulation ends.
                         for (;;) {
@@ -281,7 +282,7 @@ public final class WebotsSupervisor {
         inst.addConnectionListener(true, (event) -> {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
-                queuedMessages.add(() -> {
+                queuedEvents.add(() -> {
                     var reloadStatusTopic =
                             coordinator.getStringTopic(
                                     NTConstants.RELOAD_STATUS_TOPIC_NAME);
@@ -312,7 +313,7 @@ public final class WebotsSupervisor {
                         event.connInfo.remote_id, event.connInfo.remote_ip,
                         event.connInfo.remote_port);
             } else if (event.is(Kind.kDisconnected)) {
-                queuedMessages.add(() -> {
+                queuedEvents.add(() -> {
                     if (isWorldLoading)
                         return;
                     LOG.log(Level.INFO,
@@ -341,7 +342,7 @@ public final class WebotsSupervisor {
      */
     public static void runUntilTermination(Supervisor robot, int basicTimeStep)
             throws InterruptedException, IOException {
-        // Process messages until simulation finishes
+        // Process events until simulation finishes
         while (isDoneFuture.getNow(false).booleanValue() == false) {
             try {
                 Simulation.runPeriodicMethods();
@@ -349,15 +350,15 @@ public final class WebotsSupervisor {
                 if (robot.step(0) == -1) {
                     break;
                 }
-                if (!queuedMessages.isEmpty()) {
+                if (!queuedEvents.isEmpty()) {
                     LOG.log(Level.DEBUG, "Processing next queued message");
-                    queuedMessages.takeFirst().run();
+                    queuedEvents.takeFirst().run();
                 } else if (robotTimeSecSubscriber.exists()) {
                     // We are expecting a message from the robot that will tell us when to step
                     // the simulation.
                     LOG.log(Level.DEBUG,
                             "Waiting up to 1 second for a new message");
-                    var msg = queuedMessages.pollFirst(1, TimeUnit.SECONDS);
+                    var msg = queuedEvents.pollFirst(1, TimeUnit.SECONDS);
                     if (msg == null) {
                         LOG.log(Level.WARNING,
                                 "No message from robot for 1 second. It might have disconnected. Pausing.");
