@@ -112,7 +112,7 @@ class Watcher {
                         break;
                 }
             }
-                });
+        });
     }
 
     private void reset() {
