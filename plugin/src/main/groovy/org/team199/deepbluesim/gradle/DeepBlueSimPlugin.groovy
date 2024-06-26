@@ -38,8 +38,11 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                         }
                     }
 
-                    extractResource(project, "Webots.zip")
-                    extractResource(project, "libdeepbluesim.zip")
+                    def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
+                    dbsDir.mkdirs()
+
+                    extractResource(project, dbsDir, "Webots.zip")
+                    extractResource(project, dbsDir, "libdeepbluesim.zip")
                 }
             }
             [JavaSimulationTask, JavaExternalSimulationTask, NativeSimulationTask, NativeExternalSimulationTask].each { cls ->
@@ -51,11 +54,9 @@ class DeepBlueSimPlugin implements Plugin<Project> {
         }
     }
 
-    void extractResource(Project project, String resourceZip) {
+    void extractResource(Project project, File dbsDir, String resourceZip) {
         def resourceStream = DeepBlueSimPlugin.class.getResourceAsStream(resourceZip)
         if (resourceStream == null) throw new RuntimeException("resourceStream is null")
-        def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
-        dbsDir.mkdirs()
 
         def extractedZipFile = new File(dbsDir, resourceZip)
         FileUtils.copyInputStreamToFile(resourceStream, extractedZipFile)

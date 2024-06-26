@@ -1,6 +1,4 @@
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -54,15 +52,8 @@ public class DeepBlueSim {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread arg0, Throwable t) {
-                    try (var sw = new StringWriter();
-                            var pw = new PrintWriter(sw)) {
-                        t.printStackTrace(pw);
-                        LOG.log(Level.ERROR,
-                                "Uncaught exception. Here is the stacktrace: %s"
-                                        .formatted(sw.toString()));
-                    } catch (IOException ioEx) {
-                        t.printStackTrace(System.err);
-                    }
+                    LOG.log(Level.ERROR,
+                            "Uncaught exception! Here is the stacktrace:", t);
                     System.err.flush();
                     System.exit(1);
                 }
@@ -123,15 +114,15 @@ public class DeepBlueSim {
             // user does.
             robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
 
-        // Connect to the robot code on a separate thread. Does not block.
-        try {
-            wsConnection = WSConnection.connectHALSim(true);
-        } catch (URISyntaxException e) {
-            LOG.log(Level.ERROR,
-                    "Error occurred connecting to server:" + e.getStackTrace());
-            System.exit(1);
-            return;
-        }
+            // Connect to the robot code on a separate thread. Does not block.
+            try {
+                wsConnection = WSConnection.connectHALSim(true);
+            } catch (URISyntaxException e) {
+                LOG.log(Level.ERROR,
+                        "Error occurred connecting to server:", e);
+                System.exit(1);
+                return;
+            }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
@@ -153,17 +144,13 @@ public class DeepBlueSim {
                 }
             }
         } catch (Throwable ex) {
-            try (var sw = new StringWriter(); var pw = new PrintWriter(sw)) {
-                ex.printStackTrace(pw);
-                LOG.log(Level.ERROR,
-                        "Exception while waiting for simulation to be done. Here is the stacktrace: %s"
-                                .formatted(sw.toString()));
-            }
+            LOG.log(Level.ERROR,
+                    "Exception while waiting for simulation to be done:", ex);
             throw new RuntimeException(
                     "Exception while waiting for simulation to be done", ex);
         }
 
-        LOG.log(Level.DEBUG, "Shutting down DeepBlueSim...");
+        LOG.log(Level.INFO, "Shutting down DeepBlueSim...");
 
         System.exit(0);
     }

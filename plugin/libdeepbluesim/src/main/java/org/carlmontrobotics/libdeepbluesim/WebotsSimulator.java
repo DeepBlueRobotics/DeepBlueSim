@@ -97,18 +97,16 @@ public class WebotsSimulator implements AutoCloseable {
     public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
-        if (NT_LOG_LEVEL > 0)
+        if (NT_LOG_LEVEL > 0) {
             inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
-                if (LOG.isLoggable(Level.DEBUG))
-                    LOG.log(Level.DEBUG,
-                            "NT instance log level %d message: %s(%d): %s"
-                                .formatted(event.logMessage.level,
-                                        event.logMessage.filename,
-                                        event.logMessage.line,
-                                        event.logMessage.message));
+                LOG.log(Level.DEBUG,
+                        "NT instance log level {0} message: {1}({2}): {3}",
+                        event.logMessage.level, event.logMessage.filename,
+                        event.logMessage.line, event.logMessage.message);
             });
+        }
 
         coordinator = inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
         var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
@@ -188,11 +186,12 @@ public class WebotsSimulator implements AutoCloseable {
 
         var mode = useStepTiming ? NTConstants.SIM_MODE_FAST_VALUE
                 : NTConstants.SIM_MODE_REALTIME_VALUE;
-        LOG.log(Level.DEBUG, "Sending simMode = " + mode);
+        LOG.log(Level.DEBUG, "Sending simMode = {0}", mode);
         simModePublisher.set(mode);
 
         var robotTimeSec = robotTime.get();
-        LOG.log(Level.DEBUG, "Sending initial robotTimeSec = " + robotTimeSec);
+        LOG.log(Level.DEBUG, "Sending initial robotTimeSec = {0}",
+                robotTimeSec);
         robotTimeSecPublisher.set(robotTimeSec);
         inst.flush();
 
@@ -236,8 +235,8 @@ public class WebotsSimulator implements AutoCloseable {
                     final var eventValue = event.valueData.value.getString();
                     final var eventTimeStamp = event.valueData.value.getTime();
                     listenerCallbackExecutor.execute(() -> {
-                        LOG.log(Level.DEBUG, "In listener, reloadStatus = %s"
-                                .formatted(eventValue));
+                        LOG.log(Level.DEBUG, "In listener, reloadStatus = {0}",
+                                eventValue);
                         if (!eventValue.equals(
                                 NTConstants.RELOAD_STATUS_COMPLETED_VALUE))
                             return;
@@ -257,8 +256,7 @@ public class WebotsSimulator implements AutoCloseable {
             double deltaSecs = simTimeSec - robotTimeSec;
             // If we still haven't caught up to the simulator, then wait longer.
             // This would typically happen when robot time hasn't yet started.
-            if (LOG.isLoggable(Level.DEBUG))
-                LOG.log(Level.DEBUG, "deltaSecs = %g".formatted(deltaSecs));
+            LOG.log(Level.DEBUG, "deltaSecs = {0}", deltaSecs);
             if (deltaSecs > 0) {
                 pauser.stop();
                 pauser.startSingle(deltaSecs);
@@ -267,8 +265,7 @@ public class WebotsSimulator implements AutoCloseable {
             // We're caught up, so pause and tell the sim what our new time is so that it can
             // continue.
             SimHooks.pauseTiming();
-            if (LOG.isLoggable(Level.DEBUG))
-                LOG.log(Level.DEBUG, "Sending robotTimeSec = " + robotTimeSec);
+            LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}", robotTimeSec);
             robotTimeSecPublisher.set(robotTimeSec);
             inst.flush();
         });
@@ -302,11 +299,9 @@ public class WebotsSimulator implements AutoCloseable {
                         }
                         simTimeSec = eventValue;
                         double robotTimeSec = robotTime.get();
-                        if (LOG.isLoggable(Level.DEBUG))
-                            LOG.log(Level.DEBUG,
-                                    "Received simTimeSec of %g when robotTimeSec is %g "
-                                            .formatted(simTimeSec,
-                                                    robotTimeSec));
+                        LOG.log(Level.DEBUG,
+                                "Received simTimeSec of {0} when robotTimeSec is {1}",
+                                simTimeSec, robotTimeSec);
 
                         runAllCallbacks();
 
@@ -328,9 +323,8 @@ public class WebotsSimulator implements AutoCloseable {
                             // caught
                             // up so that the simulator will take another step.
                             robotTimeSec = simTimeSec;
-                            if (LOG.isLoggable(Level.DEBUG))
-                                LOG.log(Level.DEBUG, "Sending robotTimeSec = "
-                                        + robotTimeSec);
+                            LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}",
+                                    robotTimeSec);
                             robotTimeSecPublisher.set(robotTimeSec);
                             inst.flush();
                             LOG.log(Level.DEBUG,
@@ -391,10 +385,9 @@ public class WebotsSimulator implements AutoCloseable {
             LOG.log(Level.DEBUG, "Handling atSec() callbacks");
             OneShotCallback oscb;
             while ((oscb = oneShotCallbacks.poll()) != null) {
-                if (LOG.isLoggable(Level.DEBUG))
-                    LOG.log(Level.DEBUG,
-                            "Checking callback with time = %g at simTimeSecs = %g"
-                                    .formatted(oscb.timeSecs, simTimeSec));
+                LOG.log(Level.DEBUG,
+                        "Checking callback with time = {0} at simTimeSecs = {1}",
+                        oscb.timeSecs, simTimeSec);
                 if (oscb.timeSecs > simTimeSec) {
                     oneShotCallbacks.add(oscb); // Put it back
                     break;
@@ -594,6 +587,7 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     Throwable runExitThrowable = null;
+
     /**
      * Runs the simulation of using the specified WPILib robot.
      * 

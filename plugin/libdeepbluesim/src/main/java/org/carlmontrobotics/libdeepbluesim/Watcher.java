@@ -64,9 +64,7 @@ class Watcher {
      *        of the node to watch.
      */
     static Watcher getByDefPath(String defPath) {
-        var watcher = watcherByDefPath.computeIfAbsent(defPath, (dp) -> {
-            return new Watcher(dp);
-        });
+        var watcher = watcherByDefPath.computeIfAbsent(defPath, Watcher::new);
         watcher.reset();
         return watcher;
     }
@@ -145,7 +143,7 @@ class Watcher {
         }
     }
 
-    static private final double[] dummyPosition = new double[] {0, 0, 0},
+    private static final double[] dummyPosition = new double[] {0, 0, 0},
             dummyRotation = new double[] {0, 0, 0},
             dummyVelocity = new double[] {0, 0, 0, 0, 0, 0};
 
@@ -160,12 +158,10 @@ class Watcher {
                     "NetworkTables is not connected, so starting server");
             inst.startServer();
         }
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Waiting for position of %s to be ready"
-                    .formatted(defPath));
+        LOG.log(Level.DEBUG, "Waiting for position of {0} to be ready",
+                defPath);
         positionReady.join();
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Position of %s is ready".formatted(defPath));
+        LOG.log(Level.DEBUG, "Position of {0} is ready", defPath);
         return position;
     }
 
@@ -180,12 +176,10 @@ class Watcher {
                     "NetworkTables is not connected, so starting server");
             inst.startServer();
         }
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Waiting for velocity of %s to be ready"
-                    .formatted(defPath));
+        LOG.log(Level.DEBUG, "Waiting for velocity of {0} to be ready",
+                defPath);
         velocityReady.join();
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Position of %s is ready".formatted(defPath));
+        LOG.log(Level.DEBUG, "Velocity of {0} is ready", defPath);
         return velocity;
     }
 
@@ -200,12 +194,10 @@ class Watcher {
                     "NetworkTables is not connected, so starting server");
             inst.startServer();
         }
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Waiting for rotation of %s to be ready"
-                    .formatted(defPath));
+        LOG.log(Level.DEBUG, "Waiting for rotation of {0} to be ready",
+                defPath);
         rotationReady.join();
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Rotation of %s is ready".formatted(defPath));
+        LOG.log(Level.DEBUG, "Rotation of {0} is ready", defPath);
         return rotation;
     }
 
@@ -220,12 +212,10 @@ class Watcher {
                     "NetworkTables is not connected, so starting server");
             inst.startServer();
         }
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Waiting for velocity of %s to be ready"
-                    .formatted(defPath));
+        LOG.log(Level.DEBUG, "Waiting for angular velocity of {0} to be ready",
+                defPath);
         rotationReady.join();
-        if (LOG.isLoggable(Level.DEBUG))
-            LOG.log(Level.DEBUG, "Velocity of %s is ready".formatted(defPath));
+        LOG.log(Level.DEBUG, "Angular velocity of {0} is ready", defPath);
         return angularVelocity;
     }
 }

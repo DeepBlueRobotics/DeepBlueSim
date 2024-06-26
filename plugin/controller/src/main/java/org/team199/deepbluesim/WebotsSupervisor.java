@@ -2,8 +2,6 @@ package org.team199.deepbluesim;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Arrays;
@@ -76,7 +74,7 @@ public final class WebotsSupervisor {
             };
 
 
-    private static final BlockingDeque<Runnable> queuedMessages =
+    private static final BlockingDeque<Runnable> queuedEvents =
             new LinkedBlockingDeque<>();
 
     private static int usersSimulationSpeed = 0;
@@ -107,41 +105,40 @@ public final class WebotsSupervisor {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
-        if (NT_LOG_LEVEL > 0)
+        if (NT_LOG_LEVEL > 0) {
             inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
                 if (event.logMessage.level < ntTransientLogLevel)
                     return;
                 LOG.log(Level.DEBUG,
-                        "NT instance log level %d message: %s(%d): %s"
-                                .formatted(event.logMessage.level,
-                                        event.logMessage.filename,
-                                        event.logMessage.line,
-                                        event.logMessage.message));
+                        "NT instance log level {0} message: {1}({2}): {3}",
+                        event.logMessage.level, event.logMessage.filename,
+                        event.logMessage.line, event.logMessage.message);
             });
+        }
 
-        ConnectionProcessor.setThreadExecutor(queuedMessages::add);
+        ConnectionProcessor.setThreadExecutor(queuedEvents::add);
 
         NetworkTable watchedNodes =
                 inst.getTable(NTConstants.WATCHED_NODES_TABLE_NAME);
-        var multiSubscriber = new MultiSubscriber(inst,
+        var watchedNodesSubscriber = new MultiSubscriber(inst,
                 new String[] {NTConstants.WATCHED_NODES_TABLE_NAME + "/"},
                 pubSubOptions);
-        inst.addListener(multiSubscriber, EnumSet.of(Kind.kValueRemote),
+        inst.addListener(watchedNodesSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         var pathComponents =
                                 event.valueData.getTopic().getName().split("/");
                         var name = pathComponents[pathComponents.length - 1];
                         var defPath = pathComponents[pathComponents.length - 2];
                         defPathsToPublish.add(defPath);
                         var subTable = watchedNodes.getSubTable(defPath);
-                        LOG.log(Level.DEBUG, "Received request for %s of %s"
-                                .formatted(name, defPath));
+                        LOG.log(Level.DEBUG, "Received request for {0} of {1}",
+                                name, defPath);
                         var node = robot.getFromDef(defPath);
                         if (node == null) {
                             LOG.log(Level.ERROR,
-                                    "Could not find node for the following DEF path: "
-                                            + defPath);
+                                    "Could not find node for the following DEF path: {0}",
+                                    defPath);
                             return;
                         }
                         switch (name) {
@@ -156,8 +153,7 @@ public final class WebotsSupervisor {
                                 break;
                             default:
                                 LOG.log(Level.ERROR,
-                                        "Don't know how to report '%s'"
-                                                .formatted(name));
+                                        "Don't know how to report '{0}'", name);
                         }
                     });
                 });
@@ -180,18 +176,18 @@ public final class WebotsSupervisor {
         inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
                 (event) -> {
                     var reloadRequest = event.valueData.value.getString();
-                    LOG.log(Level.DEBUG, "In listener, reloadRequest = %s"
-                            .formatted(reloadRequest));
+                    LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
+                            reloadRequest);
                     if (reloadRequest == null)
                         return;
                     var file = new File(reloadRequest);
                     if (!file.isFile()) {
                         LOG.log(Level.ERROR,
-                                "ERROR: Received a request to load file that does not exist: %s"
-                                        .formatted(reloadRequest));
+                                "ERROR: Received a request to load file that does not exist: {0}",
+                                reloadRequest);
                         return;
                     }
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         // Ensure we don't leave any watchers waiting for values they requested
                         // before requesting a new world.
                         closePublishers();
@@ -230,10 +226,10 @@ public final class WebotsSupervisor {
                                 Supervisor.SIMULATION_MODE_REAL_TIME;
                     } else {
                         LOG.log(Level.ERROR,
-                                "Unrecognized simMode of '%s'. Must be either 'Fast' or 'Realtime'"
-                                        .formatted(simMode));
+                                "Unrecognized simMode of '{0}'. Must be either 'Fast' or 'Realtime'",
+                                simMode);
                     }
-                    queuedMessages.add(() -> {
+                    queuedEvents.add(() -> {
                         robot.simulationSetMode(usersSimulationSpeed);
                     });
                 });
@@ -249,9 +245,9 @@ public final class WebotsSupervisor {
                 EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
                     final double robotTimeSec =
                             event.valueData.value.getDouble();
-                    LOG.log(Level.DEBUG,
-                            "Received robotTimeSec=%g".formatted(robotTimeSec));
-                    queuedMessages.add(() -> {
+                    LOG.log(Level.DEBUG, "Received robotTimeSec={0}",
+                            robotTimeSec);
+                    queuedEvents.add(() -> {
                         // Keep stepping the simulation forward until the sim time is more than
                         // the robot time or the simulation ends.
                         for (;;) {
@@ -265,10 +261,9 @@ public final class WebotsSupervisor {
                             boolean isDone = (robot.step(basicTimeStep) == -1);
 
                             simTimeSec = robot.getTime();
-                            LOG.log(Level.DEBUG, "Sending simTimeSec of %g"
-                                    .formatted(simTimeSec));
+                            LOG.log(Level.DEBUG, "Sending simTimeSec of {0}",
+                                    simTimeSec);
                             if (simTimeSecPublisher == null) {
-
                                 LOG.log(Level.WARNING,
                                         "simTimeSecPublisher == null. We are probably disconnected from the robot.");
                             } else {
@@ -289,10 +284,9 @@ public final class WebotsSupervisor {
         inst.addConnectionListener(true, (event) -> {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
-                queuedMessages.add(() -> {
-                    var reloadStatusTopic =
-                            coordinator.getStringTopic(
-                                    NTConstants.RELOAD_STATUS_TOPIC_NAME);
+                queuedEvents.add(() -> {
+                    var reloadStatusTopic = coordinator.getStringTopic(
+                            NTConstants.RELOAD_STATUS_TOPIC_NAME);
                     reloadStatusPublisher =
                             reloadStatusTopic.publish(pubSubOptions);
                     reloadStatusTopic.setCached(false);
@@ -304,24 +298,22 @@ public final class WebotsSupervisor {
                     // Create a publisher for communicating the sim time and request that updates to
                     // it are
                     // communicated as quickly as possible.
-                    var simTimeSecTopic =
-                            coordinator.getDoubleTopic(
-                                    NTConstants.SIM_TIME_SEC_TOPIC_NAME);
+                    var simTimeSecTopic = coordinator.getDoubleTopic(
+                            NTConstants.SIM_TIME_SEC_TOPIC_NAME);
                     simTimeSecPublisher =
                             simTimeSecTopic.publish(pubSubOptions);
-                    LOG.log(Level.DEBUG, "Sending initial simTimeSec of %g"
-                            .formatted(simTimeSec));
+                    LOG.log(Level.DEBUG, "Sending initial simTimeSec of {0}",
+                            simTimeSec);
                     simTimeSecPublisher.set(simTimeSec);
                     simTimeSecTopic.setCached(false);
                     inst.flush();
                 });
                 LOG.log(Level.INFO,
-                        "Connected to NetworkTables server '%s' at %s:%s"
-                                .formatted(event.connInfo.remote_id,
-                                        event.connInfo.remote_ip,
-                                        event.connInfo.remote_port));
+                        "Connected to NetworkTables server '{0}' at {1}:{2}",
+                        event.connInfo.remote_id, event.connInfo.remote_ip,
+                        event.connInfo.remote_port);
             } else if (event.is(Kind.kDisconnected)) {
-                queuedMessages.add(() -> {
+                queuedEvents.add(() -> {
                     if (isWorldLoading)
                         return;
                     LOG.log(Level.INFO,
@@ -353,7 +345,7 @@ public final class WebotsSupervisor {
      */
     public static void runUntilTermination(Supervisor robot, int basicTimeStep)
             throws InterruptedException, IOException {
-        // Process messages until simulation finishes
+        // Process events until simulation finishes
         while (isDoneFuture.getNow(false).booleanValue() == false) {
             try {
                 Simulation.runPeriodicMethods();
@@ -361,15 +353,15 @@ public final class WebotsSupervisor {
                 if (robot.step(0) == -1) {
                     break;
                 }
-                if (!queuedMessages.isEmpty()) {
+                if (!queuedEvents.isEmpty()) {
                     LOG.log(Level.DEBUG, "Processing next queued message");
-                    queuedMessages.takeFirst().run();
+                    queuedEvents.takeFirst().run();
                 } else if (robotTimeSecSubscriber.exists()) {
                     // We are expecting a message from the robot that will tell us when to step
                     // the simulation.
                     LOG.log(Level.DEBUG,
                             "Waiting up to 1 second for a new message");
-                    var msg = queuedMessages.pollFirst(1, TimeUnit.SECONDS);
+                    var msg = queuedEvents.pollFirst(1, TimeUnit.SECONDS);
                     if (msg == null) {
                         LOG.log(Level.WARNING,
                                 "No message from robot for 1 second. It might have disconnected. Pausing.");
@@ -397,14 +389,10 @@ public final class WebotsSupervisor {
                     Thread.sleep(basicTimeStep);
                 }
             } catch (WebsocketNotConnectedException notConnectedException) {
-                try (var sw = new StringWriter();
-                        var pw = new PrintWriter(sw)) {
-                    notConnectedException.printStackTrace(pw);
-                    LOG.log(Level.WARNING,
-                            "No halsim connection to the robot code. Waiting 1 second in case it is restarting. Here is the stacktrace: %s"
-                                    .formatted(sw.toString()));
-                    Thread.sleep(1000);
-                }
+                LOG.log(Level.WARNING,
+                        "No halsim connection to the robot code. Waiting 1 second in case it is restarting. Here is the stacktrace:",
+                        notConnectedException);
+                Thread.sleep(1000);
             }
         }
     }
@@ -426,7 +414,6 @@ public final class WebotsSupervisor {
         reportPositionFor(node, subTable);
         reportRotationFor(node, subTable);
         reportVelocityFor(node, subTable);
-
     }
 
     private static void waitUntilFlushed() {
@@ -472,15 +459,13 @@ public final class WebotsSupervisor {
             var topicComponents = rotationTopic.getName().split("/");
             var defPath = topicComponents[topicComponents.length - 2];
             LOG.log(Level.ERROR,
-                    "rotation of %s has at least one non-finite elements. xyzArray = %s based on node.getOrientation() = %s"
-                            .formatted(defPath, Arrays.toString(xyzArray),
-                                    Arrays.toString(nodeOrientation)));
+                    "rotation of {0} has at least one non-finite elements. xyzArray = {1} based on node.getOrientation() = {2}",
+                    defPath, Arrays.toString(xyzArray),
+                    Arrays.toString(nodeOrientation));
         }
         if (LOG.isLoggable(Level.DEBUG)) {
-            LOG.log(Level.DEBUG,
-                    "Setting rotation of %s to [%g, %g, %g]".formatted(
-                            defPathForTopic(rotationTopic), xyzArray[0],
-                            xyzArray[1], xyzArray[2]));
+            LOG.log(Level.DEBUG, "Setting rotation of {0} to {1}",
+                    defPathForTopic(rotationTopic), Arrays.toString(xyzArray));
         }
         publisher.set(xyzArray);
         inst.flush();
@@ -492,10 +477,8 @@ public final class WebotsSupervisor {
         var publisher = getPublisherByTopic(positionTopic);
         double[] pos = node.getPosition().clone();
         if (LOG.isLoggable(Level.DEBUG)) {
-            LOG.log(Level.DEBUG,
-                    "Setting position of %s to [%g, %g, %g]".formatted(
-                            defPathForTopic(positionTopic), pos[0], pos[1],
-                            pos[2]));
+            LOG.log(Level.DEBUG, "Setting position of {0} to {1}",
+                    defPathForTopic(positionTopic), Arrays.toString(pos));
         }
         publisher.set(pos);
         inst.flush();
