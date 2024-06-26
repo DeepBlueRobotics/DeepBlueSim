@@ -143,7 +143,7 @@ class Watcher {
         }
     }
 
-    static private final double[] dummyPosition = new double[] {0, 0, 0},
+    private static final double[] dummyPosition = new double[] {0, 0, 0},
             dummyRotation = new double[] {0, 0, 0},
             dummyVelocity = new double[] {0, 0, 0, 0, 0, 0};
 
