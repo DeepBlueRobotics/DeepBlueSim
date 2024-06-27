@@ -126,12 +126,15 @@ testing {
         systemTest(JvmTestSuite)  {
             dependencies {
                 implementation project()
+                implementation deepbluesim.testDep()
             }
 
             targets {
                 all {
                     testTask.configure {
                         shouldRunAfter(test)
+                        systemProperty 'java.util.logging.config.file', 'logging.properties'
+                        inputs.file('logging.properties')
                     }
                 }
             }

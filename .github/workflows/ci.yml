@@ -53,6 +53,15 @@ jobs:
         name: Webots log for ${{ runner.os }}
         path: webots-${{ runner.os }}.log
 
+    - name: Archive java logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: Java logs for ${{ runner.os }}
+        path: |
+          ~/DeepBlueSim*.log
+          ~/example*.log
+
   publish:
     # Only release from the master branch
     if: github.ref == 'refs/heads/master'

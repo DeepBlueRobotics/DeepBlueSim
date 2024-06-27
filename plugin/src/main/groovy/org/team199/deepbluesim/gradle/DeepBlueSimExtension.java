@@ -12,6 +12,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.Provider;
 import org.gradle.internal.os.OperatingSystem;
 import org.gradle.process.JavaForkOptions;
@@ -39,6 +40,15 @@ public class DeepBlueSimExtension {
         this.wpi = wpi;
     }
 
+    /**
+     * Returns a dependency that should be added to any test configuration that wants to work
+     * effectively with DeepBlueSim.
+     * 
+     * @return the test library dependency
+     */
+    public FileTree testDep() {
+        return project.fileTree("libdeepbluesim");
+    }
     
     /** 
      * Configures the tasks so that they can use the WPILib simulation extensions that are enabled by default.

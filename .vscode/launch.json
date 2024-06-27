@@ -10,7 +10,8 @@
             "request": "launch",
             "mainClass": "DeepBlueSim",
             "projectName": "controller",
-            "preLaunchTask": "Build Controller"
+            "preLaunchTask": "Build Controller",
+            "cwd": "${workspaceFolder}/example/Webots/controllers/DeepBlueSim"
         },
         {
             "type": "java",
@@ -19,7 +20,8 @@
             "mainClass": "DeepBlueSim",
             "projectName": "controller",
             "preLaunchTask": "Build Controller",
-            "args": "--no-robot-code"
+            "args": "--no-robot-code",
+            "cwd": "${workspaceFolder}/example/Webots/controllers/DeepBlueSim"
         }
     ]
 }

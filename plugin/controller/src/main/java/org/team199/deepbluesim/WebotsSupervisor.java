@@ -1,20 +1,28 @@
 package org.team199.deepbluesim;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+
+import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 
 import org.ejml.simple.SimpleMatrix;
 import org.team199.wpiws.connection.ConnectionProcessor;
-import org.team199.wpiws.devices.SimDeviceSim;
-import org.team199.wpiws.interfaces.ObjectCallback;
 
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
+
+import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.Supervisor;
 
 import edu.wpi.first.math.Matrix;
@@ -23,25 +31,51 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.DoubleArrayTopic;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.LogMessage;
+import edu.wpi.first.networktables.MultiSubscriber;
+import edu.wpi.first.networktables.NetworkTableEvent.Kind;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.Topic;
 
 /**
  * Synchronizes the Webots and WPILib simulations and publishes the robot's position, orientation,
  * and velocity to Network Tables
  */
 public final class WebotsSupervisor {
+    // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
+    // are using the default system logger, edit the the
+    // Webots/controllers/DeepBlueSim/logging.properties file so that ".level=FINE".
+    private static Logger LOG =
+            System.getLogger(WebotsSupervisor.class.getName());
 
-    private static final BlockingDeque<Runnable> queuedMessages =
+    private static NetworkTableInstance inst = null;
+    private static DoublePublisher simTimeSecPublisher = null;
+    private static StringPublisher reloadStatusPublisher = null;
+    private static DoubleSubscriber robotTimeSecSubscriber = null;
+
+    // Use these to control NetworkTables logging.
+    // - ntLoglevel = 0 means no NT logging
+    // - ntLogLevel > 0 means log NT log messages that have a level that is >= *both* ntLogLevel and
+    // ntTransientLogLevel. Typically set ntLogLevel = LogMessage.kDebug4 and then, while running
+    // code requiring detailed logging, set ntTransientLogLevel to LogMessage.kDebug4.
+    private static final int NT_LOG_LEVEL = LogMessage.kInfo;
+    private static volatile int ntTransientLogLevel = LogMessage.kInfo;
+
+    private static volatile boolean isWorldLoading = false;
+
+    final static PubSubOption[] pubSubOptions =
+            new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
+                    PubSubOption.keepDuplicates(true), // including duplicates
+                    PubSubOption.periodic(Double.MIN_VALUE), // ASAP
+            };
+
+
+    private static final BlockingDeque<Runnable> queuedEvents =
             new LinkedBlockingDeque<>();
-
-    /**
-     * Time value set by the simulator and the robot to indicate that the simulation should start.
-     */
-    private static final double START_SIMULATION = -2.0;
-
-    /**
-     * The time in milliseconds since the last timestep update from the robot.
-     */
-    private static volatile long lastStepMillis = 0;
 
     private static int usersSimulationSpeed = 0;
 
@@ -55,17 +89,9 @@ public final class WebotsSupervisor {
 
     private static CompletableFuture<Boolean> isDoneFuture =
             new CompletableFuture<>();
-    private static SimDeviceSim timeSynchronizerSim;
 
     private static Set<String> defPathsToPublish =
             new ConcurrentSkipListSet<String>();
-
-    private static Map<String, DoubleArrayPublisher> positionPublisherByDefPath =
-            new HashMap<>();
-    private static Map<String, DoubleArrayPublisher> rotationPublisherByDefPath =
-            new HashMap<>();
-    private static Map<String, DoubleArrayPublisher> velocityPublisherByDefPath =
-            new HashMap<>();
 
     /**
      * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
@@ -76,148 +102,246 @@ public final class WebotsSupervisor {
      *        simulation
      */
     public static void init(Supervisor robot, int basicTimeStep) {
-        ConnectionProcessor.setThreadExecutor(queuedMessages::add);
+        // Use the default NetworkTables instance to coordinate with robot code
+        inst = NetworkTableInstance.getDefault();
 
-        NetworkTable table =
-                NetworkTableInstance.getDefault().getTable("WebotsSupervisor");
+        addNetworkTablesLogger();
 
-        table.addSubTableListener((parent, name, t) -> {
-            defPathsToPublish.add(name);
-        });
+        ConnectionProcessor.setThreadExecutor(queuedEvents::add);
 
-        updateUsersSimulationSpeed(robot);
-        // Use a SimDeviceSim to coordinate with robot code
-        timeSynchronizerSim = new SimDeviceSim("TimeSynchronizer");
-
-        // Regularly report the position, rotation, and/or velocity of the requested nodes
-        Simulation.registerPeriodicMethod(() -> {
-            for (var defPath : defPathsToPublish) {
-                var node = robot.getFromDef(defPath);
-                if (node == null) {
-                    System.err.println(
-                            "Could not find node for the following DEF path: "
-                                    + defPath);
-                    continue;
-                }
-                var subTable = table.getSubTable(defPath);
-                if (subTable == null) {
-                    System.err.println(
-                            "Could not find subtable for the following DEF path: "
-                                    + defPath);
-                    continue;
-                }
-                var positionTopic = subTable.getDoubleArrayTopic("position");
-                if (positionTopic.exists()) {
-                    var publisher = positionPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> positionTopic.publish());
-                    publisher.set(node.getPosition());
-                }
-                var rotationTopic = subTable.getDoubleArrayTopic("rotation");
-                if (rotationTopic.exists()) {
-                    var simpleMatrix =
-                            new SimpleMatrix(3, 3, true, node.getOrientation());
-                    var rotation =
-                            new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
-                    var publisher = rotationPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> rotationTopic.publish());
-                    publisher.set(new double[] {rotation.getX(),
-                            rotation.getY(), rotation.getZ()});
-                }
-                var velocityTopic = subTable.getDoubleArrayTopic("velocity");
-                if (velocityTopic.exists()) {
-                    var publisher = velocityPublisherByDefPath.computeIfAbsent(
-                            defPath, (key) -> velocityTopic.publish());
-                    publisher.set(node.getVelocity());
-                }
-            }
-        });
-
-        Timer simPauseTimer = new Timer();
-
-        // Whenever the robot time changes, step the simulation until just past that time
-        timeSynchronizerSim.registerValueChangedCallback("robotTimeSec",
-                new ObjectCallback<String>() {
-                    @Override
-                    public synchronized void callback(String name,
-                            String value) {
-                        // Ignore null default initial value
-                        if (value == null)
-                            return;
-
-                        double robotTimeSec = Double.parseDouble(value);
-
-                        // If we are asked to start the simulation, reload the world.
-                        // this will restart this controller process so that we are running the most
-                        // recent controller.
-                        if (robotTimeSec == START_SIMULATION) {
-                            // Cancel the sim pause timer so that it doesn't pause the simulation
-                            // after we unpause it below.
-                            simPauseTimer.cancel();
-                            // Unpause before reloading so that the new controller can take it's
-                            // first step.
-                            robot.simulationSetMode(usersSimulationSpeed);
-                            robot.worldReload();
+        NetworkTable watchedNodes =
+                inst.getTable(NTConstants.WATCHED_NODES_TABLE_NAME);
+        var watchedNodesSubscriber = new MultiSubscriber(inst,
+                new String[] {NTConstants.WATCHED_NODES_TABLE_NAME + "/"},
+                pubSubOptions);
+        inst.addListener(watchedNodesSubscriber, EnumSet.of(Kind.kValueRemote),
+                (event) -> {
+                    queuedEvents.add(() -> {
+                        var pathComponents =
+                                event.valueData.getTopic().getName().split("/");
+                        var name = pathComponents[pathComponents.length - 1];
+                        var defPath = pathComponents[pathComponents.length - 2];
+                        defPathsToPublish.add(defPath);
+                        var subTable = watchedNodes.getSubTable(defPath);
+                        LOG.log(Level.DEBUG, "Received request for {0} of {1}",
+                                name, defPath);
+                        var node = robot.getFromDef(defPath);
+                        if (node == null) {
+                            LOG.log(Level.ERROR,
+                                    "Could not find node for the following DEF path: {0}",
+                                    defPath);
                             return;
                         }
+                        switch (name) {
+                            case NTConstants.POSITION_TOPIC_NAME:
+                                reportPositionFor(node, subTable);
+                                break;
+                            case NTConstants.ROTATION_TOPIC_NAME:
+                                reportRotationFor(node, subTable);
+                                break;
+                            case NTConstants.VELOCITY_TOPIC_NAME:
+                                reportVelocityFor(node, subTable);
+                                break;
+                            default:
+                                LOG.log(Level.ERROR,
+                                        "Don't know how to report '{0}'", name);
+                        }
+                    });
+                });
 
-                        // Keep stepping the simulation forward until the sim time is more than the
-                        // robot time
-                        // or the simulation ends.
+        updateUsersSimulationSpeed(robot);
+        final CompletableFuture<Boolean> isDoneFuture =
+                new CompletableFuture<Boolean>();
+
+        NetworkTable coordinator =
+                inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
+
+        // Add a listener to handle reload requests.
+        var reloadRequestTopic = coordinator
+                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
+        try (var p = reloadRequestTopic.publish(pubSubOptions)) {
+            reloadRequestTopic.setCached(false);
+        }
+        var reloadRequestSubscriber =
+                reloadRequestTopic.subscribe("", pubSubOptions);
+        inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
+                (event) -> {
+                    var reloadRequest = event.valueData.value.getString();
+                    LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
+                            reloadRequest);
+                    if (reloadRequest == null)
+                        return;
+                    var file = new File(reloadRequest);
+                    if (!file.isFile()) {
+                        LOG.log(Level.ERROR,
+                                "ERROR: Received a request to load file that does not exist: {0}",
+                                reloadRequest);
+                        return;
+                    }
+                    queuedEvents.add(() -> {
+                        // Ensure we don't leave any watchers waiting for values they requested
+                        // before requesting a new world.
+                        closePublishers();
+                        waitUntilFlushed();
+                        inst.stopClient();
+                        inst.close();
+
+                        // Unpause before reloading so that the new controller can take it's
+                        // first step.
+                        updateUsersSimulationSpeed(robot);
+                        robot.simulationSetMode(usersSimulationSpeed);
+                        isWorldLoading = true;
+                        robot.worldLoad(reloadRequest);
+                    });
+                });
+
+        // Add a listener to handle simMode requests.
+        var simModeTopic =
+                coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
+        try (var p = simModeTopic.publish(pubSubOptions)) {
+            simModeTopic.setCached(false);
+        }
+        var simModeSubscriber = simModeTopic.subscribe("", pubSubOptions);
+        inst.addListener(simModeSubscriber, EnumSet.of(Kind.kValueRemote),
+                (event) -> {
+                    var simMode = event.valueData.value.getString();
+                    LOG.log(Level.DEBUG,
+                            "In listener, simMode = %s".formatted(simMode));
+                    if (simMode == null)
+                        return;
+                    if (simMode.equals(NTConstants.SIM_MODE_FAST_VALUE)) {
+                        usersSimulationSpeed = Supervisor.SIMULATION_MODE_FAST;
+                    } else if (simMode
+                            .equals(NTConstants.SIM_MODE_REALTIME_VALUE)) {
+                        usersSimulationSpeed =
+                                Supervisor.SIMULATION_MODE_REAL_TIME;
+                    } else {
+                        LOG.log(Level.ERROR,
+                                "Unrecognized simMode of '{0}'. Must be either 'Fast' or 'Realtime'",
+                                simMode);
+                    }
+                    queuedEvents.add(() -> {
+                        robot.simulationSetMode(usersSimulationSpeed);
+                    });
+                });
+
+        // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
+        // the robot of the new sim time.
+        var robotTimeSecTopic = coordinator
+                .getDoubleTopic(NTConstants.ROBOT_TIME_SEC_TOPIC_NAME);
+        robotTimeSecTopic.setCached(false);
+        robotTimeSecSubscriber =
+                robotTimeSecTopic.subscribe(-1.0, pubSubOptions);
+        inst.addListener(robotTimeSecSubscriber,
+                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
+                    final double robotTimeSec =
+                            event.valueData.value.getDouble();
+                    LOG.log(Level.DEBUG, "Received robotTimeSec={0}",
+                            robotTimeSec);
+                    queuedEvents.add(() -> {
+                        // Keep stepping the simulation forward until the sim time is more than
+                        // the robot time or the simulation ends.
                         for (;;) {
                             double simTimeSec = robot.getTime();
                             if (simTimeSec > robotTimeSec) {
                                 break;
                             }
                             // Unpause if necessary
+                            updateUsersSimulationSpeed(robot);
                             robot.simulationSetMode(usersSimulationSpeed);
                             boolean isDone = (robot.step(basicTimeStep) == -1);
 
-                            // If that was our first step, schedule a task to pause the simulator if
-                            // it
-                            // doesn't taken any steps for 1-2 seconds so it doesn't suck up CPU.
-                            if (lastStepMillis == 0) {
-                                simPauseTimer.schedule(new TimerTask() {
-                                    @Override
-                                    public void run() {
-                                        if (System.currentTimeMillis()
-                                                - lastStepMillis > 1000) {
-                                            queuedMessages.add(() -> {
-                                                updateUsersSimulationSpeed(
-                                                        robot);
-                                                robot.simulationSetMode(
-                                                        Supervisor.SIMULATION_MODE_PAUSE);
-                                            });
-                                        }
-                                    }
-                                }, 1000, 1000);
+                            simTimeSec = robot.getTime();
+                            LOG.log(Level.DEBUG, "Sending simTimeSec of {0}",
+                                    simTimeSec);
+                            if (simTimeSecPublisher == null) {
+                                LOG.log(Level.WARNING,
+                                        "simTimeSecPublisher == null. We are probably disconnected from the robot.");
+                            } else {
+                                simTimeSecPublisher.set(simTimeSec);
                             }
-
-                            lastStepMillis = System.currentTimeMillis();
-                            timeSynchronizerSim.set("simTimeSec",
-                                    robot.getTime());
+                            inst.flush();
                             if (isDone) {
                                 isDoneFuture.complete(true);
                                 break;
                             }
                             Simulation.runPeriodicMethods();
                         }
-                    }
-                }, true);
+                    });
+                });
 
+        // When a connection is (re-)established with the server, tell it that we are ready. When
+        // the server sees that message, it knows that we will receive future messages.
+        inst.addConnectionListener(true, (event) -> {
+            LOG.log(Level.DEBUG, "In connection listener");
+            if (event.is(Kind.kConnected)) {
+                queuedEvents.add(() -> {
+                    var reloadStatusTopic = coordinator.getStringTopic(
+                            NTConstants.RELOAD_STATUS_TOPIC_NAME);
+                    reloadStatusPublisher =
+                            reloadStatusTopic.publish(pubSubOptions);
+                    reloadStatusTopic.setCached(false);
+                    LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
+                    reloadStatusPublisher
+                            .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
+                    var simTimeSec = robot.getTime();
 
-        // If the robot code starts before we us, then it might have already tried to tell
-        // us it was ready and we would have missed it. So, we tell it we're ready when we
-        // connect to it.
-        ConnectionProcessor.addOpenListener(() -> {
-            timeSynchronizerSim.set("simTimeSec", START_SIMULATION);
+                    // Create a publisher for communicating the sim time and request that updates to
+                    // it are
+                    // communicated as quickly as possible.
+                    var simTimeSecTopic = coordinator.getDoubleTopic(
+                            NTConstants.SIM_TIME_SEC_TOPIC_NAME);
+                    simTimeSecPublisher =
+                            simTimeSecTopic.publish(pubSubOptions);
+                    LOG.log(Level.DEBUG, "Sending initial simTimeSec of {0}",
+                            simTimeSec);
+                    simTimeSecPublisher.set(simTimeSec);
+                    simTimeSecTopic.setCached(false);
+                    inst.flush();
+                });
+                LOG.log(Level.INFO,
+                        "Connected to NetworkTables server '{0}' at {1}:{2}",
+                        event.connInfo.remote_id, event.connInfo.remote_ip,
+                        event.connInfo.remote_port);
+            } else if (event.is(Kind.kDisconnected)) {
+                queuedEvents.add(() -> {
+                    if (isWorldLoading)
+                        return;
+                    LOG.log(Level.INFO,
+                            "Disconnected from NetworkTables server so closing publishers and pausing simulation.");
+                    closePublishers();
+                    waitUntilFlushed();
+                    inst.stopClient();
+                    robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
+
+                    // The current NT implementation makes the next 4 lines unnecessary. They are
+                    // here in case that implementation changes.
+                    inst.close();
+                    inst = NetworkTableInstance.getDefault();
+                    inst.startClient4("Webots controller");
+                    inst.setServer("localhost");
+                });
+            }
         });
+    }
 
+    @SuppressWarnings("unused")
+    private static void addNetworkTablesLogger() {
+        if (NT_LOG_LEVEL > 0) {
+            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
+                if (event.logMessage.level < ntTransientLogLevel)
+                    return;
+                LOG.log(Level.DEBUG,
+                        "NT instance log level {0} message: {1}({2}): {3}",
+                        event.logMessage.level, event.logMessage.filename,
+                        event.logMessage.line, event.logMessage.message);
+            });
+        }
     }
 
     /**
      * Processes messages from the robot code while advancing the simulation and running periodic
      * methods in time with the code.
-     *
      *
      * @param robot The robot to use to control the simulation
      * @param basicTimeStep The timestep to pass to {@link Supervisor#step(int)} to advance the
@@ -225,32 +349,144 @@ public final class WebotsSupervisor {
      * @throws InterruptedException
      */
     public static void runUntilTermination(Supervisor robot, int basicTimeStep)
-            throws InterruptedException {
-        // Process incoming messages until simulation finishes
+            throws InterruptedException, IOException {
+        // Process events until simulation finishes
         while (isDoneFuture.getNow(false).booleanValue() == false) {
-            if (timeSynchronizerSim.get("robotTimeSec") != null
-                    || !queuedMessages.isEmpty()) {
-                // Either there is a message waiting or it is ok to wait for it because the
-                // robot code will tell us when to step the simulation.
-                queuedMessages.takeFirst().run();
-            } else if (timeSynchronizerSim.get("robotTimeSec") == null && robot
-                    .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
-                // The robot code isn't going to tell us when to step the simulation and the
-                // user has unpaused it.
+            try {
                 Simulation.runPeriodicMethods();
-                if (robot.step(basicTimeStep) == -1) {
-                    break;
-                }
-            } else {
-                // The simulation is paused and robot code isn't in control so wait a beat
-                // before checking again (so we don't suck up all the CPU)
-                Thread.sleep(20);
                 // Process any pending user interface events.
                 if (robot.step(0) == -1) {
                     break;
                 }
+                if (!queuedEvents.isEmpty()) {
+                    LOG.log(Level.DEBUG, "Processing next queued message");
+                    queuedEvents.takeFirst().run();
+                } else if (robotTimeSecSubscriber.exists()) {
+                    // We are expecting a message from the robot that will tell us when to step
+                    // the simulation.
+                    LOG.log(Level.DEBUG,
+                            "Waiting up to 1 second for a new message");
+                    var msg = queuedEvents.pollFirst(1, TimeUnit.SECONDS);
+                    if (msg == null) {
+                        LOG.log(Level.WARNING,
+                                "No message from robot for 1 second. It might have disconnected. Pausing.");
+                        robot.simulationSetMode(
+                                Supervisor.SIMULATION_MODE_PAUSE);
+                        continue;
+                    }
+                    msg.run();
+                } else if (robot
+                        .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
+                    // The robot code isn't going to tell us when to step the simulation and the
+                    // user has unpaused it.
+                    LOG.log(Level.DEBUG,
+                            "Simulation is not paused and no robot code in control. Calling robot.step(basicTimeStep)");
+
+                    if (robot.step(basicTimeStep) == -1) {
+                        break;
+                    }
+                    LOG.log(Level.DEBUG, "robot.step(basicTimeStep) returned");
+                } else {
+                    // The simulation is paused and robot code isn't in control so wait a beat
+                    // before checking again (so we don't suck up all the CPU)
+                    LOG.log(Level.DEBUG,
+                            "Simulation is paused and no robot code in control. Sleeping for a step");
+                    Thread.sleep(basicTimeStep);
+                }
+            } catch (WebsocketNotConnectedException notConnectedException) {
+                LOG.log(Level.WARNING,
+                        "No halsim connection to the robot code. Waiting 1 second in case it is restarting. Here is the stacktrace:",
+                        notConnectedException);
+                Thread.sleep(1000);
             }
         }
+    }
+
+    private static void closePublishers() {
+        if (simTimeSecPublisher != null)
+            simTimeSecPublisher.close();
+        simTimeSecPublisher = null;
+        if (reloadStatusPublisher != null)
+            reloadStatusPublisher.close();
+        reloadStatusPublisher = null;
+        for (var entry : publisherByTopic.entrySet()) {
+            entry.getValue().close();
+        }
+        publisherByTopic.clear();
+    }
+
+    private static void waitUntilFlushed() {
+        try {
+            Thread.sleep(6);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+        inst.flush();
+    }
+
+    private static Map<String, DoubleArrayPublisher> publisherByTopic =
+            new HashMap<>();
+
+    private static DoubleArrayPublisher getPublisherByTopic(
+            DoubleArrayTopic topic) {
+        var topicName = topic.getName();
+        return publisherByTopic.computeIfAbsent(topicName, (tn) -> {
+            return topic.publish(pubSubOptions);
+        });
+    }
+
+    private static void reportVelocityFor(Node node, NetworkTable subTable) {
+        var velocityTopic =
+                subTable.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
+        var publisher = getPublisherByTopic(velocityTopic);
+        publisher.set(node.getVelocity().clone());
+        inst.flush();
+    }
+
+    private static void reportRotationFor(Node node, NetworkTable subTable) {
+        var rotationTopic =
+                subTable.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
+        var nodeOrientation = node.getOrientation();
+        var simpleMatrix = new SimpleMatrix(3, 3, true, nodeOrientation);
+        var rotation = new Rotation3d(new Matrix<N3, N3>(simpleMatrix));
+        var publisher = getPublisherByTopic(rotationTopic);
+        double[] xyzArray = new double[] {rotation.getX(), rotation.getY(),
+                rotation.getZ()};
+        boolean hasNonFinite =
+                Arrays.stream(xyzArray).anyMatch(v -> !Double.isFinite(v));
+        if (hasNonFinite) {
+            var topicComponents = rotationTopic.getName().split("/");
+            var defPath = topicComponents[topicComponents.length - 2];
+            LOG.log(Level.ERROR,
+                    "rotation of {0} has at least one non-finite elements. xyzArray = {1} based on node.getOrientation() = {2}",
+                    defPath, Arrays.toString(xyzArray),
+                    Arrays.toString(nodeOrientation));
+        }
+        if (LOG.isLoggable(Level.DEBUG)) {
+            LOG.log(Level.DEBUG, "Setting rotation of {0} to {1}",
+                    defPathForTopic(rotationTopic), Arrays.toString(xyzArray));
+        }
+        publisher.set(xyzArray);
+        inst.flush();
+    }
+
+    private static void reportPositionFor(Node node, NetworkTable subTable) {
+        var positionTopic =
+                subTable.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
+        var publisher = getPublisherByTopic(positionTopic);
+        double[] pos = node.getPosition().clone();
+        if (LOG.isLoggable(Level.DEBUG)) {
+            LOG.log(Level.DEBUG, "Setting position of {0} to {1}",
+                    defPathForTopic(positionTopic), Arrays.toString(pos));
+        }
+        publisher.set(pos);
+        inst.flush();
+    }
+
+    private static String defPathForTopic(Topic topic) {
+        var topicComponents = topic.getName().split("/");
+        var defPath = topicComponents[topicComponents.length - 2];
+        return defPath;
     }
 
     private WebotsSupervisor() {}

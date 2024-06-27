@@ -1,8 +1,11 @@
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.URISyntaxException;
 
 import org.java_websocket.client.WebSocketClient;
+
 import org.team199.deepbluesim.SimRegisterer;
 import org.team199.deepbluesim.Simulation;
 import org.team199.deepbluesim.WebotsSupervisor;
@@ -24,19 +27,33 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-// NOTE: Webots expects the controller class to *not* be in a package and have a name that matches the
+// NOTE: Webots expects the controller class to *not* be in a package and have a name that matches
 // the name of the jar.
 public class DeepBlueSim {
+    // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
+    // are using the default system logger, edit the the
+    // Webots/controllers/DeepBlueSim/logging.properties file so that ".level=FINE".
+    private static Logger LOG = null;
 
     private static RunningObject<WebSocketClient> wsConnection = null;
 
+    private static void startNetworkTablesClient(NetworkTableInstance inst) {
+        inst.startClient4("Webots controller");
+        inst.setServer("localhost");
+    }
+
     public static void main(String[] args) throws IOException {
+        System.setProperty("java.util.logging.config.file",
+                "logging.properties");
+        LOG = System.getLogger(DeepBlueSim.class.getName());
+        LOG.log(Level.DEBUG, "Starting log");
         // Set up exception handling to log to stderr and exit
         {
             UncaughtExceptionHandler eh = new UncaughtExceptionHandler() {
                 @Override
-                public void uncaughtException(Thread arg0, Throwable arg1) {
-                    arg1.printStackTrace(System.err);
+                public void uncaughtException(Thread arg0, Throwable t) {
+                    LOG.log(Level.ERROR,
+                            "Uncaught exception! Here is the stacktrace:", t);
                     System.err.flush();
                     System.exit(1);
                 }
@@ -64,7 +81,8 @@ public class DeepBlueSim {
         Runtime.getRuntime().addShutdownHook(new Thread(robot::delete));
 
         if (!robot.getSupervisor()) {
-            System.err.println("The robot does not have supervisor=true. This is required to detect devices.");
+            LOG.log(Level.ERROR,
+                    "The robot does not have supervisor=true. This is required to detect devices.");
             System.exit(1);
         }
 
@@ -75,8 +93,7 @@ public class DeepBlueSim {
         // Connect to Network Tables
         if (!cmd.hasOption("no-network-tables")) {
             NetworkTableInstance inst = NetworkTableInstance.getDefault();
-            inst.startClient4("Webots controller");
-            inst.setServer("localhost");
+            startNetworkTablesClient(inst);
         }
 
         if (connectToRobotCode) {
@@ -91,18 +108,18 @@ public class DeepBlueSim {
 
         SimRegisterer.connectDevices();
 
+
         if (connectToRobotCode) {
             // Pause the simulation until either the robot code tells us to proceed or the
             // user does.
             robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
 
-            // Connect to the robot code
+            // Connect to the robot code on a separate thread. Does not block.
             try {
                 wsConnection = WSConnection.connectHALSim(true);
             } catch (URISyntaxException e) {
-                System.err.println("Error occurred connecting to server:");
-                e.printStackTrace(System.err);
-                System.err.flush();
+                LOG.log(Level.ERROR,
+                        "Error occurred connecting to server:", e);
                 System.exit(1);
                 return;
             }
@@ -126,12 +143,14 @@ public class DeepBlueSim {
                     Simulation.runPeriodicMethods();
                 }
             }
-        } catch (Exception ex) {
-            throw new RuntimeException("Exception while waiting for simulation to be done", ex);
+        } catch (Throwable ex) {
+            LOG.log(Level.ERROR,
+                    "Exception while waiting for simulation to be done:", ex);
+            throw new RuntimeException(
+                    "Exception while waiting for simulation to be done", ex);
         }
 
-        System.out.println("Shutting down DeepBlueSim...");
-        System.out.flush();
+        LOG.log(Level.INFO, "Shutting down DeepBlueSim...");
 
         System.exit(0);
     }
@@ -165,5 +184,4 @@ public class DeepBlueSim {
             return null;
         }
     }
-
 }
