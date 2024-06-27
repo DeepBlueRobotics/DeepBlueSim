@@ -97,16 +97,7 @@ public class WebotsSimulator implements AutoCloseable {
     public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
-        if (NT_LOG_LEVEL > 0) {
-            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
-                if (event.logMessage.level < ntTransientLogLevel)
-                    return;
-                LOG.log(Level.DEBUG,
-                        "NT instance log level {0} message: {1}({2}): {3}",
-                        event.logMessage.level, event.logMessage.filename,
-                        event.logMessage.line, event.logMessage.message);
-            });
-        }
+        addNetworkTablesLogger();
 
         coordinator = inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
         var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
@@ -135,6 +126,20 @@ public class WebotsSimulator implements AutoCloseable {
                 coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
         simModePublisher = simModeTopic.publish(pubSubOptions);
         simModeTopic.setCached(false);
+    }
+
+    @SuppressWarnings("unused")
+    private void addNetworkTablesLogger() {
+        if (NT_LOG_LEVEL > 0) {
+            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
+                if (event.logMessage.level < ntTransientLogLevel)
+                    return;
+                LOG.log(Level.DEBUG,
+                        "NT instance log level {0} message: {1}({2}): {3}",
+                        event.logMessage.level, event.logMessage.filename,
+                        event.logMessage.line, event.logMessage.message);
+            });
+        }
     }
 
     private volatile double simTimeSec = 0.0;
