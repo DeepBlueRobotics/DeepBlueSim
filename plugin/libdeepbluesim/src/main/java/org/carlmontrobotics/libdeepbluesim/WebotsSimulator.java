@@ -169,6 +169,11 @@ public class WebotsSimulator implements AutoCloseable {
     private volatile boolean isReady = false;
     private volatile boolean isRobotCodeRunning = false;
     private AtomicBoolean isRobotTimeStarted = new AtomicBoolean(false);
+
+    // TODO: Add a method that allows this to be set to false if the user wants to run the *robot*
+    // code in real time instead of as fast as possible. That might be useful if there is robot (or
+    // vendor) code that uses a time source other than WPILib. Not temporarily making it a constant
+    // (ie. final) because that will cause the compiler/vscode to warn about dead code.
     private boolean useStepTiming = true;
 
     /** Start the robot timing if we haven't already. */
@@ -375,13 +380,9 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     private void runAllCallbacks() {
-        try {
+        try (var simState = new SimulationState()) {
             // Run all the callbacks up to the new sim time.
-            everyStepCallbacks.forEach((escb) -> {
-                try (var simState = new SimulationState()) {
-                    escb.accept(simState);
-                }
-            });
+            everyStepCallbacks.forEach(escb -> escb.accept(simState));
             LOG.log(Level.DEBUG, "Handling atSec() callbacks");
             OneShotCallback oscb;
             while ((oscb = oneShotCallbacks.poll()) != null) {
@@ -395,11 +396,9 @@ public class WebotsSimulator implements AutoCloseable {
                 var cb = oscb.callback();
                 if (cb == null)
                     continue;
-                try (var simState = new SimulationState()) {
-                    LOG.log(Level.DEBUG, "Calling callback");
-                    oscb.callback().accept(simState);
-                    LOG.log(Level.DEBUG, "Callback returned");
-                }
+                LOG.log(Level.DEBUG, "Calling callback");
+                oscb.callback().accept(simState);
+                LOG.log(Level.DEBUG, "Callback returned");
             }
         } catch (Throwable throwable) {
             // One of the callbacks threw an error, so remember it and then stop the run by clearing
@@ -409,7 +408,7 @@ public class WebotsSimulator implements AutoCloseable {
             oneShotCallbacks.clear();
             everyStepCallbacks.clear();
         } finally {
-            LOG.log(Level.DEBUG, "Done handling atSec() callbacks");
+            LOG.log(Level.DEBUG, "Done handling callbacks");
             if (oneShotCallbacks.isEmpty()) {
                 LOG.log(Level.DEBUG,
                         "Ran last atSec() callback so scheduling end of run.");

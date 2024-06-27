@@ -410,12 +410,6 @@ public final class WebotsSupervisor {
         publisherByTopic.clear();
     }
 
-    private static void reportKinematicsFor(Node node, NetworkTable subTable) {
-        reportPositionFor(node, subTable);
-        reportRotationFor(node, subTable);
-        reportVelocityFor(node, subTable);
-    }
-
     private static void waitUntilFlushed() {
         try {
             Thread.sleep(6);

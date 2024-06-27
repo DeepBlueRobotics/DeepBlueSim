@@ -83,7 +83,7 @@ class Watcher {
         // Ask that the robot's position, rotation, and velocity be updated for us every
         // simulation step
         table.addListener(EnumSet.of(Kind.kValueRemote), (t, key, value) -> {
-            synchronized (Watcher.class) {
+            synchronized (this) {
                 switch (key) {
                     case NTConstants.POSITION_TOPIC_NAME:
                         double[] posAsArray =
@@ -115,32 +115,30 @@ class Watcher {
         });
     }
 
-    private void reset() {
-        synchronized (Watcher.class) {
-            positionReady = new CompletableFuture<>();
-            rotationReady = new CompletableFuture<>();
-            velocityReady = new CompletableFuture<>();
-            var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
+    private synchronized void reset() {
+        positionReady = new CompletableFuture<>();
+        rotationReady = new CompletableFuture<>();
+        velocityReady = new CompletableFuture<>();
+        var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
-            };
-            positionTopic =
-                    table.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
-            positionPublisher = positionTopic.publish(pubSubOptions);
-            positionTopic.setCached(false);
-            positionPublisher.set(dummyPosition);
-            rotationTopic =
-                    table.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
-            rotationPublisher = rotationTopic.publish(pubSubOptions);
-            rotationTopic.setCached(false);
-            rotationPublisher.set(dummyRotation);
-            velocityTopic =
-                    table.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
-            velocityPublisher = velocityTopic.publish(pubSubOptions);
-            velocityTopic.setCached(false);
-            velocityPublisher.set(dummyVelocity);
-            inst.flush();
-        }
+        };
+        positionTopic =
+                table.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
+        positionPublisher = positionTopic.publish(pubSubOptions);
+        positionTopic.setCached(false);
+        positionPublisher.set(dummyPosition);
+        rotationTopic =
+                table.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
+        rotationPublisher = rotationTopic.publish(pubSubOptions);
+        rotationTopic.setCached(false);
+        rotationPublisher.set(dummyRotation);
+        velocityTopic =
+                table.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
+        velocityPublisher = velocityTopic.publish(pubSubOptions);
+        velocityTopic.setCached(false);
+        velocityPublisher.set(dummyVelocity);
+        inst.flush();
     }
 
     private static final double[] dummyPosition = new double[] {0, 0, 0},
