@@ -105,16 +105,7 @@ public final class WebotsSupervisor {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
-        if (NT_LOG_LEVEL > 0) {
-            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
-                if (event.logMessage.level < ntTransientLogLevel)
-                    return;
-                LOG.log(Level.DEBUG,
-                        "NT instance log level {0} message: {1}({2}): {3}",
-                        event.logMessage.level, event.logMessage.filename,
-                        event.logMessage.line, event.logMessage.message);
-            });
-        }
+        addNetworkTablesLogger();
 
         ConnectionProcessor.setThreadExecutor(queuedEvents::add);
 
@@ -332,6 +323,20 @@ public final class WebotsSupervisor {
                 });
             }
         });
+    }
+
+    @SuppressWarnings("unused")
+    private static void addNetworkTablesLogger() {
+        if (NT_LOG_LEVEL > 0) {
+            inst.addLogger(NT_LOG_LEVEL, Integer.MAX_VALUE, (event) -> {
+                if (event.logMessage.level < ntTransientLogLevel)
+                    return;
+                LOG.log(Level.DEBUG,
+                        "NT instance log level {0} message: {1}({2}): {3}",
+                        event.logMessage.level, event.logMessage.filename,
+                        event.logMessage.line, event.logMessage.message);
+            });
+        }
     }
 
     /**
