@@ -11,7 +11,7 @@ plugins {
     id 'base'
 }
 
-group 'org.team199'
+group 'org.carlmontrobotics'
 
 
 assemble {

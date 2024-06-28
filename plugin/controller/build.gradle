@@ -29,7 +29,7 @@ plugins {
     id 'edu.wpi.first.WpilibTools' version '1.3.0'
 }
 
-group 'org.team199'
+group 'org.carlmontrobotics'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17

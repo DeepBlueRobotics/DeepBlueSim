@@ -5,7 +5,7 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package org.team199.deepbluesim;
+package org.carlmontrobotics.deepbluesim;
 
 public final class Constants {
     public static int sensorTimestep = 20;

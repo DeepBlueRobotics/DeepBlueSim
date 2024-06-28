@@ -28,7 +28,7 @@ repositories {
     gradlePluginPortal()
 }
 
-group 'org.team199'
+group 'org.carlmontrobotics'
 
 // Info for publishing to the Gradle Plugin Portal
 gradlePlugin {
@@ -37,10 +37,10 @@ gradlePlugin {
     // Define the plugin
     plugins {
         deepbluesim {
-            id = 'org.team199.deepbluesim'
+            id = 'org.carlmontrobotics.deepbluesim'
             displayName = 'DeepBlueSim Plugin'
             description = 'A plugin that simplifies developing WPILib projects that use Webots for simulation.'
-            implementationClass = 'org.team199.deepbluesim.gradle.DeepBlueSimPlugin'
+            implementationClass = 'org.carlmontrobotics.deepbluesim.gradle.DeepBlueSimPlugin'
             tags.set(['FRC', 'WPILib', 'Webots'])
         }
     }
@@ -94,7 +94,7 @@ dependencies {
 
 // Copy the extra files (namely Webots.zip and libdeepbluesim.zip) into the the jar
 processResources {
-    into('org/team199/deepbluesim/gradle') {
+    into('org/carlmontrobotics/deepbluesim/gradle') {
         from configurations.extraFiles
     }
 }
