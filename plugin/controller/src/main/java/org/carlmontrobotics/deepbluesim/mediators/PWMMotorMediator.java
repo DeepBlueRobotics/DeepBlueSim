@@ -1,6 +1,6 @@
-package org.team199.deepbluesim.mediators;
+package org.carlmontrobotics.deepbluesim.mediators;
 
-import org.team199.wpiws.devices.PWMSim;
+import org.carlmontrobotics.wpiws.devices.PWMSim;
 
 import com.cyberbotics.webots.controller.Motor;
 

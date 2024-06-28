@@ -1,7 +1,7 @@
-package org.team199.deepbluesim.mediators;
+package org.carlmontrobotics.deepbluesim.mediators;
 
-import org.team199.deepbluesim.Simulation;
-import org.team199.wpiws.devices.CANAnalogInputSim;
+import org.carlmontrobotics.deepbluesim.Simulation;
+import org.carlmontrobotics.wpiws.devices.CANAnalogInputSim;
 
 import com.cyberbotics.webots.controller.DistanceSensor;
 

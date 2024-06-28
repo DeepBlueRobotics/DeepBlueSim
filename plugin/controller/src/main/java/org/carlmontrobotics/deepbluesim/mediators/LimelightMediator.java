@@ -1,10 +1,10 @@
-package org.team199.deepbluesim.mediators;
+package org.carlmontrobotics.deepbluesim.mediators;
 
 import java.util.Arrays;
 import java.util.Comparator;
 
-import org.team199.deepbluesim.Constants;
-import org.team199.deepbluesim.Simulation;
+import org.carlmontrobotics.deepbluesim.Constants;
+import org.carlmontrobotics.deepbluesim.Simulation;
 
 import com.cyberbotics.webots.controller.Camera;
 import com.cyberbotics.webots.controller.CameraRecognitionObject;

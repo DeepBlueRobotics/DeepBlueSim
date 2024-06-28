@@ -1,6 +1,6 @@
-package org.team199.deepbluesim.mediators;
+package org.carlmontrobotics.deepbluesim.mediators;
 
-import org.team199.wpiws.devices.AnalogInputSim;
+import org.carlmontrobotics.wpiws.devices.AnalogInputSim;
 
 import com.cyberbotics.webots.controller.PositionSensor;
 

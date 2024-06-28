@@ -6,12 +6,6 @@ import java.net.URISyntaxException;
 
 import org.java_websocket.client.WebSocketClient;
 
-import org.team199.deepbluesim.SimRegisterer;
-import org.team199.deepbluesim.Simulation;
-import org.team199.deepbluesim.WebotsSupervisor;
-import org.team199.wpiws.connection.RunningObject;
-import org.team199.wpiws.connection.WSConnection;
-
 import com.cyberbotics.webots.controller.Supervisor;
 
 import edu.wpi.first.math.WPIMathJNI;
@@ -26,6 +20,11 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.carlmontrobotics.deepbluesim.SimRegisterer;
+import org.carlmontrobotics.deepbluesim.Simulation;
+import org.carlmontrobotics.deepbluesim.WebotsSupervisor;
+import org.carlmontrobotics.wpiws.connection.RunningObject;
+import org.carlmontrobotics.wpiws.connection.WSConnection;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches
 // the name of the jar.

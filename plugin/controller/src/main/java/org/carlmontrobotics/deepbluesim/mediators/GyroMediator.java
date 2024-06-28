@@ -1,10 +1,10 @@
-package org.team199.deepbluesim.mediators;
+package org.carlmontrobotics.deepbluesim.mediators;
+
+import org.carlmontrobotics.deepbluesim.Constants;
+import org.carlmontrobotics.deepbluesim.Simulation;
+import org.carlmontrobotics.wpiws.devices.SimDeviceSim;
 
 import com.cyberbotics.webots.controller.Gyro;
-
-import org.team199.deepbluesim.Constants;
-import org.team199.deepbluesim.Simulation;
-import org.team199.wpiws.devices.SimDeviceSim;
 
 /**
  * Handles the linking of the simulated AHRS gyro to Webots
@@ -44,4 +44,3 @@ public class GyroMediator implements Runnable {
     }
 
 }
-
