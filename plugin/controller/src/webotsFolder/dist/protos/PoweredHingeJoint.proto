@@ -17,7 +17,7 @@ EXTERNPROTO "../protos/SparkMaxAnalogSensor.proto"
 EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 EXTERNPROTO "../protos/CANCoder.proto"
 
-# A RotationalMotor with the properties necessary to construct a WPILib DCMotor
+# A HingeJoint powered by an FRC-legal motor
 PROTO PoweredHingeJoint [
     field MFNode{
       NEOMotor{}, NEO550Motor{}, Falcon500Motor{}, CIMMotor{}, MiniCIMMotor{}, Vex775ProMotor{}, RomiBuiltinMotor{}, BanebotsRs550Motor{}, BanebotsRs775Motor{},
