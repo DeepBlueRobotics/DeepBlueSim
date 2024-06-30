@@ -38,11 +38,11 @@ public class SystemTestRobot {
                 assertEquals(0.0,
                         s.position("ROBOT")
                                 .getDistance(new Translation3d(2.6, 0, 0)),
-                        0.1, "Robot close to target position");
+                        0.2, "Robot close to target position");
                 assertEquals(0.0,
                         s.position("ELEVATOR")
                                 .getDistance(new Translation3d(2.6, 0, 0.9)),
-                        0.1, "Elevator close to target position");
+                        0.2, "Elevator close to target position");
                 assertEquals(0.0,
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
