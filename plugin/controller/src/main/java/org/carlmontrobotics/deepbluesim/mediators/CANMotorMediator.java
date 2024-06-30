@@ -6,6 +6,7 @@ import org.carlmontrobotics.wpiws.devices.CANMotorSim;
 
 import com.cyberbotics.webots.controller.Brake;
 import com.cyberbotics.webots.controller.Motor;
+import com.cyberbotics.webots.controller.Node;
 import com.cyberbotics.webots.controller.PositionSensor;
 
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -58,8 +59,9 @@ public class CANMotorMediator implements Runnable {
 
         // Use velocity control
         motor.setPosition(Double.POSITIVE_INFINITY);
-
-        brake.setDampingConstant(motorConstants.stallTorqueNewtonMeters * gearing);
+        if (brake != null)
+            brake.setDampingConstant(
+                    motorConstants.stallTorqueNewtonMeters * gearing);
 
         motorDevice.registerBrakemodeCallback((name, enabled) -> {
             brakeMode = enabled;
@@ -79,7 +81,7 @@ public class CANMotorMediator implements Runnable {
         // Apply the speed changes periodically so that changes to variables (ie brake mode) don't require a speed update to be applied
         // Copy requested output so that decreasing the neutral deadband can take effect without a speed update
         double currentOutput = requestedOutput;
-        if(Math.abs(currentOutput) < neutralDeadband) {
+        if (Math.abs(currentOutput) < neutralDeadband && brake != null) {
             currentOutput = 0;
             brake.setDampingConstant(brakeMode ? motorConstants.stallTorqueNewtonMeters * gearing : 0);
         } else {
@@ -90,7 +92,20 @@ public class CANMotorMediator implements Runnable {
         motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
 
         double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);
-        motor.setAvailableTorque(motorConstants.getTorque(currentDraw) * gearing);
+        switch (motor.getNodeType()) {
+            case Node.ROTATIONAL_MOTOR:
+                motor.setAvailableTorque(
+                        motorConstants.getTorque(currentDraw) * gearing);
+                break;
+            case Node.LINEAR_MOTOR:
+                motor.setAvailableForce(
+                        motorConstants.getTorque(currentDraw) * gearing);
+                break;
+            default:
+                throw new UnsupportedOperationException(
+                        "Unsupported motor node type %d. Must be either a RotationalMotor or a LinearMotor: "
+                                .formatted(motor.getNodeType()));
+        }
 
         motorDevice.setMotorcurrent(currentDraw);
         motorDevice.setBusvoltage(12);
