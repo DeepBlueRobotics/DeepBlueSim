@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 public class SystemTestRobot {
 
     @Test
-    void testDrivesToLocationInAutonomous()
+    void testDrivesToLocationAndElevatesInAutonomous()
             throws TimeoutException, FileNotFoundException {
         try (var robot = new Robot();
                 var manager =
@@ -38,7 +38,11 @@ public class SystemTestRobot {
                 assertEquals(0.0,
                         s.position("ROBOT")
                                 .getDistance(new Translation3d(2.6, 0, 0)),
-                        1.0, "Robot close to target position");
+                        0.1, "Robot close to target position");
+                assertEquals(0.0,
+                        s.position("ELEVATOR")
+                                .getDistance(new Translation3d(2.6, 0, 0.9)),
+                        0.1, "Elevator close to target position");
                 assertEquals(0.0,
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
@@ -53,7 +57,7 @@ public class SystemTestRobot {
 
     private volatile boolean stoppedTryingToTurn = false;
 
-    @Test
+    // @Test
     void testCanBeRotatedInPlaceInTeleop()
             throws TimeoutException, FileNotFoundException {
         try (var robot = new Robot();

@@ -30,6 +30,7 @@ public class Robot extends TimedRobot {
   private PWMMotorController m_leftFollower;
   private PWMMotorController m_rightMaster;
   private PWMMotorController m_rightFollower;
+  private PWMMotorController m_elevator;
 
   /**
    * This function is run when the robot is first started up and should be
@@ -47,6 +48,8 @@ public class Robot extends TimedRobot {
     m_rightMaster.setInverted(true);
 
     m_robotDrive = new DifferentialDrive(m_leftMaster, m_rightMaster);
+
+    m_elevator = new PWMVictorSPX(4);
   }
 
   public void close() {
@@ -55,6 +58,7 @@ public class Robot extends TimedRobot {
     m_leftFollower.close();
     m_rightMaster.close();
     m_rightFollower.close();
+    m_elevator.close();
   }
 
   /**
@@ -74,6 +78,7 @@ public class Robot extends TimedRobot {
     // Drive for 2 seconds
     if (m_timer.get() < 2.0) {
       m_robotDrive.arcadeDrive(0.5, 0.0); // drive forwards half speed
+      m_elevator.set(0.1);
     } else {
       m_robotDrive.stopMotor(); // stop robot
     }
