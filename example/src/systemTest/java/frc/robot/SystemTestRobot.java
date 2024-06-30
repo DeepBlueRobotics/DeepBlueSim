@@ -57,7 +57,7 @@ public class SystemTestRobot {
 
     private volatile boolean stoppedTryingToTurn = false;
 
-    // @Test
+    @Test
     void testCanBeRotatedInPlaceInTeleop()
             throws TimeoutException, FileNotFoundException {
         try (var robot = new Robot();
