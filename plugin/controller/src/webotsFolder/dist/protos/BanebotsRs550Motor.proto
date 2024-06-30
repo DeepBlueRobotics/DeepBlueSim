@@ -1,4 +1,5 @@
 #VRML_SIM R2023b utf8
+# template language: javascript
 
 # license: WPILib BSD
 # license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
@@ -14,16 +15,10 @@ PROTO BanebotsRs550Motor [
     field SFString sound "default"
 ]
 {
+%<
+let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`));
+>%
     WPIMotorBase {
-        controllerType IS controllerType
-        port IS port
-        gearing IS gearing
-        inverted IS inverted
-        nominalVoltageVolts 12
-        stallTorqueNewtonMeters 0.38
-        stallCurrentAmps 84
-        freeCurrentAmps 0.4
-        freeSpeedRPM 19000
-        sound IS sound
+        %<= motor.getDef('BanebotsRs550') >%
     }
 }

@@ -1,4 +1,5 @@
 #VRML_SIM R2023b utf8
+# template language: javascript
 
 # license: WPILib BSD
 # license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
@@ -14,16 +15,10 @@ PROTO BagMotor [
     field SFString sound "default"
 ]
 {
+%<
+let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`));
+>%
     WPIMotorBase {
-        controllerType IS controllerType
-        port IS port
-        gearing IS gearing
-        inverted IS inverted
-        nominalVoltageVolts 12
-        stallTorqueNewtonMeters 0.43
-        stallCurrentAmps 53
-        freeCurrentAmps 1.8
-        freeSpeedRPM 13180
-        sound IS sound
+        %<= motor.getDef('Bag') >%
     }
 }
