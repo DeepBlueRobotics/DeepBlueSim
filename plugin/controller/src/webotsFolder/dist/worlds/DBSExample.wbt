@@ -6,6 +6,7 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "../protos/MiniCIMMotor.proto"
 EXTERNPROTO "../protos/MiniCIMLinearMotor.proto"
 EXTERNPROTO "../protos/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/PoweredSliderJoint.proto"
 EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 
 WorldInfo {
@@ -33,11 +34,11 @@ DEF ROBOT Robot {
   children [
     Solid {
       children [
-        SliderJoint {
+        PoweredSliderJoint {
           jointParameters JointParameters {
             maxStop 1
           }
-          device [
+          devices [
             MiniCIMLinearMotor {
               controllerType "PWM"
               port 4
