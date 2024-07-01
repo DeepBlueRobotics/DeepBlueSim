@@ -20,45 +20,44 @@ EXTERNPROTO "../protos/CANCoder.proto"
 # A SliderJoint powered by an FRC-legal motor
 PROTO PoweredSliderJoint [
     field MFNode{
-      NEOLinearMotor{}, NEO550LinearMotor{}, Falcon500LinearMotor{}, CIMLinearMotor{}, MiniCIMLinearMotor{}, Vex775ProLinearMotor{}, RomiBuiltinLinearMotor{}, BanebotsRs550LinearMotor{}, BanebotsRs775LinearMotor{},
-      REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{}, WPIQuadratureEncoder{}, CANCoder{},
-      Brake{}
+        NEOLinearMotor{}, NEO550LinearMotor{}, Falcon500LinearMotor{}, CIMLinearMotor{}, MiniCIMLinearMotor{}, Vex775ProLinearMotor{}, RomiBuiltinLinearMotor{}, BanebotsRs550LinearMotor{}, BanebotsRs775LinearMotor{},
+        REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{}, WPIQuadratureEncoder{}, CANCoder{},
+        Brake{}
     } devices [NEOLinearMotor{} REVBuiltinEncoder{} Brake{}]
     field SFNode{Solid{}} endPoint Solid{}
     field SFNode{JointParameters{}} jointParameters JointParameters{}
 ]
 {
-%<
-import {info,assert} from 'wbutility.js'; 
-let devices = fields.devices.value;
-let hasBrake = false;
-let motorDevice = null;
-let encoderDevice = null;
-for (let i = 0; i < devices.length; i++) {
-  if (devices[i].node_name == "Brake") {
-    hasBrake = true;
-  } else if (devices[i].node_name.endsWith("Motor")) {
-    motorDevice = devices[i];
-  } else if (devices[i].node_name.endsWith("Encoder")) {
-    encoderDevice = devices[i];
-  }
-}
-assert(hasBrake, "PoweredSliderJoint is missing the required Brake device!");
-assert(motorDevice != null, "PoweredSliderJoint is missing the required motor device!");
-let motorType = motorDevice.node_name;
-let controllerType = motorDevice.fields.controllerType.value;
-if (controllerType.startsWith("Spark")) {
-  assert(encoderDevice != null, "PoweredSliderJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
-    + "Consider adding a REVBuiltinEncoder.");
-} else if (controllerType == "PWM" && encoderDevice != null) {
-  let encoderType = encoderDevice.node_name;
-  assert(!encoderType.endsWith("BuiltinEncoder"), "PoweredSliderJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
-}
-
->%
+    %<
+    import {info,assert} from 'wbutility.js';
+    let devices = fields.devices.value;
+    let hasBrake = false;
+    let motorDevice = null;
+    let encoderDevice = null;
+    for (let i = 0; i < devices.length; i++) {
+        if (devices[i].node_name == "Brake") {
+            hasBrake = true;
+        } else if (devices[i].node_name.endsWith("Motor")) {
+            motorDevice = devices[i];
+        } else if (devices[i].node_name.endsWith("Encoder")) {
+            encoderDevice = devices[i];
+        }
+    }
+    assert(hasBrake, "PoweredSliderJoint is missing the required Brake device!");
+    assert(motorDevice != null, "PoweredSliderJoint is missing the required motor device!");
+    let motorType = motorDevice.node_name;
+    let controllerType = motorDevice.fields.controllerType.value;
+    if (controllerType.startsWith("Spark")) {
+        assert(encoderDevice != null, "PoweredSliderJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
+            + "Consider adding a REVBuiltinEncoder.");
+    } else if (controllerType == "PWM" && encoderDevice != null) {
+        let encoderType = encoderDevice.node_name;
+        assert(!encoderType.endsWith("BuiltinEncoder"), "PoweredSliderJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
+    }
+    >%
     SliderJoint {
         device IS devices
         endPoint IS endPoint
         jointParameters IS jointParameters
-    }        
+    }
 }

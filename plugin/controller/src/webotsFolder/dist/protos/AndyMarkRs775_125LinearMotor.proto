@@ -16,9 +16,7 @@ PROTO AndyMarkRs775_125LinearMotor [
     field SFString sound "default"
 ]
 {
-%<
-let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`));
->%
+    %< let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`)); >%
     WPILinearMotorBase {
         %<= motor.getDef('Rs775_125') >%
     }

@@ -15,9 +15,7 @@ PROTO BagMotor [
     field SFString sound "default"
 ]
 {
-%<
-let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`));
->%
+    %< let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`)); >%
     WPIMotorBase {
         %<= motor.getDef('Bag') >%
     }
