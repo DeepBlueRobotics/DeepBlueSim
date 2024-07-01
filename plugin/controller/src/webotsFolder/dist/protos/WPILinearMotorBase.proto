@@ -6,7 +6,7 @@ PROTO WPILinearMotorBase [
     unconnectedField SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
     unconnectedField SFInt32 port 0
     field SFFloat gearing 1
-    field SFFloat outputRadiusMeters 0.0254 # 2in diameter
+    unconnectedField SFFloat outputRadiusMeters 0.0254 # 2in diameter
     unconnectedField SFBool inverted FALSE
     unconnectedField SFFloat nominalVoltageVolts 12
     field SFFloat stallTorqueNewtonMeters 5
