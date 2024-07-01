@@ -1,4 +1,5 @@
 #VRML_SIM R2023b utf8
+# template language: javascript
 
 # license: WPILib BSD
 # license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
@@ -14,16 +15,8 @@ PROTO CIMMotor [
     field SFString sound "default"
 ]
 {
+    %< let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`)); >%
     WPIMotorBase {
-        controllerType IS controllerType
-        port IS port
-        gearing IS gearing
-        inverted IS inverted
-        nominalVoltageVolts 12
-        stallTorqueNewtonMeters 2.42
-        stallCurrentAmps 133
-        freeCurrentAmps 2.7
-        freeSpeedRPM 5310
-        sound IS sound
+        %<= motor.getDef('CIM') >%
     }
 }

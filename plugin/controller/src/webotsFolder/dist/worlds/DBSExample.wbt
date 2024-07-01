@@ -4,7 +4,9 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/MiniCIMLinearMotor.proto"
 EXTERNPROTO "../protos/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/PoweredSliderJoint.proto"
 EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 
 WorldInfo {
@@ -32,6 +34,41 @@ DEF ROBOT Robot {
   children [
     Solid {
       children [
+        PoweredSliderJoint {
+          jointParameters JointParameters {
+            maxStop 1
+          }
+          devices [
+            MiniCIMLinearMotor {
+              controllerType "PWM"
+              port 4
+              gearing 7
+              outputRadiusMeters 0.0127
+            }
+            WPIQuadratureEncoder {
+              channelA 8
+              channelB 9
+            }
+            Brake {
+            }
+          ]
+          endPoint DEF ELEVATOR Solid {
+            translation 0 0 0.17
+            children [
+              Shape {
+                appearance PBRAppearance {
+                  metalness 0.5
+                }
+                geometry DEF ELEVATOR_GEOM Box {
+                  size 0.05 0.3 0.3
+                }
+              }
+            ]
+            boundingObject USE ELEVATOR_GEOM
+            physics Physics {
+            }
+          }
+        }
         PoweredHingeJoint {
           devices [
             MiniCIMMotor {

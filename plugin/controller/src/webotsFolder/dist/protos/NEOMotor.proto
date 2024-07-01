@@ -1,4 +1,5 @@
 #VRML_SIM R2023b utf8
+# template language: javascript
 
 # license: WPILib BSD
 # license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
@@ -14,16 +15,8 @@ PROTO NEOMotor [
     field SFString sound "default"
 ]
 {
+    %< let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`)); >%
     WPIMotorBase {
-        controllerType IS controllerType
-        port IS id
-        gearing IS gearing
-        inverted IS inverted
-        nominalVoltageVolts 12
-        stallTorqueNewtonMeters 2.6
-        stallCurrentAmps 105
-        freeCurrentAmps 1.8
-        freeSpeedRPM 5676
-        sound IS sound
+        %<= motor.getDef('NEO') >%
     }
 }

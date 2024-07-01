@@ -14,6 +14,17 @@ public class PWMMotorMediator {
     public final DCMotor motorConstants;
     public final PWMSim motorDevice;
 
+    /**
+     * Creates a new PWMMotorMediator
+     * 
+     * @param motor the Webots motor to link to
+     * @param simDevice the SimDeviceSim to use
+     * @param motorConstants the motor constants to use
+     * @param gearing the gear reduction ratio to use. When used with a LinearMotor this includes
+     *        the conversion between meters and radians.
+     * @param inverted whether positive voltage should result in CW rotation (true) or CCW rotation
+     *        (false).
+     */
     public PWMMotorMediator(Motor motor, PWMSim simDevice, DCMotor motorConstants, double gearing, boolean inverted) {
         this.motor = motor;
         this.motorDevice = simDevice;
