@@ -35,22 +35,24 @@ PROTO PoweredSliderJoint [
     let motorDevice = null;
     let encoderDevice = null;
     for (let i = 0; i < devices.length; i++) {
-        if (devices[i].node_name == "Brake") {
+        let node_name = devices[i].node_name;
+        if (node_name === null) continue;
+        if (node_name === "Brake") {
             hasBrake = true;
-        } else if (devices[i].node_name.endsWith("Motor")) {
+        } else if (node_name.endsWith("Motor")) {
             motorDevice = devices[i];
-        } else if (devices[i].node_name.endsWith("Encoder")) {
+        } else if (node_name.endsWith("Encoder")) {
             encoderDevice = devices[i];
         }
     }
     assert(hasBrake, "PoweredSliderJoint is missing the required Brake device!");
-    assert(motorDevice != null, "PoweredSliderJoint is missing the required motor device!");
+    assert(motorDevice !== null, "PoweredSliderJoint is missing the required motor device!");
     let motorType = motorDevice.node_name;
     let controllerType = motorDevice.fields.controllerType.value;
     if (controllerType.startsWith("Spark")) {
-        assert(encoderDevice != null, "PoweredSliderJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
+        assert(encoderDevice !== null, "PoweredSliderJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
             + "Consider adding a REVBuiltinEncoder.");
-    } else if (controllerType == "PWM" && encoderDevice != null) {
+    } else if (controllerType === "PWM" && encoderDevice !== null) {
         let encoderType = encoderDevice.node_name;
         assert(!encoderType.endsWith("BuiltinEncoder"), "PoweredSliderJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
     }
