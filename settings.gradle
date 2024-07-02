@@ -1,4 +1,5 @@
 rootProject.name = 'DeepBlueSim'
 includeBuild 'WPIWebSockets'
 includeBuild 'plugin'
+includeBuild 'tests'
 includeBuild 'example'

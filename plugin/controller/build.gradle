@@ -117,6 +117,15 @@ shadowJar {
     rename 'licenseReport.html', 'LICENSE-dependencies.html'
 }
 
+task copyJar(type: Copy) {
+    from(shadowJar)
+    into 'src/webotsFolder/dist/controllers/DeepBlueSim'
+}
+
+clean {
+    delete 'src/webotsFolder/dist/controllers/DeepBlueSim/DeepBlueSim.jar'
+}
+
 configurations {
     webotsFolder {
         canBeConsumed = true
@@ -128,9 +137,7 @@ distributions {
     webotsFolder {
         distributionBaseName = "Webots"
         contents {
-            from(shadowJar) {
-              into 'controllers/DeepBlueSim'
-            }
+            from(copyJar)
         }
     }
 }

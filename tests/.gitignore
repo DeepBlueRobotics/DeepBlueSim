@@ -17,6 +17,7 @@
 # Compiled Dynamic libraries
 *.so
 *.dylib
+*.dll
 
 # Fortran module files
 *.mod
@@ -47,9 +48,11 @@
 .mtj.tmp/
 
 # Package Files #
+*.jar
 *.war
 *.nar
 *.ear
+*.zip
 *.tar.gz
 *.rar
 
@@ -134,7 +137,6 @@ $RECYCLE.BIN/
 ### Gradle ###
 .gradle
 /build/
-/buildSrc/build
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -157,9 +159,11 @@ imgui.ini
 
 
 # End of https://www.gitignore.io/api/c++,java,linux,macos,gradle,windows,visualstudiocode
-*.wbproj
-*.dll
-*.dylib
-*.jnilib
-*.so
-plugin/controller/src/webotsFolder/dist/controllers/DeepBlueSim/DeepBlueSim.jar
+
+# For testing purposes, we want to ensure that this project starts without DeepBlueSim installed.
+Webots/*
+
+# Ignore Simulation GUI settings
+/networktables.json
+/simgui.json
+/simgui-*.json

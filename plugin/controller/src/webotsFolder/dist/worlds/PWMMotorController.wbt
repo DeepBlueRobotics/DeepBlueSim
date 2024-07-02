@@ -1,0 +1,62 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "../protos/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/MiniCIMMotor.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.24402898166491363 0.33039742727224586 0.9117496345814823 1.5165266004776918
+  position -0.029363870371338287 -0.43054911570743615 0.32156152827311507
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+}
+DEF ROBOT Robot {
+  translation 0 0 0.06
+  children [
+    DEF BASE Solid {
+      children [
+        PoweredHingeJoint {
+          devices [
+            MiniCIMMotor {
+              controllerType "PWM"
+              port 1
+              gearing 100
+            }
+            Brake {
+            }
+          ]
+          endPoint DEF SHAFT Solid {
+            children [
+              Shape {
+                appearance PBRAppearance {
+                }
+                geometry Box {
+                  size 0.1 0.1 0.05
+                }
+              }
+            ]
+            boundingObject Cylinder {
+              height 0.05
+              radius 0.05
+            }
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            axis 0 0 1
+          }
+        }
+      ]
+    }
+  ]
+  controller "DeepBlueSim"
+  supervisor TRUE
+}
