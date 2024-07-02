@@ -17,17 +17,20 @@ group 'org.carlmontrobotics'
 assemble {
     dependsOn gradle.includedBuild('WPIWebSockets').task(':assemble')
     dependsOn gradle.includedBuild('plugin').task(':assemble')
+    dependsOn gradle.includedBuild('tests').task(':assemble')
     dependsOn gradle.includedBuild('example').task(':assemble')
 }
 
 check {
     dependsOn gradle.includedBuild('WPIWebSockets').task(':check')
     dependsOn gradle.includedBuild('plugin').task(':check')
+    dependsOn gradle.includedBuild('tests').task(':check')
     dependsOn gradle.includedBuild('example').task(':check')
 }
 
 clean {
     dependsOn gradle.includedBuild('WPIWebSockets').task(':clean')
     dependsOn gradle.includedBuild('plugin').task(':clean')
+    dependsOn gradle.includedBuild('tests').task(':clean')
     dependsOn gradle.includedBuild('example').task(':clean')
 }
