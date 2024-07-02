@@ -142,7 +142,7 @@ public final class WebotsSupervisor {
                                 break;
                             default:
                                 LOG.log(Level.ERROR,
-                                        "Don't know how to report '{0}'", name);
+                                        "Don't know how to report ''{0}''", name);
                         }
                     });
                 });
@@ -215,7 +215,7 @@ public final class WebotsSupervisor {
                                 Supervisor.SIMULATION_MODE_REAL_TIME;
                     } else {
                         LOG.log(Level.ERROR,
-                                "Unrecognized simMode of '{0}'. Must be either 'Fast' or 'Realtime'",
+                                "Unrecognized simMode of ''{0}''. Must be either 'Fast' or 'Realtime'",
                                 simMode);
                     }
                     queuedEvents.add(() -> {
@@ -298,8 +298,8 @@ public final class WebotsSupervisor {
                     inst.flush();
                 });
                 LOG.log(Level.INFO,
-                        "Connected to NetworkTables server '{0}' at {1}:{2}",
-                        event.connInfo.remote_id, event.connInfo.remote_ip,
+                        "Connected to NetworkTables server ''{0}'' at {1}:{2,number,#}",
+                                event.connInfo.remote_id, event.connInfo.remote_ip,
                         event.connInfo.remote_port);
             } else if (event.is(Kind.kDisconnected)) {
                 queuedEvents.add(() -> {
