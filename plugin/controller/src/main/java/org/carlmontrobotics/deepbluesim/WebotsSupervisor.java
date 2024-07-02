@@ -142,7 +142,8 @@ public final class WebotsSupervisor {
                                 break;
                             default:
                                 LOG.log(Level.ERROR,
-                                        "Don't know how to report ''{0}''", name);
+                                        "Don't know how to report ''{0}''",
+                                        name);
                         }
                     });
                 });
@@ -299,7 +300,7 @@ public final class WebotsSupervisor {
                 });
                 LOG.log(Level.INFO,
                         "Connected to NetworkTables server ''{0}'' at {1}:{2,number,#}",
-                                event.connInfo.remote_id, event.connInfo.remote_ip,
+                        event.connInfo.remote_id, event.connInfo.remote_ip,
                         event.connInfo.remote_port);
             } else if (event.is(Kind.kDisconnected)) {
                 queuedEvents.add(() -> {
