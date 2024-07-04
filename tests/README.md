@@ -8,6 +8,3 @@ By convention, the test classes and robot classes are named after the Webots wor
 `DBSExampleTest.java` contains tests that verify that is working correctly. If, instead of running
 the tests, you want to simulate one of the robots using VSCode's `WPILib: Simulate Robot Code`, you
 need to first change the robot provider passed to `RobotBase.start()` in `Main.java`.
-
-
-
