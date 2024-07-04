@@ -1,5 +1,5 @@
 This project tests DeepBlueSim. It uses the DeepBlueSim plugin and contains tests that refer to
-Webots worlds in `../plugin/controller/src/webotFolder/dist/worlds`. That makes it easier to debug
+Webots worlds in `../plugin/controller/src/webotsFolder/dist/worlds`. That makes it easier to debug
 those worlds and the various DeepBlueSim Webots PROTOs. Note: the contents of *this* project's
 `Webots` folder are ignored.
 
