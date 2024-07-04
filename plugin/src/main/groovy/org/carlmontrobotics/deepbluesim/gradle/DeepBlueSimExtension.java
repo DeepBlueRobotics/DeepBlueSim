@@ -1,9 +1,16 @@
 package org.carlmontrobotics.deepbluesim.gradle;
 
 import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
@@ -83,6 +90,15 @@ public class DeepBlueSimExtension {
         }
     }
 
+    // DeepBlueSim uses WPI's HAL sim websocket server extension and only one process can be started
+    // with that extension at a time, presumably because it listens on a TCP port. Gradle can create
+    // multiple processes each with multiple threads each with different instances of this class. To
+    // ensure only one DeepBlueSim test task is running at a time, we use a file lock to ensure
+    // there is only one gradle process and a semaphore to ensure there is only one thread within
+    // that process that is running a DeepBlueSim test task.
+    private static Semaphore semaphore = new Semaphore(1);
+    private static volatile FileLock fileLock = null;
+
     /**
      * Configures a task so it can use the specificed WPILib simulation extensions.
      * 
@@ -112,6 +128,7 @@ public class DeepBlueSimExtension {
             @Override
             public void execute(Task task) {
                 try {
+                    var logger = project.getLogger();
                     File ldpath = extract.get().getDestinationDirectory().get().getAsFile();
                     List<HalSimPair> halSimPairs = sim.getHalSimLocations(List.of(ldpath), debug);
                     Map<String, ?> env = sim.getEnvironment();
@@ -138,12 +155,55 @@ public class DeepBlueSimExtension {
                         System.out.println(
                                 "That can be found at https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads");
                     }
-
+                    logger.debug("deepbluesim is waiting for semaphore");
+                    semaphore.acquire();
+                    logger.debug("deepbluesim acquired semaphore");
+                    if (fileLock == null) {
+                        var lockFilePath =
+                                Path.of(System.getProperty("java.io.tmpdir"),
+                                        "deepbluesim.lock");
+                        var channel = FileChannel.open(lockFilePath,
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.WRITE,
+                                StandardOpenOption.TRUNCATE_EXISTING);
+                        fileLock = channel.tryLock();
+                        while (fileLock == null) {
+                            logger.debug(
+                                    "deepbluesim is waiting for file lock. See {}",
+                                    lockFilePath);
+                            Thread.sleep(10000);
+                            fileLock = channel.tryLock();
+                        }
+                        logger.debug("deepbluesim acquired file lock.");
+                        // The lock will be released when the JVM exits.
+                        channel.write(
+                                ByteBuffer.wrap("Locked by deepbluesim %Tc"
+                                        .formatted(Calendar.getInstance())
+                                        .getBytes()));
+                    }
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
             }
         });
+        t.doLast(new Action<Task>() {
+
+            @Override
+            public void execute(Task task) {
+                var logger = project.getLogger();
+                logger.debug("deepbluesim is releasing semaphore");
+                try {
+                    logger.debug("deepbluesim is releasing file lock");
+                    fileLock.release();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                } finally {
+                    fileLock = null;
+                }
+                semaphore.release();
+            }
+        });
+
     }
 
     private void configureExecutableNatives(Task tt, Provider<ExtractNativeJavaArtifacts> extract) {

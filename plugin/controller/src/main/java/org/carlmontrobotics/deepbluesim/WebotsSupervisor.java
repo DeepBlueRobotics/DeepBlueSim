@@ -163,7 +163,7 @@ public final class WebotsSupervisor {
         }
         var reloadRequestSubscriber =
                 reloadRequestTopic.subscribe("", pubSubOptions);
-        inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote),
+        inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
                 (event) -> {
                     var reloadRequest = event.valueData.value.getString();
                     LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
