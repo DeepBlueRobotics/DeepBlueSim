@@ -1,8 +1,10 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# A DBSStandaloneEncoderBase implementation for an absolute encoder for a Spark Max
 
-EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
+EXTERNPROTO "../protos/DBSStandaloneEncoderBase.proto"
 
-# A WPIStandaloneEncoderBase implementation for an absolute encoder for a Spark Max.
 PROTO SparkMaxAbsoluteEncoder [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     field SFFloat absoluteOffsetDeg 0
@@ -11,7 +13,7 @@ PROTO SparkMaxAbsoluteEncoder [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIStandaloneEncoderBase {
+    DBSStandaloneEncoderBase {
         location IS location
         absolute TRUE
         absoluteOffsetDeg IS absoluteOffsetDeg

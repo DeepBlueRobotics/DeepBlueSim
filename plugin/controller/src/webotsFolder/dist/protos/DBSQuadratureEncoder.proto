@@ -1,9 +1,11 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# A DBSStandaloneEncoderBase implementation for a Quadrature Encoder
 
-EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
+EXTERNPROTO "../protos/DBSStandaloneEncoderBase.proto"
 
-# A WPIStandaloneEncoderBase implementation for a Quadrature Encoder.
-PROTO WPIQuadratureEncoder [
+PROTO DBSQuadratureEncoder [
     unconnectedField SFInt32 channelA 0
     unconnectedField SFInt32 channelB 1
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
@@ -12,7 +14,7 @@ PROTO WPIQuadratureEncoder [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIStandaloneEncoderBase {
+    DBSStandaloneEncoderBase {
         location IS location
         absolute FALSE
         inverted IS inverted

@@ -1,8 +1,10 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# A DBSStandaloneEncoderBase implementation for a CANCoder
 
-EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
+EXTERNPROTO "../protos/DBSStandaloneEncoderBase.proto"
 
-# A WPIStandaloneEncoderBase implementation for a CANCoder.
 PROTO CANCoder [
     unconnectedField SFInt32 id 0
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
@@ -11,7 +13,7 @@ PROTO CANCoder [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIStandaloneEncoderBase {
+    DBSStandaloneEncoderBase {
         location IS location
         absolute TRUE
         absoluteOffsetDeg IS absoluteOffsetDeg
