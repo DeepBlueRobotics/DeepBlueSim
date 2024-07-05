@@ -1,0 +1,16 @@
+#VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# tags: hidden, no3dView
+# A base proto for robot encoders that are able to interface with DeepBlueSim
+
+PROTO DBSEncoderBase [
+    field SFString name ""
+    field SFFloat noiseStdDevRad 0
+]
+{
+    PositionSensor {
+        name IS name
+        noise IS noiseStdDevRad
+    }
+}

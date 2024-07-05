@@ -1,11 +1,13 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
 # tags: hidden, no3dView
-
-EXTERNPROTO "../protos/WPIEncoderBase.proto"
-
 # A base proto for standalone robot encoders
-PROTO WPIStandaloneEncoderBase [
+
+EXTERNPROTO "../protos/DBSEncoderBase.proto"
+
+PROTO DBSStandaloneEncoderBase [
     unconnectedField SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     unconnectedField SFBool absolute FALSE
     unconnectedField SFFloat absoluteOffsetDeg 0
@@ -14,7 +16,7 @@ PROTO WPIStandaloneEncoderBase [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIEncoderBase {
+    DBSEncoderBase {
         name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
         noiseStdDevRad IS noiseStdDevRad
     }
