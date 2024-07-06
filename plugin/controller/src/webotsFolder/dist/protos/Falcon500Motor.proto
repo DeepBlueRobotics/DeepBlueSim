@@ -1,0 +1,22 @@
+#VRML_SIM R2023b utf8
+# template language: javascript
+
+# license: WPILib BSD
+# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+
+EXTERNPROTO "../protos/WPIMotorBase.proto"
+
+# A WPIMotorBase with the parameters of a Falcon 500 motor.
+PROTO Falcon500Motor [
+    field SFString{"Talon SRX", "Victor SPX", "PWM"} controllerType "Talon SRX"
+    field SFInt32 port 0
+    field SFFloat gearing 1
+    field SFBool inverted FALSE
+    field SFString sound "default"
+]
+{
+    %< let motor = eval(wbfile.readTextFile(`${context.project_path}protos/wpimotor.js`)); >%
+    WPIMotorBase {
+        %<= motor.getDef('Falcon500') >%
+    }
+}

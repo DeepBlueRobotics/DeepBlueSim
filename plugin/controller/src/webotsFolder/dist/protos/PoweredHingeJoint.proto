@@ -1,56 +1,60 @@
 #VRML_SIM R2023b utf8
-# license: MIT
-# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-# A HingeJoint powered by a DeepBlueSim-compatible motor
 
-EXTERNPROTO "../protos/DBSRotationalMotorBase.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSRotationalMotor.proto"
-
-EXTERNPROTO "../protos/CANCoder.proto"
-EXTERNPROTO "../protos/DBSQuadratureEncoder.proto"
+EXTERNPROTO "../protos/NEOMotor.proto"
+EXTERNPROTO "../protos/NEO550Motor.proto"
+EXTERNPROTO "../protos/Falcon500Motor.proto"
+EXTERNPROTO "../protos/CIMMotor.proto"
+EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/Vex775ProMotor.proto"
+EXTERNPROTO "../protos/RomiBuiltinMotor.proto"
+EXTERNPROTO "../protos/BanebotsRs550Motor.proto"
+EXTERNPROTO "../protos/BanebotsRs775Motor.proto"
 EXTERNPROTO "../protos/REVBuiltinEncoder.proto"
 EXTERNPROTO "../protos/SparkMaxAbsoluteEncoder.proto"
 EXTERNPROTO "../protos/SparkMaxAlternateEncoder.proto"
 EXTERNPROTO "../protos/SparkMaxAnalogSensor.proto"
+EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
+EXTERNPROTO "../protos/CANCoder.proto"
 
+# A HingeJoint powered by an FRC-legal motor
 PROTO PoweredHingeJoint [
     field MFNode{
-        DBSRotationalMotorBase{}, PreconfiguredDBSRotationalMotor{}
-        CANCoder{}, DBSQuadratureEncoder{}, REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{},
+        NEOMotor{}, NEO550Motor{}, Falcon500Motor{}, CIMMotor{}, MiniCIMMotor{}, Vex775ProMotor{}, RomiBuiltinMotor{}, BanebotsRs550Motor{}, BanebotsRs775Motor{},
+        REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{}, WPIQuadratureEncoder{}, CANCoder{},
         Brake{}
-    } devices [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} Brake{}]
+    } devices [NEOMotor{} REVBuiltinEncoder{} Brake{}]
     field SFNode{Solid{}} endPoint Solid{}
     field SFNode{HingeJointParameters{}} jointParameters HingeJointParameters{}
 ]
 {
     %<
-        import {assert} from 'wbutility.js';
-        let devices = fields.devices.value;
-        let hasBrake = false;
-        let motorDevice = null;
-        let encoderDevice = null;
-        for (let i = 0; i < devices.length; i++) {
-            let node_name = devices[i].node_name;
-            if (node_name === "Brake") {
-                hasBrake = true;
-            } else if (node_name.endsWith("Motor")) {
-                motorDevice = devices[i];
-            } else if (node_name.endsWith("Encoder")) {
-                encoderDevice = devices[i];
-            }
+    import {info,assert} from 'wbutility.js';
+    let devices = fields.devices.value;
+    let hasBrake = false;
+    let motorDevice = null;
+    let encoderDevice = null;
+    for (let i = 0; i < devices.length; i++) {
+        let node_name = devices[i].node_name;
+        if (node_name === "Brake") {
+            hasBrake = true;
+        } else if (node_name.endsWith("Motor")) {
+            motorDevice = devices[i];
+        } else if (node_name.endsWith("Encoder")) {
+            encoderDevice = devices[i];
         }
-        assert(hasBrake, "PoweredHingeJoint is missing the required Brake device!");
-        assert(motorDevice !== null, "PoweredHingeJoint is missing the required motor device!");
-        let motorType = motorDevice?.node_name;
-        let controllerType = motorDevice?.fields.controllerType.value;
-        if (controllerType?.startsWith("Spark")) {
-            assert(encoderDevice !== null, "PoweredHingeJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
-                + "Consider adding a REVBuiltinEncoder.");
-        } else if (controllerType === "PWM") {
-            let encoderType = encoderDevice?.node_name;
-            assert(!encoderType?.endsWith("BuiltinEncoder"), "PoweredHingeJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
-        }
+    }
+    assert(hasBrake, "PoweredHingeJoint is missing the required Brake device!");
+    assert(motorDevice !== null, "PoweredHingeJoint is missing the required motor device!");
+    let motorType = motorDevice?.node_name;
+    let controllerType = motorDevice?.fields.controllerType.value;
+    if (controllerType?.startsWith("Spark")) {
+        assert(encoderDevice !== null, "PoweredHingeJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
+            + "Consider adding a REVBuiltinEncoder.");
+    } else if (controllerType === "PWM") {
+        let encoderType = encoderDevice?.node_name;
+        assert(!encoderType?.endsWith("BuiltinEncoder"), "PoweredHingeJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
+    }
     >%
     HingeJoint {
         device IS devices

@@ -3,11 +3,11 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
-EXTERNPROTO "../protos/DBSQuadratureEncoder.proto"
+EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/MiniCIMLinearMotor.proto"
 EXTERNPROTO "../protos/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/PoweredSliderJoint.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSLinearMotor.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSRotationalMotor.proto"
+EXTERNPROTO "../protos/WPIQuadratureEncoder.proto"
 
 WorldInfo {
 }
@@ -39,14 +39,13 @@ DEF ROBOT Robot {
             maxStop 1
           }
           devices [
-            PreconfiguredDBSLinearMotor {
-              motorType "MiniCIM"
+            MiniCIMLinearMotor {
               controllerType "PWM"
               port 4
               gearing 7
               outputRadiusMeters 0.0127
             }
-            DBSQuadratureEncoder {
+            WPIQuadratureEncoder {
               channelA 8
               channelB 9
             }
@@ -72,13 +71,12 @@ DEF ROBOT Robot {
         }
         PoweredHingeJoint {
           devices [
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
+            MiniCIMMotor {
               controllerType "PWM"
               port 3
               gearing 6.9973
             }
-            DBSQuadratureEncoder {
+            WPIQuadratureEncoder {
             }
             Brake {
             }
@@ -110,13 +108,12 @@ DEF ROBOT Robot {
         }
         PoweredHingeJoint {
           devices [
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
+            MiniCIMMotor {
               controllerType "PWM"
               port 2
               gearing 6.9973
             }
-            DBSQuadratureEncoder {
+            WPIQuadratureEncoder {
               channelA 2
               channelB 3
             }
@@ -150,12 +147,11 @@ DEF ROBOT Robot {
         }
         PoweredHingeJoint {
           devices [
-            DBSQuadratureEncoder {
+            WPIQuadratureEncoder {
               channelA 4
               channelB 5
             }
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
+            MiniCIMMotor {
               controllerType "PWM"
               port 1
               gearing 6.9973
@@ -190,12 +186,11 @@ DEF ROBOT Robot {
         }
         PoweredHingeJoint {
           devices [
-            DBSQuadratureEncoder {
+            WPIQuadratureEncoder {
               channelA 6
               channelB 7
             }
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
+            MiniCIMMotor {
               controllerType "PWM"
               gearing 6.9973
             }
@@ -236,8 +231,7 @@ DEF ROBOT Robot {
             anchor 0.167 -0.232 0
           }
           device [
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
+            MiniCIMMotor {
               controllerType "PWM"
               port 3
               gearing 6.9973
