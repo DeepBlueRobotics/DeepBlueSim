@@ -5,23 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
-import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 
 @Timeout(value = 30, unit = TimeUnit.MINUTES)
+@ResourceLock("WebotsSimulator")
 public class DBSExampleTest {
     @Test
-    void testDrivesToLocationAndElevatesInAutonomous()
-            throws Exception {
-        try (var robot = new DBSExampleRobot();
-                var manager = new WebotsSimulator(
-                        "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt")) {
+    void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
+        try (var manager = new WebotsSimulator(
+                "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
+                DBSExampleRobot.class)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
@@ -50,18 +49,17 @@ public class DBSExampleTest {
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
                         1, "Robot close to target angular velocity");
-            }).run(robot);
+            }).run();
         }
     }
 
     private volatile boolean stoppedTryingToTurn = false;
 
     @Test
-    void testCanBeRotatedInPlaceInTeleop()
-            throws Exception {
-        try (var robot = new DBSExampleRobot();
-                var manager = new WebotsSimulator(
-                        "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt")) {
+    void testCanBeRotatedInPlaceInTeleop() throws Exception {
+        try (var manager = new WebotsSimulator(
+                "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
+                DBSExampleRobot.class)) {
             manager.atSec(0.0, s -> {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);
@@ -102,7 +100,7 @@ public class DBSExampleTest {
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
                         1, "Robot close to target angular velocity");
-            }).run(robot);
+            }).run();
         }
     }
 }

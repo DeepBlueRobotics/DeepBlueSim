@@ -6,9 +6,7 @@ import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
@@ -18,11 +16,9 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 public class SystemTestRobot {
 
     @Test
-    void testDrivesToLocationAndElevatesInAutonomous()
-            throws Exception {
-        try (var robot = new Robot();
-                var manager =
-                        new WebotsSimulator("Webots/worlds/DBSExample.wbt")) {
+    void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
+        try (var manager = new WebotsSimulator("Webots/worlds/DBSExample.wbt",
+                Robot.class)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
@@ -51,18 +47,16 @@ public class SystemTestRobot {
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
                         1, "Robot close to target angular velocity");
-            }).run(robot);
+            }).run();
         }
     }
 
     private volatile boolean stoppedTryingToTurn = false;
 
     @Test
-    void testCanBeRotatedInPlaceInTeleop()
-            throws Exception {
-        try (var robot = new Robot();
-                var manager =
-                        new WebotsSimulator("Webots/worlds/DBSExample.wbt")) {
+    void testCanBeRotatedInPlaceInTeleop() throws Exception {
+        try (var manager = new WebotsSimulator("Webots/worlds/DBSExample.wbt",
+                Robot.class)) {
             manager.atSec(0.0, s -> {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);
@@ -103,7 +97,7 @@ public class SystemTestRobot {
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
                         1, "Robot close to target angular velocity");
-            }).run(robot);
+            }).run();
         }
     }
 }

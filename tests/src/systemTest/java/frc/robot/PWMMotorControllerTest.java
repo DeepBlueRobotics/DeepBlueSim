@@ -5,23 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.ResourceLock;
 
-import java.io.FileNotFoundException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import edu.wpi.first.math.util.Units;
 
 @Timeout(value = 30, unit = TimeUnit.MINUTES)
+@ResourceLock("WebotsSimulator")
 public class PWMMotorControllerTest {
     @Test
-    void testShaftRotatesInAutonomous()
-            throws Exception {
+    void testShaftRotatesInAutonomous() throws Exception {
         // TODO: Fix the expected values to be physically correct and then fix PWMMotorMediator to
         // pass the test.
-        try (var robot = new PWMMotorControllerRobot();
-                var manager = new WebotsSimulator(
-                        "../plugin/controller/src/webotsFolder/dist/worlds/PWMMotorController.wbt")) {
+        try (var manager = new WebotsSimulator(
+                "../plugin/controller/src/webotsFolder/dist/worlds/PWMMotorController.wbt",
+                PWMMotorControllerRobot.class)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
@@ -40,7 +39,7 @@ public class PWMMotorControllerTest {
                 assertEquals(-28.8,
                         Units.radiansToDegrees(s.rotation("SHAFT").getZ()),
                         45.0, "Shaft close to target rotation");
-            }).run(robot);
+            }).run();
         }
     }
 }
