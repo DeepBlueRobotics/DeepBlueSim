@@ -2,8 +2,16 @@ package org.carlmontrobotics.libdeepbluesim;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -60,6 +68,15 @@ public class WebotsSimulator implements AutoCloseable {
     private static final Logger LOG =
             System.getLogger(WebotsSimulator.class.getName());
 
+    // DeepBlueSim relies on the robot's NetworkTables network server and WPI's HAL sim websocket
+    // server extension and only one process can be started with those at a time, because they
+    // listens on TCP ports. Gradle can create multiple processes each with multiple threads each
+    // with different instances of this class. To prevent conflict over use of the ports, we use a
+    // file lock to ensure there is only one process has loaded this class at a time.
+    private static volatile FileChannel channel = null;
+    private static volatile FileLock fileLock = null;
+
+
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
     private final NetworkTable coordinator;
@@ -86,15 +103,59 @@ public class WebotsSimulator implements AutoCloseable {
         // This is replaced in waitForUserToStart()
     });
 
+    private Class<? extends TimedRobot> cls;
+
+    static {
+        try {
+            acquireFileLock();
+        } catch (InterruptedException | IOException ex) {
+            LOG.log(Level.ERROR, "Unable to acquire file lock", ex);
+        }
+    }
+
+    static private synchronized void acquireFileLock()
+            throws InterruptedException, IOException {
+        if (fileLock == null) {
+            var lockFilePath = Path.of(System.getProperty("java.io.tmpdir"),
+                    "WebotSimulator.lock");
+            channel = FileChannel.open(lockFilePath, StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE);
+            boolean hadToWait = false;
+            while ((fileLock = channel.tryLock()) == null) {
+                hadToWait = true;
+                LOG.log(Level.WARNING,
+                        "WebotSimulator is waiting for file lock. See {0}",
+                        lockFilePath);
+                Thread.sleep(10000);
+            }
+
+            if (hadToWait) {
+                LOG.log(Level.WARNING,
+                        "WebotSimulator acquired file lock. It will be released when the process exits.");
+            }
+            channel.truncate(0);
+            channel.write(ByteBuffer.wrap("Locked by WebotSimulator %Tc"
+                    .formatted(Calendar.getInstance()).getBytes()));
+            channel.force(true);
+        }
+    }
+
     /**
      * Constructs an instance that when run() is called, will cause Webots to load and, if
      * necessary, ask the user to start the specified world file.
      *
      * @param worldFilePath the path to the world file that the user should be prompted to load and
      *        start.
-     * @throws FileNotFoundException if the world file does not exist
+     * @param cls the class of the TimedRobot to run.
+     * @throws InterruptedException if interrupted while waiting to get exclusive use of the needed
+     *         TCP ports.
+     * @throws IOException if an IO error occurs while attempting to get exclusive use of the needed
+     *         TCP ports.
      */
-    public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
+    public WebotsSimulator(String worldFilePath,
+            Class<? extends TimedRobot> cls)
+            throws InterruptedException, IOException {
+        this.cls = cls;
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
         addNetworkTablesLogger();
@@ -323,7 +384,8 @@ public class WebotsSimulator implements AutoCloseable {
 
                         if (useStepTiming) {
                             LOG.log(Level.DEBUG,
-                                    "Calling SimHooks.stepTiming()");
+                                    "Calling SimHooks.stepTiming({0})",
+                                    deltaSecs);
                             SimHooks.stepTiming(deltaSecs);
                             LOG.log(Level.DEBUG,
                                     "SimHooks.stepTiming() returned");
@@ -592,34 +654,57 @@ public class WebotsSimulator implements AutoCloseable {
 
     Throwable runExitThrowable = null;
 
-    /**
-     * Runs the simulation of using the specified WPILib robot.
-     * 
-     * @param robot the WPILib robot to run in the simulator
-     * 
-     */
-    public void run(TimedRobot robot) {
-        runExitThrowable = null;
-        if (oneShotCallbacks.isEmpty()) {
-            LOG.log(Level.WARNING,
-                    "WebotsSimulator.atSec() was never called so planning to enable in autonomous for 15 seconds.");
-            atSec(0.0, s -> {
-                s.enableAutonomous();
-            });
-            atSec(15.0, s -> {
-                s.disable();
-            });
-        }
+    boolean endCompetitionCalled = false;
 
-        // Run the onInited callbacks once.
-        // Note: the offset is -period so they are run before other WPILib periodic methods
-        robot.addPeriodic(this::runRobotInitedCallbacksOnce, robot.getPeriod(),
-                -robot.getPeriod());
-
-        try (var endNotifier = new Notifier(() -> {
+    private void endCompetition(TimedRobot robot) {
+        // As of WPILib 2024.3.1, calling endCompetition() more than once after calling
+        // startCompetition() doesn't seem to cause any problems, but we make sure we only call it
+        // once just in case that changes in the future.
+        if (!endCompetitionCalled) {
             LOG.log(Level.DEBUG, "Calling robot.endCompetition()");
             robot.endCompetition();
-        })) {
+            endCompetitionCalled = true;
+        }
+    }
+
+    /**
+     * Runs the simulation.
+     * 
+     * @throws SecurityException if the robot class's constructor is inaccessible due to module
+     *         security
+     * @throws NoSuchMethodException if the robot class doesn't have a default constructor
+     * @throws InvocationTargetException if the robot class's default constructor throws an
+     *         exception
+     * @throws IllegalAccessException if the robot class's default constructor is not accessible
+     *         (e.g. not public)
+     * @throws InstantiationException if the robot class is abstract
+     * 
+     */
+    public void run() throws InstantiationException, IllegalAccessException,
+            InvocationTargetException, NoSuchMethodException,
+            SecurityException {
+        endCompetitionCalled = false;
+        try (TimedRobot robot = cls.getDeclaredConstructor().newInstance();
+                var endNotifier = new Notifier(() -> {
+                    endCompetition(robot);
+                })) {
+            runExitThrowable = null;
+            if (oneShotCallbacks.isEmpty()) {
+                LOG.log(Level.WARNING,
+                        "WebotsSimulator.atSec() was never called so planning to enable in autonomous for 15 seconds.");
+                atSec(0.0, s -> {
+                    s.enableAutonomous();
+                });
+                atSec(15.0, s -> {
+                    s.disable();
+                });
+            }
+
+            // Run the onInited callbacks once.
+            // Note: the offset is -period so they are run before other WPILib periodic methods
+            robot.addPeriodic(this::runRobotInitedCallbacksOnce,
+                    robot.getPeriod(), -robot.getPeriod());
+
             this.endNotifier = endNotifier;
             // HAL must be initialized or SimDeviceSim.resetData() will crash and SmartDashboard
             // might not work.
@@ -628,10 +713,19 @@ public class WebotsSimulator implements AutoCloseable {
             SimHooks.restartTiming();
             SimHooks.resumeTiming();
             isRobotCodeRunning = true;
-            robot.startCompetition();
+            try {
+                robot.startCompetition();
+            } finally {
+                // Always call endCompetition() so that WPILib's notifier is stopped. If it isn't
+                // future tests will hang on calls to stepTiming().
+                endCompetition(robot);
+            }
             if (runExitThrowable != null) {
                 throw new RuntimeException(runExitThrowable);
             }
+        } catch (IllegalArgumentException ex) {
+            // This should not be possible.
+            throw new RuntimeException(ex);
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
@@ -656,6 +750,7 @@ public class WebotsSimulator implements AutoCloseable {
         inst.close();
         inst.stopServer();
         pauser.close();
+
         LOG.log(Level.DEBUG, "Done closing WebotsSimulator");
     }
 }
