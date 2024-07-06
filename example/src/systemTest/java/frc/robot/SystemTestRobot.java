@@ -19,7 +19,7 @@ public class SystemTestRobot {
 
     @Test
     void testDrivesToLocationAndElevatesInAutonomous()
-            throws TimeoutException, FileNotFoundException {
+            throws Exception {
         try (var robot = new Robot();
                 var manager =
                         new WebotsSimulator("Webots/worlds/DBSExample.wbt")) {
@@ -59,7 +59,7 @@ public class SystemTestRobot {
 
     @Test
     void testCanBeRotatedInPlaceInTeleop()
-            throws TimeoutException, FileNotFoundException {
+            throws Exception {
         try (var robot = new Robot();
                 var manager =
                         new WebotsSimulator("Webots/worlds/DBSExample.wbt")) {

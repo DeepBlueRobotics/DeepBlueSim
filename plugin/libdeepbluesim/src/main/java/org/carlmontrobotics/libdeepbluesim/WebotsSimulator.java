@@ -2,8 +2,15 @@ package org.carlmontrobotics.libdeepbluesim;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -12,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,6 +68,17 @@ public class WebotsSimulator implements AutoCloseable {
     private static final Logger LOG =
             System.getLogger(WebotsSimulator.class.getName());
 
+    // DeepBlueSim uses WPI's HAL sim websocket server extension and only one process can be started
+    // with that extension at a time, presumably because it listens on a TCP port. Gradle can create
+    // multiple processes each with multiple threads each with different instances of this class. To
+    // prevent conflict over use of the ports, we use a file lock to ensure there is only one
+    // process and a semaphore to ensure there is only one thread within that process that has
+    // created an instance of this class at a time.
+    private static Semaphore semaphore = new Semaphore(1);
+    private static volatile FileChannel channel = null;
+    private static volatile FileLock fileLock = null;
+
+
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
     private final NetworkTable coordinator;
@@ -86,15 +105,58 @@ public class WebotsSimulator implements AutoCloseable {
         // This is replaced in waitForUserToStart()
     });
 
+    static private void acquireFileLock()
+            throws InterruptedException, IOException {
+        if (!semaphore.tryAcquire()) {
+            LOG.log(Level.WARNING, "WebotSimulator is waiting for semaphore");
+            semaphore.acquire();
+            LOG.log(Level.WARNING, "WebotSimulator acquired semaphore");
+        }
+        if (fileLock == null) {
+            var lockFilePath = Path.of(System.getProperty("java.io.tmpdir"),
+                    "WebotSimulator.lock");
+            channel = FileChannel.open(lockFilePath, StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE);
+            boolean hadToWait = false;
+            while ((fileLock = channel.tryLock()) == null) {
+                hadToWait = true;
+                LOG.log(Level.WARNING,
+                        "WebotSimulator is waiting for file lock. See {0}",
+                        lockFilePath);
+                Thread.sleep(10000);
+                fileLock = channel.tryLock();
+            }
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                LOG.log(Level.DEBUG,
+                        "JVM holding lock on {0} is shutting down. Lock should automatically be released.");
+            }));
+
+            if (hadToWait) {
+                LOG.log(Level.WARNING,
+                        "WebotSimulator acquired file lock. It will be released when the process exits.");
+            }
+            channel.truncate(0);
+            channel.write(ByteBuffer.wrap("Locked by WebotSimulator %Tc"
+                    .formatted(Calendar.getInstance()).getBytes()));
+            channel.force(true);
+        }
+    }
+
     /**
      * Constructs an instance that when run() is called, will cause Webots to load and, if
      * necessary, ask the user to start the specified world file.
      *
      * @param worldFilePath the path to the world file that the user should be prompted to load and
      *        start.
-     * @throws FileNotFoundException if the world file does not exist
+     * @throws InterruptedException if interrupted while waiting to get exclusive use of the needed
+     *         TCP ports.
+     * @throws IOException if an IO error occurs while attempting to get exclusive use of the needed
+     *         TCP ports.
      */
-    public WebotsSimulator(String worldFilePath) throws FileNotFoundException {
+    public WebotsSimulator(String worldFilePath)
+            throws InterruptedException, IOException {
+        acquireFileLock();
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
         addNetworkTablesLogger();
@@ -209,6 +271,8 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     private volatile long isReadyTimestamp = Long.MAX_VALUE;
+
+    private static int testNumber = 0;
 
     /**
      * Load a particular world file and, if necessary, wait for the user to start it.
@@ -355,6 +419,9 @@ public class WebotsSimulator implements AutoCloseable {
         // Restart the server so that the clients will reconnect.
         inst.startServer();
 
+        // if (testNumber++ == 0) {
+        // throw new TimeoutException("Webots not ready in time");
+        // }
         // Wait up to 15 minutes for DeepBlueSim to be ready, reminding the user every 10 seconds.
         // On GitHub's MacOS Continuous Integration servers, it can take over 8 minutes for Webots
         // to start.
@@ -656,6 +723,16 @@ public class WebotsSimulator implements AutoCloseable {
         inst.close();
         inst.stopServer();
         pauser.close();
+        try {
+            LOG.log(Level.WARNING,
+                    "WebotsSimulator is releasing the semaphore");
+            channel.close();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        } finally {
+            semaphore.release();
+        }
+
         LOG.log(Level.DEBUG, "Done closing WebotsSimulator");
     }
 }

@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 public class DBSExampleTest {
     @Test
     void testDrivesToLocationAndElevatesInAutonomous()
-            throws TimeoutException, FileNotFoundException {
+            throws Exception {
         try (var robot = new DBSExampleRobot();
                 var manager = new WebotsSimulator(
                         "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt")) {
@@ -58,7 +58,7 @@ public class DBSExampleTest {
 
     @Test
     void testCanBeRotatedInPlaceInTeleop()
-            throws TimeoutException, FileNotFoundException {
+            throws Exception {
         try (var robot = new DBSExampleRobot();
                 var manager = new WebotsSimulator(
                         "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt")) {

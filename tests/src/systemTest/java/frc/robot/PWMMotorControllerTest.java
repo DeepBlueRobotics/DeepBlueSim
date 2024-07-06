@@ -16,7 +16,7 @@ import edu.wpi.first.math.util.Units;
 public class PWMMotorControllerTest {
     @Test
     void testShaftRotatesInAutonomous()
-            throws TimeoutException, FileNotFoundException {
+            throws Exception {
         // TODO: Fix the expected values to be physically correct and then fix PWMMotorMediator to
         // pass the test.
         try (var robot = new PWMMotorControllerRobot();
