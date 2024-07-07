@@ -6,7 +6,7 @@
 # The DeepBlueSim robot controller will use the motor's type (e.g. NEOMotor) and controllerType
 # (e.g. "Spark Max") to determine the encoder's CPR.
 
-EXTERNPROTO "../protos/DBSBuiltinEncoderBase.proto"
+EXTERNPROTO "DBSBuiltinEncoderBase.proto"
 
 PROTO REVBuiltinEncoder [
     field SFFloat noiseStdDevRad 0

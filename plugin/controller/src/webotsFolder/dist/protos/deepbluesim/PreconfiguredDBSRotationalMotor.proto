@@ -4,7 +4,7 @@
 # template language: javascript
 # A bunch of DBSRotationalMotorBase configuration presets
 
-EXTERNPROTO "../protos/DBSRotationalMotorBase.proto"
+EXTERNPROTO "DBSRotationalMotorBase.proto"
 
 PROTO PreconfiguredDBSRotationalMotor [
     unconnectedField SFString{"AndyMark9015", "AndyMarkRs775_125", "Bag", "BanebotsRs550", "BanebotsRs775", "CIM", "Falcon500", "MiniCIM", "NEO", "NEO550", "RomiBuiltin", "Vex775Pro"} motorType "NEO"
@@ -19,7 +19,7 @@ PROTO PreconfiguredDBSRotationalMotor [
         import {assert} from 'wbutility.js';
         assert(!fields.motorType.value.startsWith("NEO") || ["Spark Max", "PWM"].includes(fields.controllerType.value),
             `PreconfiguredDBSRotationalMotor: Brushless motor "${fields.motorType.value}" cannot be driven by brushed motor controller "${fields.controllerType.value}"!`)
-        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/dbsmotor.js`));
+        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsmotor.js`));
     >%
     DBSRotationalMotorBase {
         %<= motor.getDef(fields.motorType.value) >%

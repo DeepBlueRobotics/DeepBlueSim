@@ -18,7 +18,7 @@ PROTO DBSRotationalMotorBase [
 ]
 {
     %<
-        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/dbsmotor.js`));
+        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsmotor.js`));
 
         // Workaround https://github.com/cyberbotics/webots/issues/6566: fields.controllerType, fields.port,
         // fields.gearing, fields.inverted, fields.nominalVoltageVolts, fields.stallTorqueNewtonMeters,

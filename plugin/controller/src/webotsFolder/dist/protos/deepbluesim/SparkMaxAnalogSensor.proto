@@ -3,7 +3,7 @@
 # license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # A DBSStandaloneEncoderBase implementation for an analog sensor for a Spark Max.
 
-EXTERNPROTO "../protos/DBSStandaloneEncoderBase.proto"
+EXTERNPROTO "DBSStandaloneEncoderBase.proto"
 
 PROTO SparkMaxAnalogSensor [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"

@@ -3,12 +3,12 @@
 # license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
 # tags: hidden, no3dView
-# A base proto for robot encoders built into motors
+# A base proto for standalone robot encoders
 
-EXTERNPROTO "../protos/DBSEncoderBase.proto"
+EXTERNPROTO "DBSEncoderBase.proto"
 
-PROTO DBSBuiltinEncoderBase [
-    field SFString name ""
+PROTO DBSStandaloneEncoderBase [
+    unconnectedField SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     unconnectedField SFBool absolute FALSE
     unconnectedField SFFloat absoluteOffsetDeg 0
     unconnectedField SFBool inverted FALSE
@@ -17,7 +17,7 @@ PROTO DBSBuiltinEncoderBase [
 ]
 {
     DBSEncoderBase {
-        name IS name
+        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
         noiseStdDevRad IS noiseStdDevRad
     }
 }

@@ -2,26 +2,26 @@
 # license: MIT
 # license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-# A SliderJoint powered by a DeepBlueSim-compatible motor
+# A HingeJoint powered by a DeepBlueSim-compatible motor
 
-EXTERNPROTO "../protos/DBSLinearMotorBase.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSLinearMotor.proto"
+EXTERNPROTO "DBSRotationalMotorBase.proto"
+EXTERNPROTO "PreconfiguredDBSRotationalMotor.proto"
 
-EXTERNPROTO "../protos/CANCoder.proto"
-EXTERNPROTO "../protos/DBSQuadratureEncoder.proto"
-EXTERNPROTO "../protos/REVBuiltinEncoder.proto"
-EXTERNPROTO "../protos/SparkMaxAbsoluteEncoder.proto"
-EXTERNPROTO "../protos/SparkMaxAlternateEncoder.proto"
-EXTERNPROTO "../protos/SparkMaxAnalogSensor.proto"
+EXTERNPROTO "CANCoder.proto"
+EXTERNPROTO "DBSQuadratureEncoder.proto"
+EXTERNPROTO "REVBuiltinEncoder.proto"
+EXTERNPROTO "SparkMaxAbsoluteEncoder.proto"
+EXTERNPROTO "SparkMaxAlternateEncoder.proto"
+EXTERNPROTO "SparkMaxAnalogSensor.proto"
 
-PROTO PoweredSliderJoint [
+PROTO PoweredHingeJoint [
     field MFNode{
-        DBSLinearMotorBase{}, PreconfiguredDBSLinearMotor{}
+        DBSRotationalMotorBase{}, PreconfiguredDBSRotationalMotor{}
         CANCoder{}, DBSQuadratureEncoder{}, REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{},
         Brake{}
-    } devices [PreconfiguredDBSLinearMotor{} REVBuiltinEncoder{} Brake{}]
+    } devices [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} Brake{}]
     field SFNode{Solid{}} endPoint Solid{}
-    field SFNode{JointParameters{}} jointParameters JointParameters{}
+    field SFNode{HingeJointParameters{}} jointParameters HingeJointParameters{}
 ]
 {
     %<
@@ -40,19 +40,19 @@ PROTO PoweredSliderJoint [
                 encoderDevice = devices[i];
             }
         }
-        assert(hasBrake, "PoweredSliderJoint is missing the required Brake device!");
-        assert(motorDevice !== null, "PoweredSliderJoint is missing the required motor device!");
+        assert(hasBrake, "PoweredHingeJoint is missing the required Brake device!");
+        assert(motorDevice !== null, "PoweredHingeJoint is missing the required motor device!");
         let motorType = motorDevice?.node_name;
         let controllerType = motorDevice?.fields.controllerType.value;
         if (controllerType?.startsWith("Spark")) {
-            assert(encoderDevice !== null, "PoweredSliderJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
+            assert(encoderDevice !== null, "PoweredHingeJoint is using a " + controllerType + " motor controller but is missing the required encoder device! "
                 + "Consider adding a REVBuiltinEncoder.");
         } else if (controllerType === "PWM") {
             let encoderType = encoderDevice?.node_name;
-            assert(!encoderType?.endsWith("BuiltinEncoder"), "PoweredSliderJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
+            assert(!encoderType?.endsWith("BuiltinEncoder"), "PoweredHingeJoint is using a " + controllerType + " motor controller, so a built-in encoder is not allowed!");
         }
     >%
-    SliderJoint {
+    HingeJoint {
         device IS devices
         endPoint IS endPoint
         jointParameters IS jointParameters

@@ -3,11 +3,11 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
-EXTERNPROTO "../protos/DBSQuadratureEncoder.proto"
-EXTERNPROTO "../protos/PoweredHingeJoint.proto"
-EXTERNPROTO "../protos/PoweredSliderJoint.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSLinearMotor.proto"
-EXTERNPROTO "../protos/PreconfiguredDBSRotationalMotor.proto"
+EXTERNPROTO "../protos/deepbluesim/DBSQuadratureEncoder.proto"
+EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/deepbluesim/PoweredSliderJoint.proto"
+EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSLinearMotor.proto"
+EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
 
 WorldInfo {
 }
