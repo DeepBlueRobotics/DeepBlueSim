@@ -38,7 +38,6 @@
                 freeSpeedRPM: 13180
             },
             BanebotsRs550: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.38,
                 stallCurrentAmps: 84,

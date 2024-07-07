@@ -22,6 +22,6 @@ PROTO PreconfiguredDBSRotationalMotor [
         let motor = eval(wbfile.readTextFile(`${context.project_path}protos/dbsmotor.js`));
     >%
     DBSRotationalMotorBase {
-        %<= motor.getDef('CIM') >%
+        %<= motor.getDef(fields.motorType.value) >%
     }
 }
