@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 @ResourceLock("WebotsSimulator")
 public class DBSExampleTest {
     @Test
-    @RepeatedTest(value = 10, failureThreshold = 1)
+    // @RepeatedTest(value = 10, failureThreshold = 1) // Uncomment for stress testing.
     void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
