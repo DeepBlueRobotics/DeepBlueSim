@@ -32,7 +32,7 @@ jobs:
 
     - name: Setup Webots
       id: setupWebots
-      uses: DeepBlueRobotics/setup-webots@v2
+      uses: DeepBlueRobotics/setup-webots@v2.0.3
       with:
         webotsVersion: R2023b
 
