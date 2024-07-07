@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 
@@ -103,7 +104,7 @@ public class WebotsSimulator implements AutoCloseable {
         // This is replaced in waitForUserToStart()
     });
 
-    private Class<? extends TimedRobot> cls;
+    private Supplier<TimedRobot> robotConstructor;
 
     static {
         try {
@@ -113,7 +114,7 @@ public class WebotsSimulator implements AutoCloseable {
         }
     }
 
-    static private synchronized void acquireFileLock()
+    private static synchronized void acquireFileLock()
             throws InterruptedException, IOException {
         if (fileLock == null) {
             var lockFilePath = Path.of(System.getProperty("java.io.tmpdir"),
@@ -146,16 +147,19 @@ public class WebotsSimulator implements AutoCloseable {
      *
      * @param worldFilePath the path to the world file that the user should be prompted to load and
      *        start.
-     * @param cls the class of the TimedRobot to run.
+     * @param robotConstructor a function which creates an instance of the class of the TimedRobot
+     *        to run. Note: The supplier should create the TimedRobot instance (e.g.
+     *        <code>Robot::new</code>). Passing an existing robot object (e.g.
+     *        <code>() -> robot</code>) will lead to flaky tests.
      * @throws InterruptedException if interrupted while waiting to get exclusive use of the needed
      *         TCP ports.
      * @throws IOException if an IO error occurs while attempting to get exclusive use of the needed
      *         TCP ports.
      */
     public WebotsSimulator(String worldFilePath,
-            Class<? extends TimedRobot> cls)
+            Supplier<TimedRobot> robotConstructor)
             throws InterruptedException, IOException {
-        this.cls = cls;
+        this.robotConstructor = robotConstructor;
         withWorld(worldFilePath);
         inst = NetworkTableInstance.getDefault();
         addNetworkTablesLogger();
@@ -684,7 +688,7 @@ public class WebotsSimulator implements AutoCloseable {
             InvocationTargetException, NoSuchMethodException,
             SecurityException {
         endCompetitionCalled = false;
-        try (TimedRobot robot = cls.getDeclaredConstructor().newInstance();
+        try (TimedRobot robot = robotConstructor.get();
                 var endNotifier = new Notifier(() -> {
                     endCompetition(robot);
                 })) {

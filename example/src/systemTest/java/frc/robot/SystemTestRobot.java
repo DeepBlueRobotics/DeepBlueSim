@@ -18,7 +18,7 @@ public class SystemTestRobot {
     @Test
     void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
         try (var manager = new WebotsSimulator("Webots/worlds/DBSExample.wbt",
-                Robot.class)) {
+                Robot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
@@ -56,7 +56,7 @@ public class SystemTestRobot {
     @Test
     void testCanBeRotatedInPlaceInTeleop() throws Exception {
         try (var manager = new WebotsSimulator("Webots/worlds/DBSExample.wbt",
-                Robot.class)) {
+                Robot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);

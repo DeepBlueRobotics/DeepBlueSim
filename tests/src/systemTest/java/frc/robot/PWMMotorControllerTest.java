@@ -20,7 +20,7 @@ public class PWMMotorControllerTest {
         // pass the test.
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/PWMMotorController.wbt",
-                PWMMotorControllerRobot.class)) {
+                PWMMotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
