@@ -113,7 +113,7 @@ public class WebotsSimulator implements AutoCloseable {
         }
     }
 
-    static private synchronized void acquireFileLock()
+    private static synchronized void acquireFileLock()
             throws InterruptedException, IOException {
         if (fileLock == null) {
             var lockFilePath = Path.of(System.getProperty("java.io.tmpdir"),
