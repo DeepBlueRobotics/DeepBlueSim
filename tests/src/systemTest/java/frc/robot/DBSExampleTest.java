@@ -3,6 +3,7 @@ package frc.robot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -17,6 +18,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 @ResourceLock("WebotsSimulator")
 public class DBSExampleTest {
     @Test
+    @RepeatedTest(value = 10, failureThreshold = 1)
     void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
