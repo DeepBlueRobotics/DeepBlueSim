@@ -31,8 +31,9 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                     // This capability is needed to overwrite the files loaded from the zip (if they exist)
                     // Webots automatically sets the hidden attribute on the .wbproj file
                     // so the task will fail unless we remove it
-                    if(OperatingSystem.current().isWindows()) {
-                        Files.walk(Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds"))
+                    def worldsFolder = Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds");
+                    if(OperatingSystem.current().isWindows() && Files.isDirectory(worldsFolder)) {
+                        Files.walk(worldsFolder)
                             .filter(Files::isRegularFile)
                             .filter(file -> {
                                 def splitFilePath = file.toString().split("\\.");
