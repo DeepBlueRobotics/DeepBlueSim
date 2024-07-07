@@ -32,10 +32,13 @@ class DeepBlueSimPlugin implements Plugin<Project> {
                     // Webots automatically sets the hidden attribute on the .wbproj file
                     // so the task will fail unless we remove it
                     if(OperatingSystem.current().isWindows()) {
-                        def wbprojPath = Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds", ".DBSExample.wbproj")
-                        if(Files.exists(wbprojPath)) {
-                            Files.setAttribute(wbprojPath, "dos:hidden", false)
-                        }
+                        Files.walk(Paths.get(project.projectDir.getAbsolutePath(), "Webots", "worlds"))
+                            .filter(Files::isRegularFile)
+                            .filter(file -> {
+                                def splitFilePath = file.toString().split("\\.");
+                                return splitFilePath.length > 0 && splitFilePath[splitFilePath.length-1].equals("wbproj");
+                            })
+                            .forEach(file -> Files.setAttribute(file, "dos:hidden", false));
                     }
 
                     def dbsDir = new File(project.buildDir, "tmp/deepbluesim")
