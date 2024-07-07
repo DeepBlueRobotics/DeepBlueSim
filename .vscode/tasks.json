@@ -25,11 +25,7 @@
                 "build",
                 ":example:installDeepBlueSim",
                 "-x",
-                ":example:extractReleaseNative",
-                "-x",
-                ":example:systemTest",
-                "-x",
-                ":plugin:check"
+                "check"
             ],
             "problemMatcher": []
         },
@@ -40,11 +36,7 @@
                 "build",
                 ":example:installDeepBlueSim",
                 "-x",
-                ":example:extractReleaseNative",
-                "-x",
-                ":example:systemTest",
-                "-x",
-                ":plugin:check",
+                "check",
                 "--continuous"
             ],
             "problemMatcher": []
