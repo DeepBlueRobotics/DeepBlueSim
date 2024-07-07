@@ -1,8 +1,8 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-
-# license: WPILib BSD
-# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+# A implementation of Camera that is configured with the properties of a Limelight
 
 PROTO Limelight [
     unconnectedField SFString name "limelight"
@@ -36,17 +36,14 @@ PROTO Limelight [
 {
     Camera {
         %<
-            let modelId = fields.model.value.substring(10).replace('(+)', '');
-            if (!['1', '2', '3', '3G'].includes(modelId)) {
-                console.error('Invalid model on Limelight "' + fields.name.value + '": "' + fields.model.value + '"');
-            }
+            import {assert} from 'wbutility.js';
 
-            if (fields.pipelines.value.length === 0) {
-                console.error('Limelight "' + fields.name.value + '" has no pipelines assigned to it! It needs at least one to be used by the simulator.');
-            }
-            if (fields.defaultPipeline.value < 0 || fields.defaultPipeline.value >= fields.pipelines.value.length) {
-                console.error('Limelight "' + fields.name.value + '" has a default value corresponding to a nonexistant pipeline!');
-            }
+            let modelId = fields.model.value.substring(10).replace('(+)', '');
+            assert(['1', '2', '3', '3G'].includes(modelId), `Invalid model on Limelight "${fields.name.value}": "${"`);
+
+            assert(fields.pipelines.value.length > 0, 'Limelight "${fields.name.value}" has no pipelines assigned to it! It needs at least one to be used by the simulator.');
+            assert(fields.defaultPipeline.value >= 0 && fields.defaultPipeline.value < fields.pipelines.value.length,
+                'Limelight "${fields.name.value}" has a default value corresponding to a nonexistant pipeline!');
 
             let cameraFOVRad, cameraWidthPx, cameraHeightPx;
             if (modelId === '3G') {

@@ -1,22 +1,24 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# A DBSStandaloneEncoderBase implementation for an analog sensor for a Spark Max.
 
-EXTERNPROTO "../protos/WPIStandaloneEncoderBase.proto"
+EXTERNPROTO "DBSStandaloneEncoderBase.proto"
 
-# A WPIStandaloneEncoderBase implementation for a CANCoder.
-PROTO CANCoder [
-    unconnectedField SFInt32 id 0
+PROTO SparkMaxAnalogSensor [
     field SFString{"Motor Shaft", "Output Shaft"} location "Motor Shaft"
     field SFFloat absoluteOffsetDeg 0
     field SFBool inverted FALSE
+    field SFInt32 CPR 4096
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIStandaloneEncoderBase {
+    DBSStandaloneEncoderBase {
         location IS location
         absolute TRUE
         absoluteOffsetDeg IS absoluteOffsetDeg
         inverted IS inverted
-        CPR 4096
+        CPR IS CPR
         noiseStdDevRad IS noiseStdDevRad
     }
 }

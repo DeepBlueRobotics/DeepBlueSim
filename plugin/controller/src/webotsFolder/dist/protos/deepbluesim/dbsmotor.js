@@ -17,7 +17,6 @@
     getDef: function (motorType) {
         const specs = {
             AndyMark9015: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.36,
                 stallCurrentAmps: 71,
@@ -25,7 +24,6 @@
                 freeSpeedRPM: 14270
             },
             AndyMarkRs775_125: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.28,
                 stallCurrentAmps: 18,
@@ -33,7 +31,6 @@
                 freeSpeedRPM: 5800
             },
             Bag: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.43,
                 stallCurrentAmps: 53,
@@ -41,7 +38,6 @@
                 freeSpeedRPM: 13180
             },
             BanebotsRs550: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.38,
                 stallCurrentAmps: 84,
@@ -49,7 +45,6 @@
                 freeSpeedRPM: 19000
             },
             BanebotsRs775: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.72,
                 stallCurrentAmps: 97,
@@ -57,7 +52,6 @@
                 freeSpeedRPM: 13050
             },
             CIM: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 2.42,
                 stallCurrentAmps: 133,
@@ -65,7 +59,6 @@
                 freeSpeedRPM: 5310
             },
             Falcon500: {
-                port: "id",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 4.69,
                 stallCurrentAmps: 257,
@@ -73,7 +66,6 @@
                 freeSpeedRPM: 6380
             },
             MiniCIM: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 1.41,
                 stallCurrentAmps: 89,
@@ -81,7 +73,6 @@
                 freeSpeedRPM: 5840
             },
             NEO: {
-                port: "id",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 2.6,
                 stallCurrentAmps: 105,
@@ -89,7 +80,6 @@
                 freeSpeedRPM: 5676
             },
             NEO550: {
-                port: "id",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.97,
                 stallCurrentAmps: 100,
@@ -97,7 +87,6 @@
                 freeSpeedRPM: 11000
             },
             RomiBuiltin: {
-                port: "port",
                 nominalVoltageVolts: 4.5,
                 stallTorqueNewtonMeters: 0.1765,
                 stallCurrentAmps: 1.25,
@@ -105,7 +94,6 @@
                 freeSpeedRPM: 150
             },
             Vex775Pro: {
-                port: "port",
                 nominalVoltageVolts: 12,
                 stallTorqueNewtonMeters: 0.71,
                 stallCurrentAmps: 134,
@@ -116,7 +104,7 @@
         let spec = specs[motorType];
         return `
             controllerType IS controllerType
-            port IS ${spec.port}
+            port IS port
             gearing IS gearing
             inverted IS inverted
             nominalVoltageVolts ${spec.nominalVoltageVolts}

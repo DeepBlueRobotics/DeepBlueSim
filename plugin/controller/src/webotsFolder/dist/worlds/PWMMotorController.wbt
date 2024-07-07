@@ -3,8 +3,8 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
-EXTERNPROTO "../protos/PoweredHingeJoint.proto"
-EXTERNPROTO "../protos/MiniCIMMotor.proto"
+EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
+EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
 
 WorldInfo {
 }
@@ -25,7 +25,8 @@ DEF ROBOT Robot {
       children [
         PoweredHingeJoint {
           devices [
-            MiniCIMMotor {
+            PreconfiguredDBSRotationalMotor {
+              motorType "MiniCIM"
               controllerType "PWM"
               port 1
               gearing 100

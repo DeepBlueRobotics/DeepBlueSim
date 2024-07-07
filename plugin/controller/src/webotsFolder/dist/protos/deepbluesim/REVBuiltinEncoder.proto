@@ -1,17 +1,18 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-
-EXTERNPROTO "../protos/WPIBuiltinEncoderBase.proto"
-
 # A proto for encoders built into REV motors
 # The DeepBlueSim robot controller will use the motor's type (e.g. NEOMotor) and controllerType
 # (e.g. "Spark Max") to determine the encoder's CPR.
+
+EXTERNPROTO "DBSBuiltinEncoderBase.proto"
 
 PROTO REVBuiltinEncoder [
     field SFFloat noiseStdDevRad 0
 ]
 {
-    WPIBuiltinEncoderBase {
+    DBSBuiltinEncoderBase {
         noiseStdDevRad IS noiseStdDevRad
     }
 }

@@ -1,0 +1,31 @@
+#VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# template language: javascript
+# A Motor with the properties necessary to interface with DeepBlueSim
+
+PROTO DBSRotationalMotorBase [
+    unconnectedField SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
+    unconnectedField SFInt32 port 0
+    field SFFloat gearing 1
+    unconnectedField SFBool inverted FALSE
+    unconnectedField SFFloat nominalVoltageVolts 12
+    field SFFloat stallTorqueNewtonMeters 5
+    unconnectedField SFFloat stallCurrentAmps 100
+    unconnectedField SFFloat freeCurrentAmps 1
+    field SFFloat freeSpeedRPM 5000
+    field SFString sound "default"
+]
+{
+    %<
+        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsmotor.js`));
+
+        // Workaround https://github.com/cyberbotics/webots/issues/6566: fields.controllerType, fields.port,
+        // fields.gearing, fields.inverted, fields.nominalVoltageVolts, fields.stallTorqueNewtonMeters,
+        // fields.stallCurrentAmps, fields.freeCurrentAmps, fields.freeSpeedRPM, fields.sound,
+        // fields.outputRadiusMeters
+    >%
+    RotationalMotor {
+        %<= motor.getBaseDef(fields) >%
+    }
+}

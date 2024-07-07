@@ -1,0 +1,28 @@
+#VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# template language: javascript
+# A bunch of DBSLinearMotorBase configuration presets
+
+EXTERNPROTO "DBSLinearMotorBase.proto"
+
+PROTO PreconfiguredDBSLinearMotor [
+    unconnectedField SFString{"AndyMark9015", "AndyMarkRs775_125", "Bag", "BanebotsRs550", "BanebotsRs775", "CIM", "Falcon500", "MiniCIM", "NEO", "NEO550", "RomiBuiltin", "Vex775Pro"} motorType "NEO"
+    field SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
+    field SFInt32 port 0
+    field SFFloat gearing 1
+    field SFFloat outputRadiusMeters 0.0254 # 2in diameter
+    field SFBool inverted FALSE
+    field SFString sound "default"
+]
+{
+    %<
+        import {assert} from 'wbutility.js';
+        assert(!fields.motorType.value.startsWith("NEO") || ["Spark Max", "PWM"].includes(fields.controllerType.value),
+            `PreconfiguredDCDBSMotor: Brushless motor "${fields.motorType.value}" cannot be driven by brushed motor controller "${fields.controllerType.value}"!`)
+        let motor = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsmotor.js`));
+    >%
+    DBSLinearMotorBase {
+        %<= motor.getDef(fields.motorType.value) >%
+    }
+}

@@ -1,8 +1,8 @@
 #VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-
-# license: WPILib BSD
-# license url: https://github.com/wpilibsuite/allwpilib/blob/main/LICENSE.md
+# A implementation of DistanceSensor that is configured with the properties of a PlayingWithFusion TimeOfFlight sensor
 
 PROTO PlayingWithFusionTimeOfFlight [
     unconnectedField SFInt32 port        0
