@@ -20,7 +20,7 @@ public class DBSExampleTest {
     void testDrivesToLocationAndElevatesInAutonomous() throws Exception {
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
-                DBSExampleRobot.class)) {
+                DBSExampleRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).atSec(1.0, s -> {
@@ -59,7 +59,7 @@ public class DBSExampleTest {
     void testCanBeRotatedInPlaceInTeleop() throws Exception {
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/DBSExample.wbt",
-                DBSExampleRobot.class)) {
+                DBSExampleRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);
