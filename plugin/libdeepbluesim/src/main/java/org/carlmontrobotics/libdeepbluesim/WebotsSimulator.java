@@ -148,7 +148,9 @@ public class WebotsSimulator implements AutoCloseable {
      * @param worldFilePath the path to the world file that the user should be prompted to load and
      *        start.
      * @param robotConstructor a function which creates an instance of the class of the TimedRobot
-     *        to run.
+     *        to run. Note: The supplier should create the TimedRobot instance (e.g.
+     *        <code>Robot::new</code>). Passing an existing robot object (e.g.
+     *        <code>() -> robot</code>) will lead to flaky tests.
      * @throws InterruptedException if interrupted while waiting to get exclusive use of the needed
      *         TCP ports.
      * @throws IOException if an IO error occurs while attempting to get exclusive use of the needed
