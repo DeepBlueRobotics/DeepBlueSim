@@ -77,7 +77,6 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
 }
 
@@ -112,7 +111,7 @@ def ws_server = wpi.sim.addWebsocketsServer()
 testing {
     suites {
         configureEach {
-            useJUnitJupiter()
+            useJUnitJupiter("5.10.3")
 
             targets {
                 all {

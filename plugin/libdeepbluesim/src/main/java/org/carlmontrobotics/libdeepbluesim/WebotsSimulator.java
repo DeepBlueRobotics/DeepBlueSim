@@ -436,6 +436,10 @@ public class WebotsSimulator implements AutoCloseable {
                 } else
                     break;
             } catch (TimeoutException ex) {
+                // Restart the NT server in case we somehow missed that the loading of the world
+                // completed.
+                inst.stopServer();
+                inst.startServer();
                 LOG.log(Level.ERROR, userReminder);
             } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(
