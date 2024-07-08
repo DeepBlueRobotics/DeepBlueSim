@@ -1,9 +1,9 @@
 // Add repositories containing build plugins
 buildscript {
-  repositories {
-    jcenter()
-    google()
-  }
+    repositories {
+        jcenter()
+        google()
+    }
 }
 
 // Apply other plugins
