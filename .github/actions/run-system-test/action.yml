@@ -1,21 +1,21 @@
 name: 'Run System Test'
 description: 'Runs the system test'
 runs:
-    using: 'composite'
-    steps:
-        - name: Install DeepBlueSim
-            run: |
-                # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
-                # tasks is executed.
-                ./gradlew :example:simulateExternalJavaRelease --info --stacktrace
-            shell: bash
+  using: 'composite'
+  steps:
+    - name: Install DeepBlueSim
+      run: |
+        # This is also a test that our plugin installs DeepBlueSim if one of WPILib's simulate
+        # tasks is executed.
+        ./gradlew :example:simulateExternalJavaRelease --info --stacktrace
+      shell: bash
 
-        - name: Start Webots
-            run: |
-                $RUN_WEBOTS ./example/Webots/worlds/DBSExample.wbt &> webots-${{ runner.os }}.log &
-            shell: bash
+    - name: Start Webots
+      run: |
+        $RUN_WEBOTS ./example/Webots/worlds/DBSExample.wbt &> webots-${{ runner.os }}.log &
+      shell: bash
 
-        - name: Do the system test (and any other tests)
-            run: |
-                ./gradlew build --info --stacktrace
-            shell: bash
+    - name: Do the system test (and any other tests)
+      run: |
+        ./gradlew build --info --stacktrace
+      shell: bash
