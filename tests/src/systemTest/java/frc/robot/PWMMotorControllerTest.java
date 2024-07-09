@@ -229,7 +229,7 @@ public class PWMMotorControllerTest {
                 "For a free speed of {0} RPS when using a {1}, assuming the gearing is {2}.\n",
                 desiredFlywheelFreeSpeedRPS, motorModelName, gearing);
         var flywheelThicknessMeters = computeFlywheelThickness(
-                motor.withReduction(gearing), flywheelRadiusMeters,
+                gearMotor, flywheelRadiusMeters,
                 flywheelDensityKgPerM3, desiredTimeConstantSecs);
         LOG.log(Level.INFO,
                 "For a time constant of {0} second when using a {1} with a gearing of {2} and a flywheel with radius {3} meters and density {4} kg/m^3, assuming the flywheel thickness is {5} meters.\n",
