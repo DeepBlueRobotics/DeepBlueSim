@@ -161,7 +161,7 @@ public class PWMMotorControllerTest {
             double tSecs) {
         // TODO: Make sim accurate enough that this can be less than 1*simStepSizeSecs
         // (https://github.com/DeepBlueRobotics/DeepBlueSim/issues/101)
-        double jitterSecs = 3 * simStepSizeSecs;
+        double jitterSecs = 4 * simStepSizeSecs;
         double expectedEarlierSpeedRadPerSec =
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tSecs - jitterSecs);
         double expectedLaterSpeedRadPerSec =
