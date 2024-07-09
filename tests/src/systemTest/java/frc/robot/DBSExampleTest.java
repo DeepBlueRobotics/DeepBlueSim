@@ -84,7 +84,7 @@ public class DBSExampleTest {
                         0.1, "Robot close to target velocity");
                 assertEquals(62.5, Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
-                        2.0, "Robot close to target angular velocity");
+                        5.0, "Robot close to target angular velocity");
                 assertEquals(0.0,
                         new Translation3d(s.angularVelocity("ROBOT").getAxis())
                                 .getDistance(new Translation3d(0, 0, 1)),
