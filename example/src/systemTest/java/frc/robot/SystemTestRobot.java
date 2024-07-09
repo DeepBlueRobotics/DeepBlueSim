@@ -37,12 +37,12 @@ public class SystemTestRobot {
                         0.2, "Robot close to target position");
                 assertEquals(0.0,
                         s.position("ELEVATOR")
-                                .getDistance(new Translation3d(2.6, 0, 0.9)),
+                                .getDistance(new Translation3d(2.6, 0, 1.244)),
                         0.2, "Elevator close to target position");
                 assertEquals(0.0,
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
-                        0.01, "Robot close to target velocity");
+                        0.05, "Robot close to target velocity");
                 assertEquals(0.0,
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
@@ -61,7 +61,7 @@ public class SystemTestRobot {
                 s.enableTeleop();
                 DriverStationSim.setJoystickAxisCount(0, 2);
                 DriverStationSim.setJoystickAxis(0, 1, 0.0);
-                DriverStationSim.setJoystickAxis(0, 0, 0.15);
+                DriverStationSim.setJoystickAxis(0, 0, 0.6);
                 DriverStationSim.notifyNewData();
             }).everyStep(s -> {
                 var yawDegrees =
@@ -72,27 +72,28 @@ public class SystemTestRobot {
                     DriverStationSim.notifyNewData();
                     stoppedTryingToTurn = true;
                 }
-            }).atSec(1.0, s -> {
+            }).atSec(0.3, s -> {
                 assertEquals(0.0,
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
                         0.1, "Robot close to target velocity");
-                assertEquals(19.0,
-                        Units.radiansToDegrees(
+                assertEquals(62.5, Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
-                        1, "Robot close to target angular velocity");
+                        2.0, "Robot close to target angular velocity");
                 assertEquals(0.0,
                         new Translation3d(s.angularVelocity("ROBOT").getAxis())
                                 .getDistance(new Translation3d(0, 0, 1)),
                         0.1, "Robot close to target angular velocity axis");
-            }).atSec(4.0, s -> {
+            }).atSec(1.0, s -> {
+                // Note: Large tolerance because turning at a high speed means we can overshoot
+                // significantly in 1 step.
                 assertEquals(45.0,
-                        Units.radiansToDegrees(s.rotation("ROBOT").getZ()), 2.0,
-                        "Robot close to target rotation");
+                        Units.radiansToDegrees(s.rotation("ROBOT").getZ()),
+                        10.0, "Robot close to target rotation");
                 assertEquals(0.0,
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
-                        0.01, "Robot close to target velocity");
+                        0.1, "Robot close to target velocity");
                 assertEquals(0.0,
                         Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),

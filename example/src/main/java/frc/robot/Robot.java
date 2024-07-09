@@ -78,7 +78,7 @@ public class Robot extends TimedRobot {
     // Drive for 2 seconds
     if (m_timer.get() < 2.0) {
       m_robotDrive.arcadeDrive(0.5, 0.0); // drive forwards half speed
-      m_elevator.set(0.1);
+      m_elevator.set(0.3);
     } else {
       m_robotDrive.stopMotor(); // stop robot
     }

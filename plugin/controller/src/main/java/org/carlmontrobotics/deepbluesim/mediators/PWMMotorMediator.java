@@ -35,11 +35,16 @@ public class PWMMotorMediator {
         // Use velocity control
         motor.setPosition(Double.POSITIVE_INFINITY);
 
-        // Disable braking
-        if(motor.getBrake() != null) motor.getBrake().setDampingConstant(0);
+        if (motor.getBrake() != null) {
+            double dampingConstant = motorConstants.stallTorqueNewtonMeters
+                    * gearing / (motorConstants.freeSpeedRadPerSec / gearing);
+            motor.getBrake().setDampingConstant(dampingConstant);
+        }
 
         motorDevice.registerSpeedCallback((deviceName, speed) -> {
             double velocity = speed * motorConstants.freeSpeedRadPerSec;
+            motor.setAvailableTorque(Math.abs(speed)
+                    * motorConstants.stallTorqueNewtonMeters * gearing);
             motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
         }, true);
     }

@@ -1,0 +1,18 @@
+#VRML_SIM R2023b utf8
+# license: MIT
+# license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
+# template language: javascript
+# tags: nonDeterministic
+
+# A Brake with a unique name to workaround https://github.com/cyberbotics/webots/issues/6578
+
+PROTO DBSBrake [
+]
+{
+    %<
+        let name = "DBSBrake " + context.id;
+    >%
+    Brake {
+        name "%<= name >%"
+    }
+}

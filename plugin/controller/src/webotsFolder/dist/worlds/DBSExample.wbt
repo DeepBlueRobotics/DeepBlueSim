@@ -8,12 +8,13 @@ EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/deepbluesim/PoweredSliderJoint.proto"
 EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSLinearMotor.proto"
 EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
+EXTERNPROTO "../protos/deepbluesim/DBSBrake.proto"
 
 WorldInfo {
 }
 Viewpoint {
   orientation -0.17483905906784158 -0.1007392188381911 0.9794298919331301 4.169165907224898
-  position 1.742990312035277 3.046841469870379 1.4226819047141128
+  position 5.451052061691213 7.144320599246478 3.0635976233453825
 }
 DEF Field Group {
   children [
@@ -30,15 +31,13 @@ TexturedBackgroundLight {
 }
 DEF ROBOT Robot {
   translation -8.000411853504155e-08 0.06914638371366336 0.0592928837522033
-  rotation 0 0 1 0
   children [
     Solid {
       children [
         PoweredSliderJoint {
-          jointParameters JointParameters {
-            maxStop 1
-          }
           devices [
+            DBSBrake {
+            }
             PreconfiguredDBSLinearMotor {
               motorType "MiniCIM"
               controllerType "PWM"
@@ -49,8 +48,6 @@ DEF ROBOT Robot {
             DBSQuadratureEncoder {
               channelA 8
               channelB 9
-            }
-            Brake {
             }
           ]
           endPoint DEF ELEVATOR Solid {
@@ -69,9 +66,14 @@ DEF ROBOT Robot {
             physics Physics {
             }
           }
+          jointParameters JointParameters {
+            maxStop 1
+          }
         }
         PoweredHingeJoint {
           devices [
+            DBSBrake {
+            }
             PreconfiguredDBSRotationalMotor {
               motorType "MiniCIM"
               controllerType "PWM"
@@ -79,8 +81,6 @@ DEF ROBOT Robot {
               gearing 6.9973
             }
             DBSQuadratureEncoder {
-            }
-            Brake {
             }
           ]
           endPoint Solid {
@@ -103,13 +103,14 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 0
             axis 0 -1 0
             anchor 0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
           devices [
+            DBSBrake {
+            }
             PreconfiguredDBSRotationalMotor {
               motorType "MiniCIM"
               controllerType "PWM"
@@ -119,8 +120,6 @@ DEF ROBOT Robot {
             DBSQuadratureEncoder {
               channelA 2
               channelB 3
-            }
-            Brake {
             }
           ]
           endPoint Solid {
@@ -143,13 +142,14 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 0
             axis 0 -1 0
             anchor -0.167 -0.232 0
           }
         }
         PoweredHingeJoint {
           devices [
+            DBSBrake {
+            }
             DBSQuadratureEncoder {
               channelA 4
               channelB 5
@@ -159,8 +159,6 @@ DEF ROBOT Robot {
               controllerType "PWM"
               port 1
               gearing 6.9973
-            }
-            Brake {
             }
           ]
           endPoint Solid {
@@ -190,6 +188,8 @@ DEF ROBOT Robot {
         }
         PoweredHingeJoint {
           devices [
+            DBSBrake {
+            }
             DBSQuadratureEncoder {
               channelA 6
               channelB 7
@@ -198,8 +198,6 @@ DEF ROBOT Robot {
               motorType "MiniCIM"
               controllerType "PWM"
               gearing 6.9973
-            }
-            Brake {
             }
           ]
           endPoint Solid {
@@ -222,30 +220,11 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            position 0
             axis 0 1 0
             anchor -0.167 0.232 0
           }
         }
         Gyro {
-        }
-        HingeJoint {
-          jointParameters HingeJointParameters {
-            position 0
-            axis 0 1 0
-            anchor 0.167 -0.232 0
-          }
-          device [
-            PreconfiguredDBSRotationalMotor {
-              motorType "MiniCIM"
-              controllerType "PWM"
-              port 3
-              gearing 6.9973
-            }
-            PositionSensor {
-              name "Front Right Encoder"
-            }
-          ]
         }
         Shape {
           appearance PBRAppearance {
@@ -261,7 +240,6 @@ DEF ROBOT Robot {
     }
     Pen {
       translation 0 0 0.001
-      rotation 0 0 1 0
       inkColor 1 0 0
       inkDensity 1
       leadSize 0.1
@@ -274,6 +252,4 @@ DEF ROBOT Robot {
   }
   controller "DeepBlueSim"
   supervisor TRUE
-  linearVelocity 0 0 0
-  angularVelocity 0 0 0
 }
