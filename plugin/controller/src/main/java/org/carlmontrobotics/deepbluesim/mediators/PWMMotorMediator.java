@@ -3,6 +3,7 @@ package org.carlmontrobotics.deepbluesim.mediators;
 import org.carlmontrobotics.wpiws.devices.PWMSim;
 
 import com.cyberbotics.webots.controller.Motor;
+import com.cyberbotics.webots.controller.Node;
 
 import edu.wpi.first.math.system.plant.DCMotor;
 
@@ -41,10 +42,22 @@ public class PWMMotorMediator {
             motor.getBrake().setDampingConstant(dampingConstant);
         }
 
-        motorDevice.registerSpeedCallback((deviceName, speed) -> {
-            double velocity = speed * motorConstants.freeSpeedRadPerSec;
-            motor.setAvailableTorque(Math.abs(speed)
-                    * motorConstants.stallTorqueNewtonMeters * gearing);
+        motorDevice.registerSpeedCallback((deviceName, currentOutput) -> {
+            double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
+            switch (motor.getNodeType()) {
+                case Node.ROTATIONAL_MOTOR:
+                    motor.setAvailableTorque(Math.abs(currentOutput)
+                            * motorConstants.stallTorqueNewtonMeters * gearing);
+                    break;
+                case Node.LINEAR_MOTOR:
+                    motor.setAvailableForce(Math.abs(currentOutput)
+                            * motorConstants.stallTorqueNewtonMeters * gearing);
+                    break;
+                default:
+                    throw new UnsupportedOperationException(
+                            "Unsupported motor node type %d. Must be either a RotationalMotor or a LinearMotor: "
+                                    .formatted(motor.getNodeType()));
+            }
             motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
         }, true);
     }
