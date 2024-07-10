@@ -215,6 +215,12 @@ public class PWMMotorControllerTest {
                         * Math.PI * Math.pow(flywheelRadiusMeters, 4));
     }
 
+    private static record Measurement(double simTimeSec,
+            double speedRadPerSec) {
+    }
+
+    private Measurement m1, m2;
+
     @Test
     void testShaftRotatesInAutonomous() throws Exception {
         // To ensure we the flywheel doesn't spin or accelerate too fast...
@@ -256,15 +262,46 @@ public class PWMMotorControllerTest {
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
                         s.angularVelocity("SHAFT").getAngle());
+            }).atSec(5 * simStepSizeSecs, s -> {
+                m1 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity("SHAFT").getAngle());
             }).atSec(1.0, s -> {
+                m2 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity("SHAFT").getAngle());
+                assertCorrectTimeConstant(gearMotor, moiKgM2, 0.5);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
                         s.angularVelocity("SHAFT").getAngle(),
                         s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
+            }).atSec(2.0 + 5 * simStepSizeSecs, s -> {
+                m1 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity("SHAFT").getAngle());
             }).atSec(3.0, s -> {
+                m2 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity("SHAFT").getAngle());
+                assertCorrectTimeConstant(gearMotor, moiKgM2, 0.0);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
                         s.angularVelocity("SHAFT").getAngle(),
                         s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
             }).run();
         }
+    }
+
+    private void assertCorrectTimeConstant(DCMotor gearMotor, double moiKgM2,
+            double throttle) {
+        var targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
+                * gearMotor.KvRadPerSecPerVolt;
+        // Use the 2 measurements to measure the time constant.
+        // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
+        // Let w'(t) = w(t) - w_f = (w_0 - w_f) * exp(-t/t_c)
+        // w'(t1) = (w_0 - w_f) * exp(-t1/t_c)
+        // w'(t2) = (w_0 - w_f) * exp(-t2/t_c)
+        // w'(t2)/w'(t1) = exp((t1-t2)/t_c)
+        // ln(w'(t2)/w'(t1)) = (t1-t2)/t_c
+        // t_c = (t1-t2)/ln(w'(t2)/w'(t1))
+        var actualTimeConstantSecs = (m1.simTimeSec() - m2.simTimeSec())
+                / (Math.log((m2.speedRadPerSec() - targetSpeedRadPerSec)
+                        / (m1.speedRadPerSec() - targetSpeedRadPerSec)));
+        assertEquals(computeTimeConstantSecs(gearMotor, moiKgM2),
+                actualTimeConstantSecs, 0.02, "Time constant incorrect");
     }
 }
