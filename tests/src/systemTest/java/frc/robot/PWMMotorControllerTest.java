@@ -41,55 +41,56 @@ public class PWMMotorControllerTest {
     // alpha = dw/dt
     // dw/dt = tau / J
     //
-    // Let k_T be the motor's torque constant (Nm/A)
-    // Let k_e be the motor's voltage constant (Volts/(rad/s))
     // Let V be the applied voltage
     // Let V_max be the motor's rated voltage (e.g. 12V)
-    // Let i_free be the motor's free current (A) which we assume is the current needed to overcome
-    // friction
+    // Let i_free be the motor's free current (A) which is needed to overcome friction
     // Let w_free be the motor's free speed
     // Let i_stall be the motor's stall current
     // Let tau_stall be the motor's stall torque
-    // Let R be the motor's resistance
+    // Let R = V_max/i_stall (ie. the motor's resistance)
+    // Let k_T = tau_stall/i_stall (ie. the motor's torque constant) (Nm/A)
+    // Let k_v = w_free/(V_max - R*i_free) (ie. the motor's velocity constant) ((rad/s)/Volt)
     //
     // From electromagnetism:
-    // tau = (i-i_free)*k_T
-    // i = (V-k_e*w)/R
-    // R = V_max/i_stall
-    // k_T = tau_stall/(i_stall-i_free)
-    // k_e = V_max/w_free
+    // tau = i*k_T
+    // i = (V-w/k_v)/R
     //
     // Substitution gives:
-    // dw/dt = (V-V_max/w_free*w)/(V_max/(i_stall-i_free))*tau_stall/(i_stall-i_free)/J
+    // dw/dt = (V-w/k_v)/R*k_T/J
     //
     // Rearranging gives:
-    // dw/dt = (tau_stall*V/V_max)/J-(tau_stall/w_free)/J*w
-    // dw/dt + (tau_stall/w_free)/J*w = (tau_stall*V/V_max)/J
+    // dw/dt = k_T/(R*J)*V - k_T/(R*J)/k_v*w
+    // dw/dt + k_T/(R*J)/k_v*w = k_T/(R*J)*V
 
-    // The following w(t) solving that differential equation (where w_0 = w(0)):
-    // w(t) = w_0 + (V/V_max*w_free - w_0)(1-exp(-tau_stall/(J*w_free)*t))
+    // The following w(t) solves that differential equation (where w_0 = w(0)):
+    // w(t) = w_0 + (V*k_v-w_0)(1-exp(-k_T/(R*J*k_v)*t))
     //
-    // That is an exponential decay from w_0 to V/V_max*w_free with a time constant of:
-    // t_c = J*w_free/tau_stall
+    // That is an exponential decay from w_0 to V*k_v with a time constant of:
+    // t_c = R*J*k_v/k_T
+    //
+    // Let w_f = V*k_v (ie the asymptotic speed that corresponds to a voltage of V)
     //
     // That can be rearranged to give:
-    // w(t) = V/V_max*w_free + (w_0 - V/V_max*w_free) * exp(-t/t_c)
+    // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
     //
     // Integrating with respect to t gives:
-    // theta(t) = C + V/V_max*w_free * t - (w_0 - V/V_max*w_free) * t_c * exp(-t/t_c)
+    // theta(t) = C + w_f*t - (w_0 - w_f) * t_c * exp(-t/t_c)
     //
-    // C is constant of integration that we can determine from initial conditions:
-    // theta(0) = theta_0 = C - (w_0 - V/V_max*w_free) * t_c
-    // C = theta_0 + (w_0 - V/V_max*w_free) * t_c
+    // C is a constant of integration that we can determine from initial conditions:
+    // theta(0) = theta_0 = C - (w_0 - w_f) * t_c
+    // C = theta_0 + (w_0 - w_f)) * t_c
     //
     // Substituting gives:
-    // theta(t) = theta_0 + V/V_max*w_free * t + (w_0 - V/V_max*w_free) * t_c (1-exp(-t/t_c))
+    // theta(t) = theta_0 + (w_0 - w_f) * t_c + w_f*t - (w_0 - w_f) * t_c * exp(-t/t_c)
+    //
+    // Rearranging gives:
+    // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
 
     private double computeSpeedRadPerSec(DCMotor gearMotor, double moiKgM2,
             double targetSpeedRadPerSec, double initialSpeedRadPerSec,
             double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
-        // w(t) = V/V_max*w_free + (w_0 - V/V_max*w_free) * exp(-t/t_c)
+        // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
         return targetSpeedRadPerSec
                 + (initialSpeedRadPerSec - targetSpeedRadPerSec)
                         * Math.exp(-tSecs / timeConstantSecs);
@@ -99,7 +100,7 @@ public class PWMMotorControllerTest {
             double targetSpeedRadPerSec, double initialSpeedRadPerSec,
             double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
-        // theta(t) = theta_0 + V/V_max*w_free * t + (w_0 - V/V_max*w_free) * t_c (1-exp(-t/t_c))
+        // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
         return initialAngleRad + targetSpeedRadPerSec * tSecs
                 + (initialSpeedRadPerSec - targetSpeedRadPerSec)
                         * timeConstantSecs
@@ -107,19 +108,16 @@ public class PWMMotorControllerTest {
     }
 
     private double computeTimeConstantSecs(DCMotor gearMotor, double moiKgM2) {
-        return moiKgM2 * gearMotor.freeSpeedRadPerSec
-                / gearMotor.stallTorqueNewtonMeters;
-    }
-
-    private double computeCylinderMoiKgM2(double radiusMeters, double massKg) {
-        return massKg * radiusMeters * radiusMeters / 2.0;
+        // t_c = R*J*k_v/k_T
+        return gearMotor.rOhms * moiKgM2 * gearMotor.KvRadPerSecPerVolt
+                / gearMotor.KtNMPerAmp;
     }
 
     private double computeCylinderMoiKgM2(double radiusMeters,
             double heightMeters, double densityKgPerM3) {
-        double mass = densityKgPerM3 * Math.PI * radiusMeters * radiusMeters
+        double massKg = densityKgPerM3 * Math.PI * radiusMeters * radiusMeters
                 * heightMeters;
-        return computeCylinderMoiKgM2(radiusMeters, mass);
+        return massKg * radiusMeters * radiusMeters / 2.0;
     }
 
     private double timeOfNextStepSecs(double tSecs) {
