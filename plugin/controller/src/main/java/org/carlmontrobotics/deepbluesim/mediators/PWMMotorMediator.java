@@ -46,9 +46,7 @@ public class PWMMotorMediator {
 
         motorDevice.registerSpeedCallback((deviceName, currentOutput) -> {
             double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
-            double maxTorque = gearing * motorConstants.KtNMPerAmp
-                    / (motorConstants.rOhms * motorConstants.KvRadPerSecPerVolt)
-                    * motorConstants.freeSpeedRadPerSec;
+            double maxTorque = gearing * motorConstants.stallTorqueNewtonMeters;
             switch (motor.getNodeType()) {
                 case Node.ROTATIONAL_MOTOR:
                     motor.setAvailableTorque(

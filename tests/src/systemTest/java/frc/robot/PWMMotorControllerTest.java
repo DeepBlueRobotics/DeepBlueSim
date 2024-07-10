@@ -87,8 +87,9 @@ public class PWMMotorControllerTest {
     // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
 
     private double computeSpeedRadPerSec(DCMotor gearMotor, double moiKgM2,
-            double targetSpeedRadPerSec, double initialSpeedRadPerSec,
-            double tSecs) {
+            double throttle, double initialSpeedRadPerSec, double tSecs) {
+        double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
+                * gearMotor.KvRadPerSecPerVolt;
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
         // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
         return targetSpeedRadPerSec
@@ -97,9 +98,11 @@ public class PWMMotorControllerTest {
     }
 
     private double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
-            double targetSpeedRadPerSec, double initialSpeedRadPerSec,
-            double initialAngleRad, double tSecs) {
+            double throttle, double initialSpeedRadPerSec,
+                    double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
+        double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
+                * gearMotor.KvRadPerSecPerVolt;
         // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
         return initialAngleRad + targetSpeedRadPerSec * tSecs
                 + (initialSpeedRadPerSec - targetSpeedRadPerSec)
@@ -132,7 +135,7 @@ public class PWMMotorControllerTest {
 
         if (tSecs <= tMotorStopsSecs) {
             return computeSpeedRadPerSec(gearMotor, moiKgM2,
-                    0.5 * gearMotor.freeSpeedRadPerSec, 0, tSecs);
+                    0.5, 0, tSecs);
         }
         return computeSpeedRadPerSec(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
@@ -146,7 +149,7 @@ public class PWMMotorControllerTest {
         double tMotorStopsSecs = timeOfNextStepSecs(2.0);
         if (tSecs <= tMotorStopsSecs) {
             return computeAngleRadians(gearMotor, moiKgM2,
-                    0.5 * gearMotor.freeSpeedRadPerSec, 0, 0, tSecs);
+                    0.5, 0, 0, tSecs);
         }
         return computeAngleRadians(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
