@@ -77,14 +77,14 @@ public class SystemTestRobot {
                         s.velocity("ROBOT")
                                 .getDistance(new Translation3d(0, 0, 0)),
                         0.1, "Robot close to target velocity");
-                assertEquals(62.5, Units.radiansToDegrees(
+                assertEquals(50.1185, Units.radiansToDegrees(
                                 s.angularVelocity("ROBOT").getAngle()),
                         2.0, "Robot close to target angular velocity");
                 assertEquals(0.0,
                         new Translation3d(s.angularVelocity("ROBOT").getAxis())
                                 .getDistance(new Translation3d(0, 0, 1)),
                         0.1, "Robot close to target angular velocity axis");
-            }).atSec(1.0, s -> {
+            }).atSec(1.5, s -> {
                 // Note: Large tolerance because turning at a high speed means we can overshoot
                 // significantly in 1 step.
                 assertEquals(45.0,

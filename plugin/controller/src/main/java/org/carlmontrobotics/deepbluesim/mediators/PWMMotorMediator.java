@@ -37,21 +37,26 @@ public class PWMMotorMediator {
         motor.setPosition(Double.POSITIVE_INFINITY);
 
         if (motor.getBrake() != null) {
-            double dampingConstant = motorConstants.stallTorqueNewtonMeters
-                    * gearing / (motorConstants.freeSpeedRadPerSec / gearing);
+            // gearing^2*k_T/(R*k_v)
+            double dampingConstant = gearing * gearing
+                    * motorConstants.KtNMPerAmp / (motorConstants.rOhms
+                            * motorConstants.KvRadPerSecPerVolt);
             motor.getBrake().setDampingConstant(dampingConstant);
         }
 
         motorDevice.registerSpeedCallback((deviceName, currentOutput) -> {
             double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
+            double maxTorque = gearing * motorConstants.KtNMPerAmp
+                    / (motorConstants.rOhms * motorConstants.KvRadPerSecPerVolt)
+                    * motorConstants.freeSpeedRadPerSec;
             switch (motor.getNodeType()) {
                 case Node.ROTATIONAL_MOTOR:
-                    motor.setAvailableTorque(Math.abs(currentOutput)
-                            * motorConstants.stallTorqueNewtonMeters * gearing);
+                    motor.setAvailableTorque(
+                            Math.abs(currentOutput) * maxTorque);
                     break;
                 case Node.LINEAR_MOTOR:
-                    motor.setAvailableForce(Math.abs(currentOutput)
-                            * motorConstants.stallTorqueNewtonMeters * gearing);
+                    motor.setAvailableForce(
+                            Math.abs(currentOutput) * maxTorque);
                     break;
                 default:
                     throw new UnsupportedOperationException(
