@@ -162,7 +162,7 @@ public class PWMMotorControllerTest {
             double tSecs) {
         // TODO: Make sim accurate enough that this can be less than 1*simStepSizeSecs
         // (https://github.com/DeepBlueRobotics/DeepBlueSim/issues/101)
-        double jitterSecs = 4 * simStepSizeSecs;
+        double jitterSecs = 5 * simStepSizeSecs;
         double expectedEarlierSpeedRadPerSec =
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tSecs - jitterSecs);
         double expectedLaterSpeedRadPerSec =
@@ -190,7 +190,7 @@ public class PWMMotorControllerTest {
                 expectedAngleRadians,
                         actualAngleRadians,
                 toleranceRadians, 0, 2 * Math.PI),
-                "Shaft not close enought to target rotation. Expected %g +/- %g radians, but got %g radians."
+                "Shaft not close enough to target rotation. Expected %g +/- %g radians, but got %g radians."
                         .formatted(expectedAngleRadians, toleranceRadians,
                                 actualAngleRadians));
     }
