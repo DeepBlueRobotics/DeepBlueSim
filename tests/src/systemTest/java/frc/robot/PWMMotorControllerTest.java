@@ -203,15 +203,14 @@ public class PWMMotorControllerTest {
             double flywheelRadiusMeters, double flywheelDensityKgPerM3,
             double desiredTimeConstantSecs) {
         // for a time constant of t_c seconds:
-        // t_c = moiKgM2 * (motor.freeSpeedRadPerSec / gearing) / (motor.stallTorqueNewtonMeters *
-        // gearing);
-        // moiKgM2 = t_c*gearing^2*motor.stallTorqueNewtonMeters/motor.freeSpeedRadPerSec
-        // moiKgM2 = 0.5*densityKgPerM3 * Math.PI * radiusMeters^2 * heightMeters * radiusMeters^2
-        // heightMeters = 2 * moiKgM2/(densityKgPerM3 * Math.PI * radiusMeters^4)
-        // heightMeters = 2 * t_c*gearing^2*motor.stallTorqueNewtonMeters/(motor.freeSpeedRadPerSec
-        // * densityKgPerM3 * Math.PI * radiusMeters^4)
-        return 2 * desiredTimeConstantSecs * gearMotor.stallTorqueNewtonMeters
-                / (gearMotor.freeSpeedRadPerSec * flywheelDensityKgPerM3
+        // t_c = R*J*k_v/k_T
+        // J = t_c*k_T/(k_v*R)
+        // J = 0.5*density * pi * r^2 * h * r^2
+        // h = 2*J/(density*pi*r^4)
+        // h = 2*t_c*k_T/(k_v*R*density*pi*r^4)
+        return 2 * desiredTimeConstantSecs * gearMotor.KtNMPerAmp
+                / (gearMotor.KvRadPerSecPerVolt * gearMotor.rOhms
+                        * flywheelDensityKgPerM3
                         * Math.PI * Math.pow(flywheelRadiusMeters, 4));
     }
 

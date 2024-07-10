@@ -47,7 +47,7 @@ DEF ROBOT Robot {
               }
             ]
             boundingObject Cylinder {
-              height 0.222485
+              height 0.215
               radius 0.5
             }
             physics Physics {
