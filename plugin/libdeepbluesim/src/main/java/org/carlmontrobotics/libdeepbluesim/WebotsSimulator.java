@@ -378,7 +378,7 @@ public class WebotsSimulator implements AutoCloseable {
                                 "Received simTimeSec of {0} when robotTimeSec is {1}",
                                 simTimeSec, robotTimeSec);
 
-                        runAllCallbacks();
+                        runAllCallbacks(robotTimeSec, simTimeSec);
 
                         // If we're not behind the sim time, there is nothing else to do.
                         double deltaSecs = simTimeSec - robotTimeSec;
@@ -454,8 +454,8 @@ public class WebotsSimulator implements AutoCloseable {
         return this;
     }
 
-    private void runAllCallbacks() {
-        try (var simState = new SimulationState()) {
+    private void runAllCallbacks(double robotTimeSec, double simTimeSec) {
+        try (var simState = new SimulationState(robotTimeSec, simTimeSec)) {
             // Run all the callbacks up to the new sim time.
             everyStepCallbacks.forEach(escb -> escb.accept(simState));
             LOG.log(Level.DEBUG, "Handling atSec() callbacks");
@@ -611,6 +611,29 @@ public class WebotsSimulator implements AutoCloseable {
 
         @Override
         public void close() {}
+
+        /**
+         * @return the time (in seconds) since the robot code started, according to the robot code.
+         */
+        public double getRobotTimeSec() {
+            return robotTimeSec;
+        }
+
+        /**
+         * @return the time (in seconds) since the simulation started, according to the simulator.
+         */
+        public double getSimTimeSec() {
+            return simTimeSec;
+        }
+
+        private SimulationState() {}
+
+        private double robotTimeSec, simTimeSec;
+
+        private SimulationState(double robotTimeSec, double simTimeSec) {
+            this.robotTimeSec = robotTimeSec;
+            this.simTimeSec = simTimeSec;
+        }
     }
 
     private record OneShotCallback(double timeSecs,

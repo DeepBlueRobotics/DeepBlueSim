@@ -14,12 +14,14 @@ EXTERNPROTO "SparkMaxAbsoluteEncoder.proto"
 EXTERNPROTO "SparkMaxAlternateEncoder.proto"
 EXTERNPROTO "SparkMaxAnalogSensor.proto"
 
+EXTERNPROTO "DBSBrake.proto"
+
 PROTO PoweredHingeJoint [
     field MFNode{
         DBSRotationalMotorBase{}, PreconfiguredDBSRotationalMotor{}
         CANCoder{}, DBSQuadratureEncoder{}, REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{},
-        Brake{}
-    } devices [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} Brake{}]
+        DBSBrake{}
+    } devices [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} DBSBrake{}]
     field SFNode{Solid{}} endPoint Solid{}
     field SFNode{HingeJointParameters{}} jointParameters HingeJointParameters{}
 ]
@@ -32,7 +34,7 @@ PROTO PoweredHingeJoint [
         let encoderDevice = null;
         for (let i = 0; i < devices.length; i++) {
             let node_name = devices[i].node_name;
-            if (node_name === "Brake") {
+            if (node_name.endsWith("Brake")) {
                 hasBrake = true;
             } else if (node_name.endsWith("Motor")) {
                 motorDevice = devices[i];
@@ -40,7 +42,7 @@ PROTO PoweredHingeJoint [
                 encoderDevice = devices[i];
             }
         }
-        assert(hasBrake, "PoweredHingeJoint is missing the required Brake device!");
+        assert(hasBrake, "PoweredHingeJoint is missing the required DBSBrake device!");
         assert(motorDevice !== null, "PoweredHingeJoint is missing the required motor device!");
         let motorType = motorDevice?.node_name;
         let controllerType = motorDevice?.fields.controllerType.value;

@@ -5,18 +5,20 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
+EXTERNPROTO "../protos/deepbluesim/DBSBrake.proto"
 
 WorldInfo {
 }
 Viewpoint {
   orientation -0.24402898166491363 0.33039742727224586 0.9117496345814823 1.5165266004776918
-  position -0.029363870371338287 -0.43054911570743615 0.32156152827311507
+  position -0.6005906535473244 -4.740227792969629 3.113219051699273
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
 RectangleArena {
+  floorSize 10 10
 }
 DEF ROBOT Robot {
   translation 0 0 0.06
@@ -25,13 +27,13 @@ DEF ROBOT Robot {
       children [
         PoweredHingeJoint {
           devices [
+            DBSBrake {
+            }
             PreconfiguredDBSRotationalMotor {
               motorType "MiniCIM"
               controllerType "PWM"
               port 1
-              gearing 100
-            }
-            Brake {
+              gearing 97.3333
             }
           ]
           endPoint DEF SHAFT Solid {
@@ -40,13 +42,13 @@ DEF ROBOT Robot {
                 appearance PBRAppearance {
                 }
                 geometry Box {
-                  size 0.1 0.1 0.05
+                  size 1 1 0.222485
                 }
               }
             ]
             boundingObject Cylinder {
-              height 0.05
-              radius 0.05
+              height 0.215
+              radius 0.5
             }
             physics Physics {
             }
