@@ -78,7 +78,7 @@ public class PWMMotorControllerTest {
     //
     // C is a constant of integration that we can determine from initial conditions:
     // theta(0) = theta_0 = C - (w_0 - w_f) * t_c
-    // C = theta_0 + (w_0 - w_f)) * t_c
+    // C = theta_0 + (w_0 - w_f) * t_c
     //
     // Substituting gives:
     // theta(t) = theta_0 + (w_0 - w_f) * t_c + w_f*t - (w_0 - w_f) * t_c * exp(-t/t_c)
