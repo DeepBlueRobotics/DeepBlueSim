@@ -174,18 +174,22 @@ public class PWMMotorControllerTest {
                 actualSpeedRadPerSec,
                 Math.abs(expectedEarlierSpeedRadPerSec
                         - expectedLaterSpeedRadPerSec) / 2,
-                "Shaft close to target angular velocity");
+                "Shaft not close enough to target angular velocity");
         double expectedEarlierAngleRadians =
                 expectedAngleRadians(gearMotor, moiKgM2, tSecs - jitterSecs);
         double expectedLaterAngleRadians =
                 expectedAngleRadians(gearMotor, moiKgM2, tSecs + jitterSecs);
+        double expectedAngleRadians =
+                (expectedEarlierAngleRadians + expectedLaterAngleRadians) / 2;
+        double toleranceRadians = Math.abs(
+                expectedEarlierAngleRadians - expectedLaterAngleRadians) / 2;
         assertTrue(MathUtil.isNear(
-                (expectedEarlierAngleRadians + expectedLaterAngleRadians) / 2,
-                actualAngleRadians,
-                Math.abs(
-                        expectedEarlierAngleRadians - expectedLaterAngleRadians)
-                        / 2,
-                0, 2 * Math.PI), "Shaft close to target rotation");
+                expectedAngleRadians,
+                        actualAngleRadians,
+                toleranceRadians, 0, 2 * Math.PI),
+                "Shaft not close enought to target rotation. Expected %g +/- %g radians, but got %g radians."
+                        .formatted(expectedAngleRadians, toleranceRadians,
+                                actualAngleRadians));
     }
 
     private double computeGearing(DCMotor motor, double desiredFreeSpeedRPS) {
