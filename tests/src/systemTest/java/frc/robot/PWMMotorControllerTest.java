@@ -56,11 +56,11 @@ public class PWMMotorControllerTest {
     // i = (V-w/k_v)/R
     //
     // Substitution gives:
-    // dw/dt = (V-w/k_v)/R*k_T/J
+    // dw/dt = ((V-w/k_v)/R)*k_T/J
     //
     // Rearranging gives:
-    // dw/dt = k_T/(R*J)*V - k_T/(R*J)/k_v*w
-    // dw/dt + k_T/(R*J)/k_v*w = k_T/(R*J)*V
+    // dw/dt = (k_T*V)/(R*J) - (k_T*w)/(R*J*k_v)
+    // dw/dt + (k_T*w)/(R*J*k_v) = (k_T*V)/(R*J)
 
     // The following w(t) solves that differential equation (where w_0 = w(0)):
     // w(t) = w_0 + (V*k_v-w_0)(1-exp(-k_T/(R*J*k_v)*t))
