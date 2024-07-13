@@ -11,6 +11,11 @@
             "mainClass": "DeepBlueSim",
             "projectName": "controller",
             "preLaunchTask": "Build Controller",
+            "linux": {
+                "env": {
+                    "LD_LIBRARY_PATH": "${env:WEBOTS_HOME}/lib/controller/java:${env:WEBOTS_HOME}/lib/controller:${env:LD_LIBRARY_PATH}"
+                },
+            },
             "cwd": "${workspaceFolder}/example/Webots/controllers/DeepBlueSim"
         },
         {
@@ -20,6 +25,11 @@
             "mainClass": "DeepBlueSim",
             "projectName": "controller",
             "preLaunchTask": "Build Controller",
+            "linux": {
+                "env": {
+                    "LD_LIBRARY_PATH": "${env:WEBOTS_HOME}/lib/controller/java:${env:WEBOTS_HOME}/lib/controller:${env:LD_LIBRARY_PATH}"
+                },
+            },
             "args": "--no-robot-code",
             "cwd": "${workspaceFolder}/example/Webots/controllers/DeepBlueSim"
         }
