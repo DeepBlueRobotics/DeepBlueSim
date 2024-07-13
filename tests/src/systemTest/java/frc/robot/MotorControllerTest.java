@@ -226,7 +226,7 @@ public class MotorControllerTest {
         // For this test to pass, the motor and flywheel need to be setup in the world as follows.
         var flywheelRadiusMeters = 0.5;
         var flywheelDensityKgPerM3 = 1000.0;
-        var motorModelName = "MiniCIM";
+        var motorModelName = "NEO";
         var motor = (DCMotor) (DCMotor.class
                 .getDeclaredMethod("get" + motorModelName, int.class)
                 .invoke(null, 1));
@@ -248,6 +248,7 @@ public class MotorControllerTest {
         var moiKgM2 = computeCylinderMoiKgM2(flywheelRadiusMeters,
                 flywheelThicknessMeters, flywheelDensityKgPerM3);
 
+        var shaftDefPath = "PWM_SHAFT";
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
                 MotorControllerRobot::new)) {
@@ -257,27 +258,27 @@ public class MotorControllerTest {
                 LOG.log(Level.DEBUG,
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(5 * simStepSizeSecs, s -> {
                 m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(1.0, s -> {
                 m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
                 assertCorrectTimeConstant(gearMotor, moiKgM2, 0.5);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity("SHAFT").getAngle(),
-                        s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
+                        s.angularVelocity(shaftDefPath).getAngle(),
+                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
             }).atSec(2.0 + 5 * simStepSizeSecs, s -> {
                 m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(3.0, s -> {
                 m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
                 assertCorrectTimeConstant(gearMotor, moiKgM2, 0.0);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity("SHAFT").getAngle(),
-                        s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
+                        s.angularVelocity(shaftDefPath).getAngle(),
+                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
             }).run();
         }
     }

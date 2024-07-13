@@ -6,6 +6,7 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
 EXTERNPROTO "../protos/deepbluesim/DBSBrake.proto"
+EXTERNPROTO "../protos/deepbluesim/REVBuiltinEncoder.proto"
 
 WorldInfo {
 }
@@ -23,7 +24,7 @@ RectangleArena {
 DEF ROBOT Robot {
   translation 0 0 0.06
   children [
-    DEF BASE Solid {
+    DEF PWM_BASE Solid {
       children [
         PoweredHingeJoint {
           devices [
@@ -36,7 +37,7 @@ DEF ROBOT Robot {
               gearing 97.3333
             }
           ]
-          endPoint DEF SHAFT Solid {
+          endPoint DEF PWM_SHAFT Solid {
             children [
               Shape {
                 appearance PBRAppearance {
@@ -59,7 +60,45 @@ DEF ROBOT Robot {
         }
       ]
     }
+    DEF CAN_BASE Solid {
+      translation 0 2 0
+      children [
+        PoweredHingeJoint {
+          devices [
+            REVBuiltinEncoder {
+            }
+            DBSBrake {
+            }
+            PreconfiguredDBSRotationalMotor {
+              port 2
+              gearing 94.6
+            }
+          ]
+          endPoint DEF CAN_SHAFT Solid {
+            children [
+              Shape {
+                appearance PBRAppearance {
+                }
+                geometry Box {
+                  size 1 1 0.392
+                }
+              }
+            ]
+            boundingObject Cylinder {
+              height 0.392
+              radius 0.5
+            }
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            axis 0 0 1
+          }
+        }
+      ]
+      name "solid(1)"
+    }
   ]
-  controller "DeepBlueSim"
+  controller "<extern>"
   supervisor TRUE
 }

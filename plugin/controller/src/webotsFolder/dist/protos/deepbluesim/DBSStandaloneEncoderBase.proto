@@ -2,7 +2,7 @@
 # license: MIT
 # license url: https://github.com/DeepBlueRobotics/DeepBlueSim/blob/master/LICENSE.md
 # template language: javascript
-# tags: hidden, no3dView
+# tags: hidden, no3dView, nonDeterministic
 # A base proto for standalone robot encoders
 
 EXTERNPROTO "DBSEncoderBase.proto"
@@ -17,7 +17,8 @@ PROTO DBSStandaloneEncoderBase [
 ]
 {
     DBSEncoderBase {
-        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value].join('_') + '"' >%
+        # Name includes unique context.id to workaround https://github.com/cyberbotics/webots/issues/6578
+        name %<= '"' + ["DBSim_Encoder", fields.location.value === "Motor Shaft", fields.absolute.value, fields.absoluteOffsetDeg.value, fields.inverted.value, fields.CPR.value, context.id].join('_') + '"' >%
         noiseStdDevRad IS noiseStdDevRad
     }
 }
