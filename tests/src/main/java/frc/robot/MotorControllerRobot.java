@@ -13,7 +13,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;
 import edu.wpi.first.wpilibj.motorcontrol.PWMMotorController;
 
-public class PWMMotorControllerRobot extends TimedRobot {
+public class MotorControllerRobot extends TimedRobot {
 
     private final Joystick m_stick = new Joystick(0);
     private final Timer m_timer = new Timer();
@@ -49,9 +49,9 @@ public class PWMMotorControllerRobot extends TimedRobot {
     public void autonomousPeriodic() {
         // Run the motor at 50% for 2 seconds.
         if (m_timer.get() < 2.0) {
-        m_motorController.set(0.5);
+            m_motorController.set(0.5);
         } else {
-        m_motorController.stopMotor();
+            m_motorController.stopMotor();
         }
     }
 
