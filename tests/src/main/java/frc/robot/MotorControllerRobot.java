@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj.motorcontrol.PWMMotorController;
 
 import org.carlmontrobotics.lib199.MotorControllerFactory;
@@ -37,6 +38,11 @@ public class MotorControllerRobot extends TimedRobot {
         m_canMotorController =
                 MotorControllerFactory.createSparkMax(2, MotorConfig.NEO);
         m_canEncoder = m_canMotorController.getEncoder();
+    }
+
+    @Override
+    public void robotPeriodic() {
+        CommandScheduler.getInstance().run();
     }
 
     public void close() {
