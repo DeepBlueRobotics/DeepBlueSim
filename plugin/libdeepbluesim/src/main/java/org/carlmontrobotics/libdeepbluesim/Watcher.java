@@ -113,12 +113,6 @@ class Watcher {
                 }
             }
         });
-    }
-
-    private synchronized void reset() {
-        positionReady = new CompletableFuture<>();
-        rotationReady = new CompletableFuture<>();
-        velocityReady = new CompletableFuture<>();
         var pubSubOptions = new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
@@ -127,16 +121,22 @@ class Watcher {
                 table.getDoubleArrayTopic(NTConstants.POSITION_TOPIC_NAME);
         positionPublisher = positionTopic.publish(pubSubOptions);
         positionTopic.setCached(false);
-        positionPublisher.set(dummyPosition);
         rotationTopic =
                 table.getDoubleArrayTopic(NTConstants.ROTATION_TOPIC_NAME);
         rotationPublisher = rotationTopic.publish(pubSubOptions);
         rotationTopic.setCached(false);
-        rotationPublisher.set(dummyRotation);
         velocityTopic =
                 table.getDoubleArrayTopic(NTConstants.VELOCITY_TOPIC_NAME);
         velocityPublisher = velocityTopic.publish(pubSubOptions);
         velocityTopic.setCached(false);
+    }
+
+    private synchronized void reset() {
+        positionReady = new CompletableFuture<>();
+        rotationReady = new CompletableFuture<>();
+        velocityReady = new CompletableFuture<>();
+        positionPublisher.set(dummyPosition);
+        rotationPublisher.set(dummyRotation);
         velocityPublisher.set(dummyVelocity);
         inst.flush();
     }
