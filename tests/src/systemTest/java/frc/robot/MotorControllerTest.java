@@ -218,7 +218,17 @@ public class MotorControllerTest {
     private Measurement m1, m2;
 
     @Test
-    void testShaftRotatesInAutonomous() throws Exception {
+    void testCANMotorRotationInAutonomous() throws Exception {
+        assertCorrectRotationInAutonomous("NEO", "CAN_SHAFT");
+    }
+
+    @Test
+    void testPWMMotorRotationInAutonomous() throws Exception {
+        assertCorrectRotationInAutonomous("MiniCIM", "PWM_SHAFT");
+    }
+
+    void assertCorrectRotationInAutonomous(String motorModelName,
+            String shaftDefPath) throws Exception {
         // To ensure we the flywheel doesn't spin or accelerate too fast...
         var desiredFlywheelFreeSpeedRPS = 1.0;
         var desiredTimeConstantSecs = 1.0;
@@ -226,7 +236,6 @@ public class MotorControllerTest {
         // For this test to pass, the motor and flywheel need to be setup in the world as follows.
         var flywheelRadiusMeters = 0.5;
         var flywheelDensityKgPerM3 = 1000.0;
-        var motorModelName = "NEO";
         var motor = (DCMotor) (DCMotor.class
                 .getDeclaredMethod("get" + motorModelName, int.class)
                 .invoke(null, 1));
@@ -248,7 +257,6 @@ public class MotorControllerTest {
         var moiKgM2 = computeCylinderMoiKgM2(flywheelRadiusMeters,
                 flywheelThicknessMeters, flywheelDensityKgPerM3);
 
-        var shaftDefPath = "PWM_SHAFT";
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
                 MotorControllerRobot::new)) {
