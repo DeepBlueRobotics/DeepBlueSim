@@ -99,6 +99,6 @@ DEF ROBOT Robot {
       name "solid(1)"
     }
   ]
-  controller "<extern>"
+  controller "DeepBlueSim"
   supervisor TRUE
 }

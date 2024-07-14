@@ -24,10 +24,13 @@ public class CANMotorMediator implements Runnable {
     public final DCMotor motorConstants;
     public final CANMotorSim motorDevice;
     public final Brake brake;
+    public final PositionSensor positionSensor;
 
     private double requestedOutput = 0;
+    private double actualOutput = 0;
     private boolean brakeMode = true;
     private double neutralDeadband = 0.04;
+    private double dampingConstant = 0.0;
 
     /**
      * Creates a new CANMotorMediator
@@ -56,63 +59,111 @@ public class CANMotorMediator implements Runnable {
             }
         }
 
+        // Bus voltage is not motor specific. It would need to be simulated by a simulated PDP/PDH.
+        // Since we don't simulate it, we set it to 0.0 to be compliant with the spec.
+        motorDevice.setBusvoltage(0.0);
+
+        // We simulate motor current (see the run() method below), not supply current, so we set
+        // supply current to 0.0 to be compliant with the spec.
+        motorDevice.setSupplycurrent(0.0);
+
         this.brake = motor.getBrake();
         if(brake == null) {
             System.err.println(String.format("WARNING: Brake not found for motor: \"%s\", braking will be disabled!", motor.getName()));
         }
 
+        this.positionSensor = motor.getPositionSensor();
+        if (positionSensor == null) {
+            System.err.println(String.format(
+                    "WARNING: Encoder not found for motor: \"%s\", current will not be reported!",
+                    motor.getName()));
+        }
+
         // Use velocity control
         motor.setPosition(Double.POSITIVE_INFINITY);
-        if (brake != null)
-            brake.setDampingConstant(
-                    motorConstants.stallTorqueNewtonMeters * gearing);
+        if (brake != null) {
+            // gearing^2*k_T/(R*k_v)
+            dampingConstant = gearing * gearing * motorConstants.KtNMPerAmp
+                    / (motorConstants.rOhms
+                            * motorConstants.KvRadPerSecPerVolt);
+            brake.setDampingConstant(dampingConstant);
 
+        }
         motorDevice.registerBrakemodeCallback((name, enabled) -> {
             brakeMode = enabled;
+            updateBrakeDampingConstant();
         }, true);
         motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
             neutralDeadband = deadband;
+            updateBrakeDampingConstant();
         }, true);
         motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
             requestedOutput = percentOutput;
+            updateBrakeDampingConstant();
         }, true);
 
         Simulation.registerPeriodicMethod(this);
     }
 
-    @Override
-    public void run() {
-        // Apply the speed changes periodically so that changes to variables (ie brake mode) don't require a speed update to be applied
-        // Copy requested output so that decreasing the neutral deadband can take effect without a speed update
-        double currentOutput = requestedOutput;
-        if (Math.abs(currentOutput) < neutralDeadband && brake != null) {
-            currentOutput = 0;
-            brake.setDampingConstant(brakeMode ? motorConstants.stallTorqueNewtonMeters * gearing : 0);
-        } else {
-            brake.setDampingConstant(0);
+    private void updateBrakeDampingConstant() {
+        actualOutput = requestedOutput;
+        if (Math.abs(actualOutput) < neutralDeadband) {
+            actualOutput = 0.0;
         }
-
-        double velocity = currentOutput * motorConstants.freeSpeedRadPerSec;
-        motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
-
-        double currentDraw = motorConstants.getCurrent(velocity, currentOutput * motorConstants.nominalVoltageVolts);
+        if (brake != null) {
+            if (!brakeMode && actualOutput == 0.0) {
+                brake.setDampingConstant(0);
+            } else {
+                brake.setDampingConstant(dampingConstant);
+            }
+        }
+        double velocity = actualOutput * motorConstants.freeSpeedRadPerSec;
+        double maxTorque = gearing * motorConstants.stallTorqueNewtonMeters;
         switch (motor.getNodeType()) {
             case Node.ROTATIONAL_MOTOR:
                 motor.setAvailableTorque(
-                        motorConstants.getTorque(currentDraw) * gearing);
+                        Math.abs(actualOutput) * maxTorque);
                 break;
             case Node.LINEAR_MOTOR:
                 motor.setAvailableForce(
-                        motorConstants.getTorque(currentDraw) * gearing);
+                        Math.abs(actualOutput) * maxTorque);
                 break;
             default:
                 throw new UnsupportedOperationException(
                         "Unsupported motor node type %d. Must be either a RotationalMotor or a LinearMotor: "
                                 .formatted(motor.getNodeType()));
         }
+        motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
+    }
 
-        motorDevice.setMotorcurrent(currentDraw);
-        motorDevice.setBusvoltage(12);
+    double lastPosRads = Double.NaN;
+
+    @Override
+    public void run() {
+        if (positionSensor == null) {
+            return;
+        }
+        double samplingPeriodMs = positionSensor.getSamplingPeriod();
+        if (samplingPeriodMs == 0) {
+            // Sensor was not enabled.
+            return;
+        }
+        double posRads = positionSensor.getValue();
+        if (!Double.isNaN(lastPosRads)) {
+            double velRadPerSec = (posRads - lastPosRads)
+                    / (samplingPeriodMs / 1000.0) * gearing;
+            // i = (V-w/k_v)/R
+            double currentDraw =
+                    (actualOutput * motorConstants.nominalVoltageVolts
+                            - velRadPerSec / motorConstants.KvRadPerSecPerVolt)
+                            / motorConstants.rOhms;
+            // Arguably, we should be able to set a negative motor current, but the current spec
+            // says it needs to be >= 0.0
+            // TODO: Create a wpilib issue to address this.
+            currentDraw = Math.abs(currentDraw);
+            motorDevice.setMotorcurrent(currentDraw);
+        }
+        lastPosRads = posRads;
     }
 
 }
