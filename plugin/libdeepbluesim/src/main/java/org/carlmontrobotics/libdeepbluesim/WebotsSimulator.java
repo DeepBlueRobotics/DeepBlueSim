@@ -737,10 +737,8 @@ public class WebotsSimulator implements AutoCloseable {
                     robot.getPeriod(), -robot.getPeriod());
 
             this.endNotifier = endNotifier;
-            // HAL must be initialized or SimDeviceSim.resetData() will crash and SmartDashboard
-            // might not work.
+            // HAL must be initialized or SmartDashboard might not work.
             HAL.initialize(500, 0);
-            SimDeviceSim.resetData();
             SimHooks.restartTiming();
             SimHooks.resumeTiming();
             isRobotCodeRunning = true;
@@ -760,7 +758,6 @@ public class WebotsSimulator implements AutoCloseable {
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
-            SimDeviceSim.resetData();
             // HAL.shutdown();
             LOG.log(Level.DEBUG, "run() returning");
         }

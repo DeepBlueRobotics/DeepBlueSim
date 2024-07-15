@@ -43,6 +43,7 @@ deploy {
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' } // for lib199
 }
 
 def deployArtifact = deploy.targets.roborio.artifacts.frcJava
@@ -58,6 +59,7 @@ def includeDesktopSupport = true
 dependencies {
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
+    implementation "com.github.deepbluerobotics:lib199:5785769c553ade2a9e53640896efe3cd6ffdce45"
 
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)

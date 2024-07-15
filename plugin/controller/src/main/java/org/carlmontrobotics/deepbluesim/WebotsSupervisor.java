@@ -248,7 +248,8 @@ public final class WebotsSupervisor {
                             // Unpause if necessary
                             updateUsersSimulationSpeed(robot);
                             robot.simulationSetMode(usersSimulationSpeed);
-                            boolean isDone = (robot.step(basicTimeStep) == -1);
+                            boolean isDone = (stepSimulation(robot,
+                                    basicTimeStep) == -1);
 
                             simTimeSec = robot.getTime();
                             LOG.log(Level.DEBUG, "Sending simTimeSec of {0}",
@@ -338,6 +339,11 @@ public final class WebotsSupervisor {
         }
     }
 
+    private static int stepSimulation(Supervisor robot, int basicTimeStep) {
+        Simulation.runPeriodicMethods();
+        return robot.step(basicTimeStep);
+    }
+
     /**
      * Processes messages from the robot code while advancing the simulation and running periodic
      * methods in time with the code.
@@ -352,7 +358,6 @@ public final class WebotsSupervisor {
         // Process events until simulation finishes
         while (isDoneFuture.getNow(false).booleanValue() == false) {
             try {
-                Simulation.runPeriodicMethods();
                 // Process any pending user interface events.
                 if (robot.step(0) == -1) {
                     break;
@@ -379,12 +384,12 @@ public final class WebotsSupervisor {
                     // The robot code isn't going to tell us when to step the simulation and the
                     // user has unpaused it.
                     LOG.log(Level.DEBUG,
-                            "Simulation is not paused and no robot code in control. Calling robot.step(basicTimeStep)");
+                            "Simulation is not paused and no robot code in control. Stepping simulation.");
 
-                    if (robot.step(basicTimeStep) == -1) {
+                    if (stepSimulation(robot, basicTimeStep) == -1) {
                         break;
                     }
-                    LOG.log(Level.DEBUG, "robot.step(basicTimeStep) returned");
+                    LOG.log(Level.DEBUG, "Step finished.");
                 } else {
                     // The simulation is paused and robot code isn't in control so wait a beat
                     // before checking again (so we don't suck up all the CPU)

@@ -17,7 +17,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 
 @Timeout(value = 30, unit = TimeUnit.MINUTES)
 @ResourceLock("WebotsSimulator")
-public class PWMMotorControllerTest {
+public class MotorControllerTest {
     // NOTE: By default, only messages at INFO level or higher are logged. To change that, if you
     // are using the default system logger, edit the logging properties file specified by the
     // java.util.logging.config.file system property so that both ".level=FINE" and
@@ -25,7 +25,7 @@ public class PWMMotorControllerTest {
     // java.util.logging.config.file system property can be configured using the systemProperty of
     // the test task.
     private static final Logger LOG =
-            System.getLogger(PWMMotorControllerTest.class.getName());
+            System.getLogger(MotorControllerTest.class.getName());
 
     // Should be the same as the basicTimeStep in the world's WorldInfo (default to 32ms)
     private double simStepSizeSecs = 0.032;
@@ -99,7 +99,7 @@ public class PWMMotorControllerTest {
 
     private double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
             double throttle, double initialSpeedRadPerSec,
-                    double initialAngleRad, double tSecs) {
+            double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
         double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
                 * gearMotor.KvRadPerSecPerVolt;
@@ -134,8 +134,7 @@ public class PWMMotorControllerTest {
         double tMotorStopsSecs = timeOfNextStepSecs(2.0);
 
         if (tSecs <= tMotorStopsSecs) {
-            return computeSpeedRadPerSec(gearMotor, moiKgM2,
-                    0.5, 0, tSecs);
+            return computeSpeedRadPerSec(gearMotor, moiKgM2, 0.5, 0, tSecs);
         }
         return computeSpeedRadPerSec(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
@@ -148,8 +147,7 @@ public class PWMMotorControllerTest {
         // sets the speed to 0 and lets it stop on it's own).
         double tMotorStopsSecs = timeOfNextStepSecs(2.0);
         if (tSecs <= tMotorStopsSecs) {
-            return computeAngleRadians(gearMotor, moiKgM2,
-                    0.5, 0, 0, tSecs);
+            return computeAngleRadians(gearMotor, moiKgM2, 0.5, 0, 0, tSecs);
         }
         return computeAngleRadians(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
@@ -186,10 +184,9 @@ public class PWMMotorControllerTest {
                 (expectedEarlierAngleRadians + expectedLaterAngleRadians) / 2;
         double toleranceRadians = Math.abs(
                 expectedEarlierAngleRadians - expectedLaterAngleRadians) / 2;
-        assertTrue(MathUtil.isNear(
-                expectedAngleRadians,
-                        actualAngleRadians,
-                toleranceRadians, 0, 2 * Math.PI),
+        assertTrue(
+                MathUtil.isNear(expectedAngleRadians, actualAngleRadians,
+                        toleranceRadians, 0, 2 * Math.PI),
                 "Shaft not close enough to target rotation. Expected %g +/- %g radians, but got %g radians."
                         .formatted(expectedAngleRadians, toleranceRadians,
                                 actualAngleRadians));
@@ -210,8 +207,8 @@ public class PWMMotorControllerTest {
         // h = 2*t_c*k_T/(k_v*R*density*pi*r^4)
         return 2 * desiredTimeConstantSecs * gearMotor.KtNMPerAmp
                 / (gearMotor.KvRadPerSecPerVolt * gearMotor.rOhms
-                        * flywheelDensityKgPerM3
-                        * Math.PI * Math.pow(flywheelRadiusMeters, 4));
+                        * flywheelDensityKgPerM3 * Math.PI
+                        * Math.pow(flywheelRadiusMeters, 4));
     }
 
     private static record Measurement(double simTimeSec,
@@ -221,7 +218,17 @@ public class PWMMotorControllerTest {
     private Measurement m1, m2;
 
     @Test
-    void testShaftRotatesInAutonomous() throws Exception {
+    void testCANMotorRotationInAutonomous() throws Exception {
+        assertCorrectRotationInAutonomous("NEO", "CAN_SHAFT");
+    }
+
+    @Test
+    void testPWMMotorRotationInAutonomous() throws Exception {
+        assertCorrectRotationInAutonomous("MiniCIM", "PWM_SHAFT");
+    }
+
+    void assertCorrectRotationInAutonomous(String motorModelName,
+            String shaftDefPath) throws Exception {
         // To ensure we the flywheel doesn't spin or accelerate too fast...
         var desiredFlywheelFreeSpeedRPS = 1.0;
         var desiredTimeConstantSecs = 1.0;
@@ -229,7 +236,6 @@ public class PWMMotorControllerTest {
         // For this test to pass, the motor and flywheel need to be setup in the world as follows.
         var flywheelRadiusMeters = 0.5;
         var flywheelDensityKgPerM3 = 1000.0;
-        var motorModelName = "MiniCIM";
         var motor = (DCMotor) (DCMotor.class
                 .getDeclaredMethod("get" + motorModelName, int.class)
                 .invoke(null, 1));
@@ -238,9 +244,9 @@ public class PWMMotorControllerTest {
         LOG.log(Level.INFO,
                 "For a free speed of {0} RPS when using a {1}, assuming the gearing is {2}.\n",
                 desiredFlywheelFreeSpeedRPS, motorModelName, gearing);
-        var flywheelThicknessMeters = computeFlywheelThickness(
-                gearMotor, flywheelRadiusMeters,
-                flywheelDensityKgPerM3, desiredTimeConstantSecs);
+        var flywheelThicknessMeters =
+                computeFlywheelThickness(gearMotor, flywheelRadiusMeters,
+                        flywheelDensityKgPerM3, desiredTimeConstantSecs);
         LOG.log(Level.INFO,
                 "For a time constant of {0} second when using a {1} with a gearing of {2} and a flywheel with radius {3} meters and density {4} kg/m^3, assuming the flywheel thickness is {5} meters.\n",
                 desiredTimeConstantSecs, motorModelName, gearing,
@@ -252,35 +258,35 @@ public class PWMMotorControllerTest {
                 flywheelThicknessMeters, flywheelDensityKgPerM3);
 
         try (var manager = new WebotsSimulator(
-                "../plugin/controller/src/webotsFolder/dist/worlds/PWMMotorController.wbt",
-                PWMMotorControllerRobot::new)) {
+                "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
+                MotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
             }).everyStep(s -> {
                 LOG.log(Level.DEBUG,
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(5 * simStepSizeSecs, s -> {
                 m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(1.0, s -> {
                 m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
                 assertCorrectTimeConstant(gearMotor, moiKgM2, 0.5);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity("SHAFT").getAngle(),
-                        s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
+                        s.angularVelocity(shaftDefPath).getAngle(),
+                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
             }).atSec(2.0 + 5 * simStepSizeSecs, s -> {
                 m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
             }).atSec(3.0, s -> {
                 m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity("SHAFT").getAngle());
+                        s.angularVelocity(shaftDefPath).getAngle());
                 assertCorrectTimeConstant(gearMotor, moiKgM2, 0.0);
                 assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity("SHAFT").getAngle(),
-                        s.rotation("SHAFT").getZ(), s.getRobotTimeSec());
+                        s.angularVelocity(shaftDefPath).getAngle(),
+                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
             }).run();
         }
     }

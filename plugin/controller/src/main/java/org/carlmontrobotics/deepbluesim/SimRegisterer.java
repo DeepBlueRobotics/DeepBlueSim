@@ -212,8 +212,10 @@ public class SimRegisterer {
         if(controllerType.equals("PWM")) {
             new PWMMotorMediator(device, new PWMSim(Integer.toString(port)), motorConstants, gearing, inverted);
         } else {
-            String simDeviceName = "CANMotor:CAN" + controllerType.replaceAll("\\s", "") + "[" + port + "]";
-            new CANMotorMediator(device, new CANMotorSim(simDeviceName, "SimDevice"), motorConstants, gearing, inverted);
+            String simDeviceName = "CAN" + controllerType.replaceAll("\\s", "")
+                    + "[" + port + "]";
+            new CANMotorMediator(device, new CANMotorSim(simDeviceName),
+                    motorConstants, gearing, inverted);
         }
     }
 
