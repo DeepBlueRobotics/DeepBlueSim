@@ -759,6 +759,8 @@ public class WebotsSimulator implements AutoCloseable {
             InvocationTargetException, NoSuchMethodException,
             SecurityException {
         endCompetitionCalled = false;
+        // HAL must be initialized or SmartDashboard might not work.
+        HAL.initialize(500, 0);
         try (TimedRobot robot = robotConstructor.get();
                 var endNotifier = new Notifier(() -> {
                     endCompetition(robot);
@@ -781,8 +783,6 @@ public class WebotsSimulator implements AutoCloseable {
                     robot.getPeriod(), -robot.getPeriod());
 
             this.endNotifier = endNotifier;
-            // HAL must be initialized or SmartDashboard might not work.
-            HAL.initialize(500, 0);
             SimHooks.restartTiming();
             SimHooks.resumeTiming();
             isRobotCodeRunning = true;
@@ -802,7 +802,10 @@ public class WebotsSimulator implements AutoCloseable {
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
-            SimDeviceSim.resetData();
+            // Calling resetData() causes testCANMotorRotationInAutonomous() to hang before anything
+            // turns.
+
+            // SimDeviceSim.resetData();
             // HAL.shutdown();
             LOG.log(Level.DEBUG, "run() returning");
         }
