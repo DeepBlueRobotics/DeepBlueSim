@@ -31,6 +31,7 @@ public class CANMotorMediator implements Runnable {
     private boolean brakeMode = true;
     private double neutralDeadband = 0.04;
     private double dampingConstant = 0.0;
+    private double lastPosRads = Double.NaN;
 
     /**
      * Creates a new CANMotorMediator
