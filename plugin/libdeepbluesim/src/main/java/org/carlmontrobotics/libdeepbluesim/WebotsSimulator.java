@@ -463,7 +463,8 @@ public class WebotsSimulator implements AutoCloseable {
                         runAllCallbacks(robotTimeSec, simTimeSec);
 
                         // If we're not behind the sim time, there is nothing else to do.
-                        double deltaSecs = simTimeSec + 0.032 - robotTimeSec;
+                        double deltaSecs =
+                                simTimeSec + maxJitterSecs - robotTimeSec;
                         if (deltaSecs < 0.0) {
                             return;
                         }
