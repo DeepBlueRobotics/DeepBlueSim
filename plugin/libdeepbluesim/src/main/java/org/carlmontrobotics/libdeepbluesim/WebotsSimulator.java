@@ -367,8 +367,7 @@ public class WebotsSimulator implements AutoCloseable {
             // Due to rounding error, robot.getTime() might actually return something slightly less
             // than simTimeSec. We lie and say that we've actually caught up so that the simulator
             // will take another step.
-            // TODO: Maybe use simTimeSec after initial report.
-            var timeSec = robotTime.get();
+            var timeSec = simTimeSec;
             LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}", timeSec);
             robotTimeSecSim.set(timeSec);
         });
@@ -437,15 +436,15 @@ public class WebotsSimulator implements AutoCloseable {
                             "In simTimeSec value changed callback");
                     final var eventValue = value.getDouble();
                     listenerCallbackExecutor.execute(() -> {
-                        simTimeSec = eventValue;
                         LOG.log(Level.DEBUG, "Got simTimeSec value of {0}",
-                                simTimeSec);
-                        if (simTimeSec < 0.0) {
+                                eventValue);
+                        if (eventValue < 0.0) {
                             LOG.log(Level.DEBUG,
                                     "Ignoring simTimeSec value of {0}",
-                                    simTimeSec);
+                                    eventValue);
                             return;
                         }
+                        simTimeSec = eventValue;
                         // Start the robot timing if we haven't already
                         ensureRobotTimingStarted();
 
@@ -470,15 +469,15 @@ public class WebotsSimulator implements AutoCloseable {
                         }
 
                         if (useStepTiming) {
-                            // Send the new robot time at the end of the current step.
-                            robotTimeNotifier.startSingle(deltaSecs);
                             LOG.log(Level.DEBUG,
                                     "Calling SimHooks.stepTiming({0})",
                                     deltaSecs);
-                            // The extra 0.0001 ensures that the robotTimeNotifier gets run.
-                            SimHooks.stepTiming(deltaSecs + 0.0001);
+                            SimHooks.stepTiming(deltaSecs);
                             LOG.log(Level.DEBUG,
                                     "SimHooks.stepTiming() returned");
+                            // Send the new robot time at the end of the current step.
+                            robotTimeNotifier.startSingle(0);
+                            SimHooks.stepTiming(0);
                             LOG.log(Level.DEBUG,
                                     "Returning from simTimeSec listener");
                             return;
@@ -495,6 +494,7 @@ public class WebotsSimulator implements AutoCloseable {
                     });
                 }, true);
         listenerCallbackExecutor.execute(() -> {
+            simTimeSec = 0.0;
             sendRobotTime();
         });
     }

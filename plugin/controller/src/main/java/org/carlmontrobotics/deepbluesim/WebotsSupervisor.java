@@ -273,10 +273,7 @@ public final class WebotsSupervisor {
                         // the robot time or the simulation ends.
                         for (;;) {
                             double simTimeSec = robot.getTime();
-                            // The 0.0001 is to ensure the simulation keeps moving forward even if
-                            // rounding errors cause simTimeSec to be slightly larger than
-                            // robotTimeSec.
-                            if (simTimeSec > robotTimeSec + 0.0001) {
+                            if (simTimeSec > robotTimeSec) {
                                 break;
                             }
                             // Unpause if necessary
