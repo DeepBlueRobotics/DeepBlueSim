@@ -262,7 +262,7 @@ public class MotorControllerTest {
                 MotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
-            }).everyStep(s -> {
+            }).setMaxJitterSecs(0.032).everyStep(s -> {
                 LOG.log(Level.DEBUG,
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),

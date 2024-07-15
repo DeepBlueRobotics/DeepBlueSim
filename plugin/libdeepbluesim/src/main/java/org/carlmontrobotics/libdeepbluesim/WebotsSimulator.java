@@ -29,10 +29,10 @@ import java.util.function.Supplier;
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.hal.SimDevice;
+import edu.wpi.first.hal.SimDouble;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.networktables.DoublePublisher;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
@@ -83,8 +83,6 @@ public class WebotsSimulator implements AutoCloseable {
     private final NetworkTable coordinator;
     private final StringPublisher reloadRequestPublisher;
     private final StringSubscriber reloadStatusSubscriber;
-    private final DoublePublisher robotTimeSecPublisher;
-    private final DoubleSubscriber simTimeSecSubscriber;
     private final StringPublisher simModePublisher;
 
     // We'll use this to run all NT listener callbacks sequentially on a single separate thread.
@@ -104,7 +102,37 @@ public class WebotsSimulator implements AutoCloseable {
         // This is replaced in waitForUserToStart()
     });
 
+    @SuppressWarnings("resource")
+    private final Notifier robotTimeNotifier = new Notifier(() -> {
+        // This is replaced in waitForUserToStart()
+    });
+
     private Supplier<TimedRobot> robotConstructor;
+
+    private double maxJitterSecs = 0.0;
+
+    /**
+     * @return the maximum amount of time (in seconds) that the robot code can run ahead of the
+     *         simulator.
+     */
+    public double getMaxJitterSecs() {
+        return maxJitterSecs;
+    }
+
+    /**
+     * Set the maximum amount of time (in seconds) that the robot code can run ahead of the
+     * simulator. Setting this to a positive value allows the robot code and simulator to run in
+     * parallel (and thus faster) but with less reproducible results.
+     *
+     * @param maxJitterSecs the maximum amount of time (in seconds) that the robot code can run
+     *        ahead of the simulator.
+     * 
+     * @return this object for chaining.
+     */
+    public WebotsSimulator setMaxJitterSecs(double maxJitterSecs) {
+        this.maxJitterSecs = maxJitterSecs;
+        return this;
+    }
 
     static {
         try {
@@ -118,14 +146,14 @@ public class WebotsSimulator implements AutoCloseable {
             throws InterruptedException, IOException {
         if (fileLock == null) {
             var lockFilePath = Path.of(System.getProperty("java.io.tmpdir"),
-                    "WebotSimulator.lock");
+                    "WebotsSimulator.lock");
             channel = FileChannel.open(lockFilePath, StandardOpenOption.CREATE,
                     StandardOpenOption.WRITE);
             boolean hadToWait = false;
             while ((fileLock = channel.tryLock()) == null) {
                 hadToWait = true;
                 LOG.log(Level.WARNING,
-                        "WebotSimulator is waiting for file lock. See {0}",
+                        "WebotsSimulator is waiting for file lock. See {0}",
                         lockFilePath);
                 Thread.sleep(10000);
             }
@@ -141,6 +169,7 @@ public class WebotsSimulator implements AutoCloseable {
         }
     }
 
+    private SimDouble robotTimeSecSim;
     /**
      * Constructs an instance that when run() is called, will cause Webots to load and, if
      * necessary, ask the user to start the specified world file.
@@ -177,15 +206,6 @@ public class WebotsSimulator implements AutoCloseable {
         var reloadStatusTopic = coordinator
                 .getStringTopic(NTConstants.RELOAD_STATUS_TOPIC_NAME);
         reloadStatusSubscriber = reloadStatusTopic.subscribe("", pubSubOptions);
-
-        var robotTimeSecTopic = coordinator
-                .getDoubleTopic(NTConstants.ROBOT_TIME_SEC_TOPIC_NAME);
-        robotTimeSecPublisher = robotTimeSecTopic.publish(pubSubOptions);
-        robotTimeSecTopic.setCached(false);
-
-        var simTimeSecTopic =
-                coordinator.getDoubleTopic(NTConstants.SIM_TIME_SEC_TOPIC_NAME);
-        simTimeSecSubscriber = simTimeSecTopic.subscribe(-1.0, pubSubOptions);
 
         var simModeTopic =
                 coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
@@ -229,6 +249,7 @@ public class WebotsSimulator implements AutoCloseable {
         onRobotInited(() -> {
             try {
                 waitForUserToStart(worldFile.getAbsolutePath());
+                startTimeSync();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
@@ -264,16 +285,12 @@ public class WebotsSimulator implements AutoCloseable {
         LOG.log(Level.DEBUG, "Sending simMode = {0}", mode);
         simModePublisher.set(mode);
 
-        var robotTimeSec = robotTime.get();
-        LOG.log(Level.DEBUG, "Sending initial robotTimeSec = {0}",
-                robotTimeSec);
-        robotTimeSecPublisher.set(robotTimeSec);
         inst.flush();
 
         LOG.log(Level.INFO, "Robot is running.");
     }
 
-    private volatile long isReadyTimestamp = Long.MAX_VALUE;
+    private CompletableFuture<Boolean> isReadyFuture = null;
 
     /**
      * Load a particular world file and, if necessary, wait for the user to start it.
@@ -290,14 +307,13 @@ public class WebotsSimulator implements AutoCloseable {
         SimHooks.pauseTiming();
 
         isReady = false;
-        isReadyTimestamp = Long.MAX_VALUE;
 
         // Tell the user to load the world file.
         String userReminder =
                 "Waiting for Webots to be ready. Please start %s in Webots."
                         .formatted(worldFileAbsPath);
 
-        final var isReadyFuture = new CompletableFuture<Boolean>();
+        isReadyFuture = new CompletableFuture<Boolean>();
 
         // Stop the server to disconnect any existing clients.
         inst.stopServer();
@@ -308,7 +324,6 @@ public class WebotsSimulator implements AutoCloseable {
         inst.addListener(reloadStatusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final var eventValue = event.valueData.value.getString();
-                    final var eventTimeStamp = event.valueData.value.getTime();
                     listenerCallbackExecutor.execute(() -> {
                         LOG.log(Level.DEBUG, "In listener, reloadStatus = {0}",
                                 eventValue);
@@ -316,11 +331,14 @@ public class WebotsSimulator implements AutoCloseable {
                                 NTConstants.RELOAD_STATUS_COMPLETED_VALUE))
                             return;
                         if (reloadCount++ == 0) {
+                            LOG.log(Level.DEBUG, "Sending reloadRequest = {0}",
+                                    worldFileAbsPath);
                             reloadRequestPublisher.set(worldFileAbsPath);
                             inst.flush();
+                            LOG.log(Level.DEBUG, "Sent reloadRequest = {0}",
+                                    worldFileAbsPath);
                         } else {
                             isReady = true;
-                            isReadyTimestamp = eventTimeStamp;
                             isReadyFuture.complete(true);
                         }
                     });
@@ -341,83 +359,20 @@ public class WebotsSimulator implements AutoCloseable {
             // continue.
             SimHooks.pauseTiming();
             LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}", robotTimeSec);
-            robotTimeSecPublisher.set(robotTimeSec);
-            inst.flush();
+            robotTimeSecSim.set(robotTimeSec);
         });
 
-        inst.addListener(simTimeSecSubscriber,
-                EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
-                    final var eventTime = event.valueData.value.getTime();
-                    final var eventValue = event.valueData.value.getDouble();
-                    listenerCallbackExecutor.execute(() -> {
-                        // Ignore values sent before simulator said it was ready.
+        robotTimeNotifier.setCallback(() -> {
+            LOG.log(Level.DEBUG, "In robotTimeNotifier callback");
+            // Due to rounding error, robot.getTime() might actually return something slightly less
+            // than simTimeSec. We lie and say that we've actually caught up so that the simulator
+            // will take another step.
+            // TODO: Maybe use simTimeSec after initial report.
+            var timeSec = robotTime.get();
+            LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}", timeSec);
+            robotTimeSecSim.set(timeSec);
+        });
 
-                        // TODO: Make the reloadStatus topic into a struct topic containing both the
-                        // Completed status and the initial simTimeSecs to avoid the remote
-                        // possibility that the server time offset changes between when reloadStatus
-                        // and simTimeSec is sent. See
-                        // https://github.com/wpilibsuite/allwpilib/discussions/6712#discussioncomment-9714930
-                        if (eventTime < isReadyTimestamp) {
-                            LOG.log(Level.DEBUG,
-                                    "Ignoring simTimeSec because it was sent before simulator said it was ready.");
-                            return;
-                        }
-
-                        // Start the robot timing if we haven't already
-                        ensureRobotTimingStarted();
-
-                        // Do nothing if the robot program is not rurnning
-                        if (!isRobotCodeRunning) {
-                            LOG.log(Level.DEBUG,
-                                    "Ignoring simTimeSec because robot code is not running.");
-                            return;
-                        }
-                        simTimeSec = eventValue;
-                        double robotTimeSec = robotTime.get();
-                        LOG.log(Level.DEBUG,
-                                "Received simTimeSec of {0} when robotTimeSec is {1}",
-                                simTimeSec, robotTimeSec);
-
-                        runAllCallbacks(robotTimeSec, simTimeSec);
-
-                        // If we're not behind the sim time, there is nothing else to do.
-                        double deltaSecs = simTimeSec - robotTimeSec;
-                        if (deltaSecs < 0.0) {
-                            return;
-                        }
-
-                        if (useStepTiming) {
-                            LOG.log(Level.DEBUG,
-                                    "Calling SimHooks.stepTiming({0})",
-                                    deltaSecs);
-                            SimHooks.stepTiming(deltaSecs);
-                            LOG.log(Level.DEBUG,
-                                    "SimHooks.stepTiming() returned");
-                            // Due to rounding error, robot.getTime() might actually returns
-                            // something
-                            // slightly less than simTimeSec. We lie and say that we've actually
-                            // caught
-                            // up so that the simulator will take another step.
-                            robotTimeSec = simTimeSec;
-                            LOG.log(Level.DEBUG, "Sending robotTimeSec = {0}",
-                                    robotTimeSec);
-                            robotTimeSecPublisher.set(robotTimeSec);
-                            inst.flush();
-                            LOG.log(Level.DEBUG,
-                                    "Returning from simTimeSec listener");
-                            return;
-                        }
-                        // We are behind the sim time, so run until we've caught up.
-                        // We use a Notifier instead of SimHooks.stepTiming() because
-                        // using SimHooks.stepTiming() causes accesses to sim data to block.
-                        pauser.stop();
-                        pauser.startSingle(deltaSecs);
-                        LOG.log(Level.DEBUG, "Calling SimHooks.resumeTiming()");
-                        SimHooks.resumeTiming();
-                        LOG.log(Level.DEBUG,
-                                "SimHooks.resumeTiming() returned");
-                    });
-                });
         // Restart the server so that the clients will reconnect.
         inst.startServer();
 
@@ -454,6 +409,95 @@ public class WebotsSimulator implements AutoCloseable {
         return this;
     }
 
+    private void sendRobotTime() {
+        listenerCallbackExecutor.execute(() -> {
+            robotTimeNotifier.startSingle(0);
+            SimHooks.stepTiming(0);
+        });
+    }
+
+    private SimDevice timeSyncDevice;
+            private SimDeviceSim timeSyncDeviceSim;
+
+    private void startTimeSync() {
+        LOG.log(Level.DEBUG, "In startTimeSync()");
+        ensureRobotTimingStarted();
+        timeSyncDevice = SimDevice.create("DBSTimeSync");
+        robotTimeSecSim = timeSyncDevice.createDouble("robotTimeSec",
+                SimDevice.Direction.kBidir, -1.0);
+        timeSyncDevice.createDouble("simTimeSec", SimDevice.Direction.kBidir,
+                -1.0);
+        LOG.log(Level.DEBUG, "Created SimDevice with name {0}",
+                timeSyncDevice.getName());
+        timeSyncDeviceSim = new SimDeviceSim("DBSTimeSync");
+        timeSyncDeviceSim.registerValueChangedCallback(
+                timeSyncDeviceSim.getDouble("simTimeSec"),
+                (name, handle, direction, value) -> {
+                    LOG.log(Level.DEBUG,
+                            "In simTimeSec value changed callback");
+                    final var eventValue = value.getDouble();
+                    listenerCallbackExecutor.execute(() -> {
+                        simTimeSec = eventValue;
+                        LOG.log(Level.DEBUG, "Got simTimeSec value of {0}",
+                                simTimeSec);
+                        if (simTimeSec < 0.0) {
+                            LOG.log(Level.DEBUG,
+                                    "Ignoring simTimeSec value of {0}",
+                                    simTimeSec);
+                            return;
+                        }
+                        // Start the robot timing if we haven't already
+                        ensureRobotTimingStarted();
+
+                        // Do nothing if the robot program is not rurnning
+                        if (!isRobotCodeRunning) {
+                            LOG.log(Level.DEBUG,
+                                    "Ignoring simTimeSec because robot code is not running.");
+                            return;
+                        }
+                        double robotTimeSec = robotTime.get();
+                        LOG.log(Level.DEBUG,
+                                "Received simTimeSec of {0} when robotTimeSec is {1}",
+                                simTimeSec, robotTimeSec);
+
+                        runAllCallbacks(robotTimeSec, simTimeSec);
+
+                        // If we're not behind the sim time, there is nothing else to do.
+                        double deltaSecs = simTimeSec + 0.032 - robotTimeSec;
+                        if (deltaSecs < 0.0) {
+                            return;
+                        }
+
+                        if (useStepTiming) {
+                            // Send the new robot time at the end of the current step.
+                            robotTimeNotifier.startSingle(deltaSecs);
+                            LOG.log(Level.DEBUG,
+                                    "Calling SimHooks.stepTiming({0})",
+                                    deltaSecs);
+                            // The extra 0.0001 ensures that the robotTimeNotifier gets run.
+                            SimHooks.stepTiming(deltaSecs + 0.0001);
+                            LOG.log(Level.DEBUG,
+                                    "SimHooks.stepTiming() returned");
+                            LOG.log(Level.DEBUG,
+                                    "Returning from simTimeSec listener");
+                            return;
+                        }
+                        // We are behind the sim time, so run until we've caught up.
+                        // We use a Notifier instead of SimHooks.stepTiming() because
+                        // using SimHooks.stepTiming() causes accesses to sim data to block.
+                        pauser.stop();
+                        pauser.startSingle(deltaSecs);
+                        LOG.log(Level.DEBUG, "Calling SimHooks.resumeTiming()");
+                        SimHooks.resumeTiming();
+                        LOG.log(Level.DEBUG,
+                                "SimHooks.resumeTiming() returned");
+                    });
+                }, true);
+        listenerCallbackExecutor.execute(() -> {
+            sendRobotTime();
+        });
+    }
+
     private void runAllCallbacks(double robotTimeSec, double simTimeSec) {
         try (var simState = new SimulationState(robotTimeSec, simTimeSec)) {
             // Run all the callbacks up to the new sim time.
@@ -462,8 +506,8 @@ public class WebotsSimulator implements AutoCloseable {
             OneShotCallback oscb;
             while ((oscb = oneShotCallbacks.poll()) != null) {
                 LOG.log(Level.DEBUG,
-                        "Checking callback with time = {0} at simTimeSecs = {1}",
-                        oscb.timeSecs, simTimeSec);
+                        "Checking callback with time = {0} at simTimeSec = {1}",
+                                oscb.timeSecs, simTimeSec);
                 if (oscb.timeSecs > simTimeSec) {
                     oneShotCallbacks.add(oscb); // Put it back
                     break;
@@ -772,12 +816,13 @@ public class WebotsSimulator implements AutoCloseable {
         LOG.log(Level.DEBUG, "Closing WebotsSimulator");
         reloadRequestPublisher.close();
         reloadStatusSubscriber.close();
-        robotTimeSecPublisher.close();
-        simTimeSecSubscriber.close();
         Watcher.closeAll();
         inst.close();
         inst.stopServer();
         pauser.close();
+        if (timeSyncDevice != null) {
+            timeSyncDevice.close();
+        }
 
         LOG.log(Level.DEBUG, "Done closing WebotsSimulator");
     }
