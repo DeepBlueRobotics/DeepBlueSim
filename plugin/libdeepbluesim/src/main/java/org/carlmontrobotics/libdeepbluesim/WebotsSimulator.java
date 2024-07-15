@@ -758,6 +758,7 @@ public class WebotsSimulator implements AutoCloseable {
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
+            SimDeviceSim.resetData();
             // HAL.shutdown();
             LOG.log(Level.DEBUG, "run() returning");
         }
