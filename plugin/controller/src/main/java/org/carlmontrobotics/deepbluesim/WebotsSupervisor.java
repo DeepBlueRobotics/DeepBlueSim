@@ -94,6 +94,8 @@ public final class WebotsSupervisor {
 
     private static boolean gotSimMode;
 
+    private static java.util.Timer delayer = null;
+
     /**
      * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
      * called before connecting to the robot code.
@@ -108,7 +110,7 @@ public final class WebotsSupervisor {
 
         addNetworkTablesLogger();
 
-        var delayer = new Timer();
+        delayer = new Timer();
         // Set to something like 100 if you are trying to reproduce the latencies we sometimes see
         // on some underpowered CI machines
         double delayMs = 0;
@@ -203,6 +205,9 @@ public final class WebotsSupervisor {
                         waitUntilFlushed();
                         inst.stopClient();
                         inst.close();
+                        if (delayer != null) {
+                            delayer.cancel();
+                        }
 
                         LOG.log(Level.DEBUG,
                                 "Updating simulation speed and mode");
