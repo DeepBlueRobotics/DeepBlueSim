@@ -15,11 +15,9 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj.motorcontrol.PWMMotorController;
 
 import org.carlmontrobotics.lib199.MotorControllerFactory;
-import org.carlmontrobotics.lib199.sim.MockedEncoder;
 import org.carlmontrobotics.lib199.MotorConfig;
 
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.RelativeEncoder;
 
 public class MotorControllerRobot extends TimedRobot {
 
@@ -27,7 +25,6 @@ public class MotorControllerRobot extends TimedRobot {
     private final Timer m_timer = new Timer();
     private PWMMotorController m_motorController;
     private CANSparkMax m_canMotorController;
-    private RelativeEncoder m_canEncoder;
 
     /**
      * This function is run when the robot is first started up and should be used for any
@@ -38,7 +35,6 @@ public class MotorControllerRobot extends TimedRobot {
         m_motorController = new PWMVictorSPX(1);
         m_canMotorController =
                 MotorControllerFactory.createSparkMax(2, MotorConfig.NEO);
-        m_canEncoder = m_canMotorController.getEncoder();
     }
 
     @Override
@@ -49,12 +45,6 @@ public class MotorControllerRobot extends TimedRobot {
     public void close() {
         System.out.println("Closing motors in Robot.close()");
         m_motorController.close();
-        // The following closing of the mocked encoder can be removed once we are using a version of
-        // lib199 containing https://github.com/DeepBlueRobotics/lib199/pull/104. That said, closing
-        // it multiple times does not break anything.
-        MockedEncoder mockedEncoder =
-                (MockedEncoder) (m_canMotorController.getEncoder());
-        mockedEncoder.close();
         m_canMotorController.close();
     }
 

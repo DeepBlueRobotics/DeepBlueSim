@@ -92,21 +92,21 @@ public class CANMotorMediator implements Runnable {
         }
         motorDevice.registerBrakemodeCallback((name, enabled) -> {
             brakeMode = enabled;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
         motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
             neutralDeadband = deadband;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
         motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
             requestedOutput = percentOutput;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
 
         Simulation.registerPeriodicMethod(this);
     }
 
-    private void updateBrakeDampingConstant() {
+    private void updateMotorAndBrakeSettings() {
         actualOutput = requestedOutput;
         if (Math.abs(actualOutput) < neutralDeadband) {
             actualOutput = 0.0;
