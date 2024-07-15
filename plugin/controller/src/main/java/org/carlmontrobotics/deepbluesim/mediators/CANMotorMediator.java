@@ -136,7 +136,6 @@ public class CANMotorMediator implements Runnable {
         motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
     }
 
-    double lastPosRads = Double.NaN;
 
     @Override
     public void run() {
