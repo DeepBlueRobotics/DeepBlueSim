@@ -802,10 +802,6 @@ public class WebotsSimulator implements AutoCloseable {
         } finally {
             LOG.log(Level.DEBUG, "startCompetition() returned");
             isRobotCodeRunning = false;
-            // Calling resetData() causes testCANMotorRotationInAutonomous() to hang before anything
-            // turns.
-
-            // SimDeviceSim.resetData();
             // HAL.shutdown();
             LOG.log(Level.DEBUG, "run() returning");
         }
