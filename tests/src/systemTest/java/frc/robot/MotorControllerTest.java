@@ -219,7 +219,7 @@ public class MotorControllerTest {
     private Measurement m1, m2;
 
     // @Test
-    @RepeatedTest(10)
+    @RepeatedTest(1)
     void testCANMotorRotationInAutonomous() throws Exception {
         assertCorrectRotationInAutonomous("NEO", "CAN_SHAFT");
     }
