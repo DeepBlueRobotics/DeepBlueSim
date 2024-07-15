@@ -31,6 +31,7 @@ public class CANMotorMediator implements Runnable {
     private boolean brakeMode = true;
     private double neutralDeadband = 0.04;
     private double dampingConstant = 0.0;
+    private double lastPosRads = Double.NaN;
 
     /**
      * Creates a new CANMotorMediator
@@ -91,21 +92,21 @@ public class CANMotorMediator implements Runnable {
         }
         motorDevice.registerBrakemodeCallback((name, enabled) -> {
             brakeMode = enabled;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
         motorDevice.registerNeutraldeadbandCallback((name, deadband) -> {
             neutralDeadband = deadband;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
         motorDevice.registerPercentoutputCallback((name, percentOutput) -> {
             requestedOutput = percentOutput;
-            updateBrakeDampingConstant();
+            updateMotorAndBrakeSettings();
         }, true);
 
         Simulation.registerPeriodicMethod(this);
     }
 
-    private void updateBrakeDampingConstant() {
+    private void updateMotorAndBrakeSettings() {
         actualOutput = requestedOutput;
         if (Math.abs(actualOutput) < neutralDeadband) {
             actualOutput = 0.0;
@@ -136,7 +137,6 @@ public class CANMotorMediator implements Runnable {
         motor.setVelocity((inverted ? -1 : 1) * velocity / gearing);
     }
 
-    double lastPosRads = Double.NaN;
 
     @Override
     public void run() {

@@ -10,10 +10,6 @@
 EXTERNPROTO "DBSEncoderBase.proto"
 
 PROTO DBSBuiltinEncoderBase [
-    unconnectedField SFBool absolute FALSE
-    unconnectedField SFFloat absoluteOffsetDeg 0
-    unconnectedField SFBool inverted FALSE
-    unconnectedField SFInt32 CPR 4096
     field SFFloat noiseStdDevRad 0
 ]
 {
