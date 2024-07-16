@@ -113,7 +113,7 @@ public final class WebotsSupervisor {
         delayer = new Timer();
         // Set to something like 100 if you are trying to reproduce the latencies we sometimes see
         // on some underpowered CI machines
-        double delayMs = 0;
+        long delayMs = 0;
         ConnectionProcessor.setThreadExecutor((ev) -> {
             if (delayMs == 0) {
                 queuedEvents.add(ev);
