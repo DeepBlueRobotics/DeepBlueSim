@@ -123,7 +123,7 @@ public final class WebotsSupervisor {
                         LOG.log(Level.DEBUG, "Queueing halsim event");
                         queuedEvents.add(ev);
                     }
-                }, 1);
+                }, delayMs);
             }
         });
 
