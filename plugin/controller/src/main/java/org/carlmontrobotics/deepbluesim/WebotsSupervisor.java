@@ -220,7 +220,7 @@ public final class WebotsSupervisor {
                                 reloadRequest);
                         robot.worldLoad(reloadRequest);
                         // Allow Webots to process the request.
-                        robot.step(0);
+                        robot.step(basicTimeStep);
                         LOG.log(Level.DEBUG, "Loaded world {0}", reloadRequest);
                     });
                 });
