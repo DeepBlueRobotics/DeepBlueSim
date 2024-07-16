@@ -414,7 +414,7 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     private SimDevice timeSyncDevice;
-        private SimDeviceSim timeSyncDeviceSim;
+    private SimDeviceSim timeSyncDeviceSim;
 
     private void startTimeSync() {
         LOG.log(Level.DEBUG, "In startTimeSync()");
