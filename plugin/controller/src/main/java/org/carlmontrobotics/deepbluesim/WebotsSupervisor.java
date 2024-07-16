@@ -16,11 +16,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 import org.carlmontrobotics.wpiws.connection.ConnectionProcessor;
 import org.carlmontrobotics.wpiws.devices.SimDeviceSim;
 import org.ejml.simple.SimpleMatrix;
+import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 
 import com.cyberbotics.webots.controller.Node;
@@ -66,6 +68,8 @@ public final class WebotsSupervisor {
 
     private static volatile boolean isWorldLoading = false;
 
+    private static Supplier<WebSocketClient> wsClientSupplier = null;
+
     final static PubSubOption[] pubSubOptions =
             new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
                     PubSubOption.keepDuplicates(true), // including duplicates
@@ -94,7 +98,20 @@ public final class WebotsSupervisor {
 
     private static boolean gotSimMode;
 
-    private static Timer delayer = null;
+    private static final Timer delayer = new Timer();
+    private static volatile long lastMsgTimeMs = -1;
+
+    /**
+     * 
+     * @return milliseconds since the last message was received, or -1 if no message has been
+     *         received yet.
+     */
+    private static long getTimeSinceLastMessageMs() {
+        if (lastMsgTimeMs < 0) {
+            return -1;
+        }
+        return System.currentTimeMillis() - lastMsgTimeMs;
+    }
 
     /**
      * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
@@ -103,20 +120,24 @@ public final class WebotsSupervisor {
      * @param robot The robot to report on
      * @param basicTimeStep The timestep to pass to {@link Supervisor#step(int)} to advance the
      *        simulation
-     * @param connectionCloser code to run to close open network connections
+     * @param halSimWSClientSupplier The supplier of the WebSocket connection to the HALSim
+     *        WebSocket server
      */
     public static void init(Supervisor robot, int basicTimeStep,
-            Runnable connectionCloser) {
+            Supplier<WebSocketClient> halSimWSClientSupplier) {
+
+        wsClientSupplier = halSimWSClientSupplier;
+
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
         addNetworkTablesLogger();
 
-        delayer = new Timer();
         // Set to something like 100 if you are trying to reproduce the latencies we sometimes see
         // on some underpowered CI machines
         long delayMs = 0;
         ConnectionProcessor.setThreadExecutor((ev) -> {
+            lastMsgTimeMs = System.currentTimeMillis();
             if (delayMs == 0) {
                 queuedEvents.add(ev);
             } else {
@@ -205,12 +226,9 @@ public final class WebotsSupervisor {
                         // before requesting a new world.
                         closePublishers();
                         waitUntilFlushed();
-                        inst.stopClient();
-                        connectionCloser.run();
+                        close();
                         inst.close();
-                        if (delayer != null) {
-                            delayer.cancel();
-                        }
+                        delayer.cancel();
 
                         LOG.log(Level.DEBUG,
                                 "Updating simulation speed and mode");
@@ -309,13 +327,10 @@ public final class WebotsSupervisor {
                 queuedEvents.add(() -> {
                     var reloadStatusTopic = coordinator.getStringTopic(
                             NTConstants.RELOAD_STATUS_TOPIC_NAME);
+                    reloadStatusTopic.setCached(false);
                     reloadStatusPublisher =
                             reloadStatusTopic.publish(pubSubOptions);
-                    reloadStatusTopic.setCached(false);
-                    LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
-                    reloadStatusPublisher
-                            .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
-                    inst.flush();
+                    sendCompletedOnceHALSimIsQuiet();
                 });
                 LOG.log(Level.INFO,
                         "Connected to NetworkTables server ''{0}'' at {1}:{2,number,#}",
@@ -341,6 +356,32 @@ public final class WebotsSupervisor {
                 });
             }
         });
+    }
+
+    private static final long minQuietTimeMs = 500;
+
+    private static void sendCompletedOnceHALSimIsQuiet() {
+        // To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, wait until HALSim has
+        // been quiet for a bit. We take that as a sign that any of the server's onConnect callbacks
+        // have run and it will be safe for the WebotsSimulator to create SimDevices.
+        var timeSinceLastMsgMs = getTimeSinceLastMessageMs();
+        if (reloadStatusPublisher != null
+                && timeSinceLastMsgMs > minQuietTimeMs) {
+            LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
+            reloadStatusPublisher
+                    .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
+            inst.flush();
+        } else {
+            LOG.log(Level.DEBUG,
+                    "The last HALSim message was {0} ms ago, which is < {1} ms, so waiting.",
+                    timeSinceLastMsgMs, minQuietTimeMs);
+            delayer.schedule(new TimerTask() {
+                public void run() {
+                    queuedEvents.add(
+                            WebotsSupervisor::sendCompletedOnceHALSimIsQuiet);
+                }
+            }, minQuietTimeMs);
+        }
     }
 
     @SuppressWarnings("unused")
@@ -436,6 +477,21 @@ public final class WebotsSupervisor {
                         "No halsim connection to the robot code. Waiting 1 second in case it is restarting. Here is the stacktrace:",
                         notConnectedException);
                 Thread.sleep(1000);
+            }
+        }
+    }
+
+    public static void close() {
+        NetworkTableInstance.getDefault().stopClient();
+        var wsClient = wsClientSupplier.get();
+        if (wsClient != null && !wsClient.isClosed()) {
+            try {
+                wsClient.closeBlocking();
+            } catch (InterruptedException ex) {
+                LOG.log(Level.ERROR,
+                        "Interrupted while closing HALSim WebSocket connection.",
+                        ex);
+                System.err.flush();
             }
         }
     }
