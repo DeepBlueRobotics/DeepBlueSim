@@ -409,10 +409,8 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     private void sendRobotTime() {
-        listenerCallbackExecutor.execute(() -> {
-            robotTimeNotifier.startSingle(0);
-            SimHooks.stepTiming(0);
-        });
+        robotTimeNotifier.startSingle(0);
+        SimHooks.stepTiming(0);
     }
 
     private SimDevice timeSyncDevice;
@@ -473,9 +471,8 @@ public class WebotsSimulator implements AutoCloseable {
                             SimHooks.stepTiming(deltaSecs);
                             LOG.log(Level.DEBUG,
                                     "SimHooks.stepTiming() returned");
-                            // Send the new robot time at the end of the current step.
-                            robotTimeNotifier.startSingle(0);
-                            SimHooks.stepTiming(0);
+                            // Send the new robot time
+                            sendRobotTime();
                             LOG.log(Level.DEBUG,
                                     "Returning from simTimeSec listener");
                             return;
