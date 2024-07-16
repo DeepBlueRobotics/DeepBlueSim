@@ -415,7 +415,7 @@ public final class WebotsSupervisor {
                     // The robot code isn't going to tell us when to step the simulation and the
                     // user has unpaused it.
                     logDebugLimitingRepeats(
-                            "Simulation is not paused and no robot code in control. Calling robot.step(basicTimeStep)");
+                            "Simulation is not paused and no robot code in control. Stepping simulation.");
 
                     if (stepSimulation(robot, basicTimeStep) == -1) {
                         break;
