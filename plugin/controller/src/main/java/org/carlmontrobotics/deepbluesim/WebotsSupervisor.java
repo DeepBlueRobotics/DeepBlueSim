@@ -103,8 +103,10 @@ public final class WebotsSupervisor {
      * @param robot The robot to report on
      * @param basicTimeStep The timestep to pass to {@link Supervisor#step(int)} to advance the
      *        simulation
+     * @param connectionCloser code to run to close open network connections
      */
-    public static void init(Supervisor robot, int basicTimeStep) {
+    public static void init(Supervisor robot, int basicTimeStep,
+            Runnable connectionCloser) {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
@@ -204,6 +206,7 @@ public final class WebotsSupervisor {
                         closePublishers();
                         waitUntilFlushed();
                         inst.stopClient();
+                        connectionCloser.run();
                         inst.close();
                         if (delayer != null) {
                             delayer.cancel();

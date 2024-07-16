@@ -41,6 +41,20 @@ public class DeepBlueSim {
         inst.setServer("localhost");
     }
 
+    private static void closeConnections() {
+        NetworkTableInstance.getDefault().stopClient();
+        if (wsConnection != null && !wsConnection.object.isClosed()) {
+            try {
+                wsConnection.object.closeBlocking();
+            } catch (InterruptedException ex) {
+                LOG.log(Level.ERROR,
+                        "Interrupted while closing HALSim WebSocket connection.",
+                        ex);
+                System.err.flush();
+            }
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         System.setProperty("java.util.logging.config.file",
                 "logging.properties");
@@ -54,6 +68,7 @@ public class DeepBlueSim {
                     LOG.log(Level.ERROR,
                             "Uncaught exception! Here is the stacktrace:", t);
                     System.err.flush();
+                    closeConnections();
                     System.exit(1);
                 }
             };
@@ -96,7 +111,8 @@ public class DeepBlueSim {
         }
 
         if (connectToRobotCode) {
-            WebotsSupervisor.init(robot, basicTimeStep);
+            WebotsSupervisor.init(robot, basicTimeStep,
+                    DeepBlueSim::closeConnections);
         }
 
         // Wait until startup has completed to ensure that the Webots simulator is
@@ -124,10 +140,9 @@ public class DeepBlueSim {
             }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    wsConnection.object.closeBlocking();
-                } catch (InterruptedException e) {
-                }
+                // If connections haven't already been closed, we try to close them now. Note that
+                // this might silently fail if it takes too long.
+                closeConnections();
             }));
         }
 

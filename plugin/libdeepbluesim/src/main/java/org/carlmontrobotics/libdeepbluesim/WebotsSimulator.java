@@ -231,6 +231,8 @@ public class WebotsSimulator implements AutoCloseable {
 
     private volatile int reloadCount = 0;
 
+    private File worldFile = null;
+
     /**
      * Load and, if necessary, ask the user to start the specified world file when the simulation is
      * run.
@@ -246,9 +248,9 @@ public class WebotsSimulator implements AutoCloseable {
         if (!worldFile.isFile()) {
             throw new FileNotFoundException(worldFilePath);
         }
+        this.worldFile = worldFile;
         onRobotInited(() -> {
             try {
-                waitForUserToStart(worldFile.getAbsolutePath());
                 startTimeSync();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -749,14 +751,17 @@ public class WebotsSimulator implements AutoCloseable {
      * @throws IllegalAccessException if the robot class's default constructor is not accessible
      *         (e.g. not public)
      * @throws InstantiationException if the robot class is abstract
+     * @throws TimeoutException if the world is not loaded running withing Webots in a reasonable
+     *         amount of time
      * 
      */
     public void run() throws InstantiationException, IllegalAccessException,
             InvocationTargetException, NoSuchMethodException,
-            SecurityException {
+            SecurityException, TimeoutException {
         endCompetitionCalled = false;
         // HAL must be initialized or SmartDashboard might not work.
         HAL.initialize(500, 0);
+        waitForUserToStart(worldFile.getAbsolutePath());
         try (TimedRobot robot = robotConstructor.get();
                 var endNotifier = new Notifier(() -> {
                     endCompetition(robot);
