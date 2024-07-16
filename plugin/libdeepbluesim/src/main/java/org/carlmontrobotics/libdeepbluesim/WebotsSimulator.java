@@ -445,8 +445,6 @@ public class WebotsSimulator implements AutoCloseable {
                             return;
                         }
                         simTimeSec = eventValue;
-                        // Start the robot timing if we haven't already
-                        ensureRobotTimingStarted();
 
                         // Do nothing if the robot program is not rurnning
                         if (!isRobotCodeRunning) {
@@ -823,6 +821,11 @@ public class WebotsSimulator implements AutoCloseable {
         pauser.close();
         if (timeSyncDevice != null) {
             timeSyncDevice.close();
+        }
+        try {
+            listenerCallbackExecutor.shutdown();
+        } catch (SecurityException ex) {
+            LOG.log(Level.ERROR, "Could not shutdown callback executor.", ex);
         }
 
         LOG.log(Level.DEBUG, "Done closing WebotsSimulator");

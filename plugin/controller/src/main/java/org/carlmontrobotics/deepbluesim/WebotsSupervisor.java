@@ -219,7 +219,8 @@ public final class WebotsSupervisor {
                         LOG.log(Level.DEBUG, "Loading world {0}",
                                 reloadRequest);
                         robot.worldLoad(reloadRequest);
-                        stepSimulation(robot, basicTimeStep);
+                        // Allow Webots to process the request.
+                        robot.step(0);
                         LOG.log(Level.DEBUG, "Loaded world {0}", reloadRequest);
                     });
                 });
