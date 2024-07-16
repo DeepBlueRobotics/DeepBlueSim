@@ -359,7 +359,7 @@ public final class WebotsSupervisor {
         return robot.step(basicTimeStep);
     }
 
-    private static String lastMsg = new String();
+    private static String lastMsg = "";
     private static long lastMsgTimeMillis = 0,
             minTimeBetweenRepeatsMillis = 10000;
 
