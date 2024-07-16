@@ -288,7 +288,6 @@ public final class WebotsSupervisor {
                             timeSyncDeviceSim.set("simTimeSec", simTimeSec);
                             LOG.log(Level.DEBUG, "Sent simTimeSec of {0}",
                                     simTimeSec);
-                            inst.flush();
                             if (isDone) {
                                 isDoneFuture.complete(true);
                                 break;
