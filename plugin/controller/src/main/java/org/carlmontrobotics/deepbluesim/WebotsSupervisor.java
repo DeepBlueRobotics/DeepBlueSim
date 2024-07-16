@@ -94,7 +94,7 @@ public final class WebotsSupervisor {
 
     private static boolean gotSimMode;
 
-    private static java.util.Timer delayer = null;
+    private static Timer delayer = null;
 
     /**
      * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
