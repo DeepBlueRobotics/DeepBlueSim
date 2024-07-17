@@ -54,6 +54,7 @@ public class DeepBlueSim {
                     LOG.log(Level.ERROR,
                             "Uncaught exception! Here is the stacktrace:", t);
                     System.err.flush();
+                    WebotsSupervisor.close();
                     System.exit(1);
                 }
             };
@@ -96,7 +97,12 @@ public class DeepBlueSim {
         }
 
         if (connectToRobotCode) {
-            WebotsSupervisor.init(robot, basicTimeStep);
+            WebotsSupervisor.init(robot, basicTimeStep, () -> {
+                if (wsConnection == null)
+                    return null;
+                else
+                    return wsConnection.object;
+            });
         }
 
         // Wait until startup has completed to ensure that the Webots simulator is
@@ -124,10 +130,9 @@ public class DeepBlueSim {
             }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    wsConnection.object.closeBlocking();
-                } catch (InterruptedException e) {
-                }
+                // If connections haven't already been closed, we try to close them now. Note that
+                // this might silently fail if it takes too long.
+                WebotsSupervisor.close();
             }));
         }
 
