@@ -762,6 +762,11 @@ public class WebotsSimulator implements AutoCloseable {
         // HAL must be initialized or SmartDashboard might not work.
         HAL.initialize(500, 0);
         waitForUserToStart(worldFile.getAbsolutePath());
+
+        // Restart timing before robot is constructed to ensure that timed callbacks added during
+        // the constructor (and our own onRobotInit callback) work properly.
+        SimHooks.restartTiming();
+        SimHooks.pauseTiming();
         try (TimedRobot robot = robotConstructor.get();
                 var endNotifier = new Notifier(() -> {
                     endCompetition(robot);
@@ -784,7 +789,6 @@ public class WebotsSimulator implements AutoCloseable {
                     robot.getPeriod(), -robot.getPeriod());
 
             this.endNotifier = endNotifier;
-            SimHooks.restartTiming();
             SimHooks.resumeTiming();
             isRobotCodeRunning = true;
             try {
