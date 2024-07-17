@@ -9,8 +9,11 @@
             "type": "cppdbg",
             "request": "attach",
             "program": "${env:HOME}/wpilib/2024/jdk/bin/java",
+            "windows": {
+                "program": "${env:PUBLIC}\\wpilib\\2024\\jdk\\bin\\java"
+            },
             "sourceFileMap": {
-                "/work/": "${env:HOME}/git/allwpilib/"
+                "/work/": "${input:wpilibSrcPath}/"
             },
             "MIMode": "gdb",
             "setupCommands": [
@@ -54,6 +57,14 @@
             },
             "args": "--no-robot-code",
             "cwd": "${workspaceFolder}/example/Webots/controllers/DeepBlueSim"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "wpilibSrcPath",
+            "type": "promptString",
+            "description": "The path to the wpilib source code (no trailing slash)",
+            "default": "${workspaceFolder}/../allwpilib"
         }
     ]
 }

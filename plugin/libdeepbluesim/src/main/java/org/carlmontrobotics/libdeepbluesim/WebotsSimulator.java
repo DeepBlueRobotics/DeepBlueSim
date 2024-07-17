@@ -419,7 +419,7 @@ public class WebotsSimulator implements AutoCloseable {
     }
 
     private SimDevice timeSyncDevice;
-        private SimDeviceSim timeSyncDeviceSim;
+    private SimDeviceSim timeSyncDeviceSim;
 
     private void startTimeSync() {
         LOG.log(Level.DEBUG, "In startTimeSync()");
@@ -767,7 +767,7 @@ public class WebotsSimulator implements AutoCloseable {
         waitForUserToStart(worldFile.getAbsolutePath());
 
         // Restart timing before robot is constructed to ensure that timed callbacks added during
-        // the constructor (and out own onRobotInit callback) work properly.
+        // the constructor (and our own onRobotInit callback) work properly.
         SimHooks.restartTiming();
         SimHooks.pauseTiming();
         try (TimedRobot robot = robotConstructor.get();

@@ -98,6 +98,8 @@ public final class WebotsSupervisor {
 
     private static boolean gotSimMode;
 
+    private static final long minQuietTimeMs = 500;
+
     private static final Timer delayer = new Timer();
     private static volatile long lastMsgTimeMs = -1;
 
@@ -204,17 +206,15 @@ public final class WebotsSupervisor {
         try (var p = requestTopic.publish(pubSubOptions)) {
             requestTopic.setCached(false);
         }
-        var requestSubscriber =
-                requestTopic.subscribe("", pubSubOptions);
+        var requestSubscriber = requestTopic.subscribe("", pubSubOptions);
         inst.addListener(requestSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     var request = event.valueData.value.getString();
-                    LOG.log(Level.DEBUG, "In listener, request = {0}",
-                            request);
+                    LOG.log(Level.DEBUG, "In listener, request = {0}", request);
                     if (request == null)
                         return;
                     var requestParts = request.split(" ", 2);
-                            var requestVerb = requestParts[0];
+                    var requestVerb = requestParts[0];
                     switch (requestVerb) {
                         case NTConstants.REQUEST_LOAD_VERB:
                             if (requestParts.length != 2) {
@@ -313,8 +313,8 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 queuedEvents.add(() -> {
-                    var statusTopic = coordinator.getStringTopic(
-                            NTConstants.STATUS_TOPIC_NAME);
+                    var statusTopic = coordinator
+                            .getStringTopic(NTConstants.STATUS_TOPIC_NAME);
                     statusTopic.setCached(false);
                     statusPublisher = statusTopic.publish(pubSubOptions);
                     sendCompletedOnceHALSimIsQuiet();
@@ -378,18 +378,14 @@ public final class WebotsSupervisor {
         });
     }
 
-    private static final long minQuietTimeMs = 500;
-
     private static void sendCompletedOnceHALSimIsQuiet() {
         // To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, wait until HALSim has
         // been quiet for a bit. We take that as a sign that any of the server's onConnect callbacks
         // have run and it will be safe for the WebotsSimulator to create SimDevices.
         var timeSinceLastMsgMs = getTimeSinceLastMessageMs();
-        if (statusPublisher != null
-                && timeSinceLastMsgMs > minQuietTimeMs) {
+        if (statusPublisher != null && timeSinceLastMsgMs > minQuietTimeMs) {
             LOG.log(Level.DEBUG, "Setting status to Completed");
-            statusPublisher
-                    .set(NTConstants.STATUS_COMPLETED_VALUE);
+            statusPublisher.set(NTConstants.STATUS_COMPLETED_VALUE);
             inst.flush();
         } else {
             LOG.log(Level.DEBUG,
