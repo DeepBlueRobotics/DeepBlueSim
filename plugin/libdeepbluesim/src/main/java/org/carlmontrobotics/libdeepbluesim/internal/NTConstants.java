@@ -28,13 +28,13 @@ public class NTConstants {
         public static final String ROBOT_TIME_SEC_TOPIC_NAME = "robotTimeSec";
 
         /** The name of the topic that is used to communicate the status of Webots (re)loading. */
-        public static final String RELOAD_STATUS_TOPIC_NAME = "reloadStatus";
+        public static final String STATUS_TOPIC_NAME = "status";
 
         /** The value signifying that Webots has finished reloading. */
-        public static final String RELOAD_STATUS_COMPLETED_VALUE = "Completed";
+        public static final String STATUS_COMPLETED_VALUE = "Completed";
 
         /** The name of the topic that is used to tell Webots which world file to load. */
-        public static final String RELOAD_REQUEST_TOPIC_NAME = "reloadRequest";
+        public static final String REQUEST_TOPIC_NAME = "request";
 
         /** The name of the table that contains the above topics. */
         public static final String COORDINATOR_TABLE_NAME =

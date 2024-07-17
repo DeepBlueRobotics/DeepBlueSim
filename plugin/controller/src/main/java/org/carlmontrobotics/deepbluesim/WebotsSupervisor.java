@@ -54,7 +54,7 @@ public final class WebotsSupervisor {
             System.getLogger(WebotsSupervisor.class.getName());
 
     private static NetworkTableInstance inst = null;
-    private static StringPublisher reloadStatusPublisher = null;
+    private static StringPublisher statusPublisher = null;
 
     private static SimDeviceSim timeSyncDeviceSim = null;
 
@@ -198,30 +198,30 @@ public final class WebotsSupervisor {
         NetworkTable coordinator =
                 inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
 
-        // Add a listener to handle reload requests.
-        var reloadRequestTopic = coordinator
-                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
-        try (var p = reloadRequestTopic.publish(pubSubOptions)) {
-            reloadRequestTopic.setCached(false);
+        // Add a listener to handle requests.
+        var requestTopic =
+                coordinator.getStringTopic(NTConstants.REQUEST_TOPIC_NAME);
+        try (var p = requestTopic.publish(pubSubOptions)) {
+            requestTopic.setCached(false);
         }
-        var reloadRequestSubscriber =
-                reloadRequestTopic.subscribe("", pubSubOptions);
-        inst.addListener(reloadRequestSubscriber,
+        var requestSubscriber =
+                requestTopic.subscribe("", pubSubOptions);
+        inst.addListener(requestSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
-                    var reloadRequest = event.valueData.value.getString();
-                    LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
-                            reloadRequest);
-                    if (reloadRequest == null)
+                    var request = event.valueData.value.getString();
+                    LOG.log(Level.DEBUG, "In listener, request = {0}",
+                            request);
+                    if (request == null)
                         return;
-                    var file = new File(reloadRequest);
+                    var file = new File(request);
                     if (!file.isFile()) {
                         LOG.log(Level.ERROR,
                                 "ERROR: Received a request to load file that does not exist: {0}",
-                                reloadRequest);
+                                request);
                         return;
                     }
                     queuedEvents.add(() -> {
-                        LOG.log(Level.DEBUG, "Handling reload request");
+                        LOG.log(Level.DEBUG, "Handling request");
                         // Ensure we don't leave any watchers waiting for values they requested
                         // before requesting a new world.
                         closePublishers();
@@ -232,17 +232,17 @@ public final class WebotsSupervisor {
 
                         LOG.log(Level.DEBUG,
                                 "Updating simulation speed and mode");
-                        // Unpause before reloading so that the new controller can take it's
+                        // Unpause before loading so that the new controller can take it's
                         // first step.
                         updateUsersSimulationSpeed(robot);
                         robot.simulationSetMode(usersSimulationSpeed);
                         isWorldLoading = true;
                         LOG.log(Level.DEBUG, "Loading world {0}",
-                                reloadRequest);
-                        robot.worldLoad(reloadRequest);
+                                request);
+                        robot.worldLoad(request);
                         // Allow Webots to process the request.
                         robot.step(basicTimeStep);
-                        LOG.log(Level.DEBUG, "Loaded world {0}", reloadRequest);
+                        LOG.log(Level.DEBUG, "Loaded world {0}", request);
                     });
                 });
 
@@ -325,11 +325,10 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 queuedEvents.add(() -> {
-                    var reloadStatusTopic = coordinator.getStringTopic(
-                            NTConstants.RELOAD_STATUS_TOPIC_NAME);
-                    reloadStatusTopic.setCached(false);
-                    reloadStatusPublisher =
-                            reloadStatusTopic.publish(pubSubOptions);
+                    var statusTopic = coordinator.getStringTopic(
+                            NTConstants.STATUS_TOPIC_NAME);
+                    statusTopic.setCached(false);
+                    statusPublisher = statusTopic.publish(pubSubOptions);
                     sendCompletedOnceHALSimIsQuiet();
                 });
                 LOG.log(Level.INFO,
@@ -365,11 +364,11 @@ public final class WebotsSupervisor {
         // been quiet for a bit. We take that as a sign that any of the server's onConnect callbacks
         // have run and it will be safe for the WebotsSimulator to create SimDevices.
         var timeSinceLastMsgMs = getTimeSinceLastMessageMs();
-        if (reloadStatusPublisher != null
+        if (statusPublisher != null
                 && timeSinceLastMsgMs > minQuietTimeMs) {
-            LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
-            reloadStatusPublisher
-                    .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
+            LOG.log(Level.DEBUG, "Setting status to Completed");
+            statusPublisher
+                    .set(NTConstants.STATUS_COMPLETED_VALUE);
             inst.flush();
         } else {
             LOG.log(Level.DEBUG,
@@ -497,9 +496,9 @@ public final class WebotsSupervisor {
     }
 
     private static void closePublishers() {
-        if (reloadStatusPublisher != null)
-            reloadStatusPublisher.close();
-        reloadStatusPublisher = null;
+        if (statusPublisher != null)
+            statusPublisher.close();
+        statusPublisher = null;
         for (var entry : publisherByTopic.entrySet()) {
             entry.getValue().close();
         }

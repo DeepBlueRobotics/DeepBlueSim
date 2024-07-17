@@ -81,8 +81,8 @@ public class WebotsSimulator implements AutoCloseable {
     private final Timer robotTime = new Timer();
     private final NetworkTableInstance inst;
     private final NetworkTable coordinator;
-    private final StringPublisher reloadRequestPublisher;
-    private final StringSubscriber reloadStatusSubscriber;
+    private final StringPublisher requestPublisher;
+    private final StringSubscriber statusSubscriber;
     private final StringPublisher simModePublisher;
 
     // We'll use this to run all NT listener callbacks sequentially on a single separate thread.
@@ -198,14 +198,14 @@ public class WebotsSimulator implements AutoCloseable {
                 PubSubOption.keepDuplicates(true), // including duplicates
                 PubSubOption.periodic(Double.MIN_VALUE), // ASAP
         };
-        var reloadRequestTopic = coordinator
-                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
-        reloadRequestPublisher = reloadRequestTopic.publish(pubSubOptions);
-        reloadRequestTopic.setCached(false);
+        var requestTopic =
+                coordinator.getStringTopic(NTConstants.REQUEST_TOPIC_NAME);
+        requestPublisher = requestTopic.publish(pubSubOptions);
+        requestTopic.setCached(false);
 
-        var reloadStatusTopic = coordinator
-                .getStringTopic(NTConstants.RELOAD_STATUS_TOPIC_NAME);
-        reloadStatusSubscriber = reloadStatusTopic.subscribe("", pubSubOptions);
+        var statusTopic =
+                coordinator.getStringTopic(NTConstants.STATUS_TOPIC_NAME);
+        statusSubscriber = statusTopic.subscribe("", pubSubOptions);
 
         var simModeTopic =
                 coordinator.getStringTopic(NTConstants.SIM_MODE_TOPIC_NAME);
@@ -229,7 +229,7 @@ public class WebotsSimulator implements AutoCloseable {
 
     private volatile double simTimeSec = 0.0;
 
-    private volatile int reloadCount = 0;
+    private volatile int loadCount = 0;
 
     private File worldFile = null;
 
@@ -320,25 +320,25 @@ public class WebotsSimulator implements AutoCloseable {
         // Stop the server to disconnect any existing clients.
         inst.stopServer();
 
-        reloadCount = 0;
-        // When DeepBlueSim says that reload has completed, if it's the first time then request a
-        // reload, otherwise we're ready.
-        inst.addListener(reloadStatusSubscriber,
+        loadCount = 0;
+                // When DeepBlueSim says that load has completed, if it's the first time then request a
+        // load, otherwise we're ready.
+        inst.addListener(statusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final var eventValue = event.valueData.value.getString();
                     listenerCallbackExecutor.execute(() -> {
-                        LOG.log(Level.DEBUG, "In listener, reloadStatus = {0}",
-                                eventValue);
+                        LOG.log(Level.DEBUG, "In listener, status = {0}",
+                                        eventValue);
                         if (!eventValue.equals(
-                                NTConstants.RELOAD_STATUS_COMPLETED_VALUE))
+                                NTConstants.STATUS_COMPLETED_VALUE))
                             return;
-                        if (reloadCount++ == 0) {
-                            LOG.log(Level.DEBUG, "Sending reloadRequest = {0}",
+                        if (loadCount++ == 0) {
+                                    LOG.log(Level.DEBUG, "Sending request = {0}",
                                     worldFileAbsPath);
-                            reloadRequestPublisher.set(worldFileAbsPath);
+                            requestPublisher.set(worldFileAbsPath);
                             inst.flush();
-                            LOG.log(Level.DEBUG, "Sent reloadRequest = {0}",
-                                    worldFileAbsPath);
+                            LOG.log(Level.DEBUG, "Sent request = {0}",
+                                            worldFileAbsPath);
                         } else {
                             isReady = true;
                             isReadyFuture.complete(true);
@@ -819,8 +819,8 @@ public class WebotsSimulator implements AutoCloseable {
      */
     public void close() {
         LOG.log(Level.DEBUG, "Closing WebotsSimulator");
-        reloadRequestPublisher.close();
-        reloadStatusSubscriber.close();
+        requestPublisher.close();
+        statusSubscriber.close();
         Watcher.closeAll();
         inst.close();
         inst.stopServer();
