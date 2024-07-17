@@ -36,6 +36,9 @@ public class NTConstants {
         /** The name of the topic that is used to tell Webots which world file to load. */
         public static final String REQUEST_TOPIC_NAME = "request";
 
+        /** The verb used to request that a world be loaded. */
+        public static final String REQUEST_LOAD_VERB = "load";
+
         /** The name of the table that contains the above topics. */
         public static final String COORDINATOR_TABLE_NAME =
                         "/DeepBlueSim/Coordinator";

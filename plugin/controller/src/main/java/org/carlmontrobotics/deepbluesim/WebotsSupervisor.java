@@ -213,37 +213,25 @@ public final class WebotsSupervisor {
                             request);
                     if (request == null)
                         return;
-                    var file = new File(request);
-                    if (!file.isFile()) {
-                        LOG.log(Level.ERROR,
-                                "ERROR: Received a request to load file that does not exist: {0}",
-                                request);
-                        return;
-                    }
-                    queuedEvents.add(() -> {
-                        LOG.log(Level.DEBUG, "Handling request");
-                        // Ensure we don't leave any watchers waiting for values they requested
-                        // before requesting a new world.
-                        closePublishers();
-                        waitUntilFlushed();
-                        close();
-                        inst.close();
-                        delayer.cancel();
+                    var requestParts = request.split(" ", 2);
+                            var requestVerb = requestParts[0];
+                    switch (requestVerb) {
+                        case NTConstants.REQUEST_LOAD_VERB:
+                            if (requestParts.length != 2) {
+                                LOG.log(Level.ERROR,
+                                        "Ignoring malformed load request: {0}",
+                                        request);
+                            } else {
+                                handleLoadRequest(robot, basicTimeStep,
+                                        requestParts[1]);
+                            }
+                            break;
 
-                        LOG.log(Level.DEBUG,
-                                "Updating simulation speed and mode");
-                        // Unpause before loading so that the new controller can take it's
-                        // first step.
-                        updateUsersSimulationSpeed(robot);
-                        robot.simulationSetMode(usersSimulationSpeed);
-                        isWorldLoading = true;
-                        LOG.log(Level.DEBUG, "Loading world {0}",
-                                request);
-                        robot.worldLoad(request);
-                        // Allow Webots to process the request.
-                        robot.step(basicTimeStep);
-                        LOG.log(Level.DEBUG, "Loaded world {0}", request);
-                    });
+                        default:
+                            LOG.log(Level.ERROR,
+                                    "Ignoring unrecognized request verb {0}",
+                                    requestVerb);
+                    }
                 });
 
         // Add a listener to handle simMode requests.
@@ -354,6 +342,39 @@ public final class WebotsSupervisor {
                     inst.setServer("localhost");
                 });
             }
+        });
+    }
+
+    private static void handleLoadRequest(Supervisor robot, int basicTimeStep,
+            String worldFilePath) {
+        var file = new File(worldFilePath);
+        if (!file.isFile()) {
+            LOG.log(Level.ERROR,
+                    "ERROR: Received a request to load file that does not exist: {0}",
+                    worldFilePath);
+            return;
+        }
+        queuedEvents.add(() -> {
+            LOG.log(Level.DEBUG, "Handling request");
+            // Ensure we don't leave any watchers waiting for values they requested
+            // before requesting a new world.
+            closePublishers();
+            waitUntilFlushed();
+            close();
+            inst.close();
+            delayer.cancel();
+
+            LOG.log(Level.DEBUG, "Updating simulation speed and mode");
+            // Unpause before loading so that the new controller can take it's
+            // first step.
+            updateUsersSimulationSpeed(robot);
+            robot.simulationSetMode(usersSimulationSpeed);
+            isWorldLoading = true;
+            LOG.log(Level.DEBUG, "Loading world {0}", worldFilePath);
+            robot.worldLoad(worldFilePath);
+            // Allow Webots to process the request.
+            robot.step(basicTimeStep);
+            LOG.log(Level.DEBUG, "Loaded world {0}", worldFilePath);
         });
     }
 

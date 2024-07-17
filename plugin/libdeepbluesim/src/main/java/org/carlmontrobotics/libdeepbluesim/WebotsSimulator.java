@@ -333,12 +333,15 @@ public class WebotsSimulator implements AutoCloseable {
                                 NTConstants.STATUS_COMPLETED_VALUE))
                             return;
                         if (loadCount++ == 0) {
-                                    LOG.log(Level.DEBUG, "Sending request = {0}",
+                            var request = String.format("%s %s",
+                                    NTConstants.REQUEST_LOAD_VERB,
                                     worldFileAbsPath);
-                            requestPublisher.set(worldFileAbsPath);
+                            LOG.log(Level.DEBUG, "Sending request = {0}",
+                                            request);
+                            requestPublisher.set(request);
                             inst.flush();
                             LOG.log(Level.DEBUG, "Sent request = {0}",
-                                            worldFileAbsPath);
+                                    request);
                         } else {
                             isReady = true;
                             isReadyFuture.complete(true);
