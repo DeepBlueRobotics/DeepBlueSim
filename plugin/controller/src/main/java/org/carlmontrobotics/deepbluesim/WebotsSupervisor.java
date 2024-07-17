@@ -98,6 +98,8 @@ public final class WebotsSupervisor {
 
     private static boolean gotSimMode;
 
+    private static final long minQuietTimeMs = 500;
+
     private static final Timer delayer = new Timer();
     private static volatile long lastMsgTimeMs = -1;
 
@@ -357,8 +359,6 @@ public final class WebotsSupervisor {
             }
         });
     }
-
-    private static final long minQuietTimeMs = 500;
 
     private static void sendCompletedOnceHALSimIsQuiet() {
         // To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, wait until HALSim has
