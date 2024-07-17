@@ -9,6 +9,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 import org.carlmontrobotics.wpiws.connection.ConnectionProcessor;
+import org.carlmontrobotics.wpiws.devices.SimDeviceSim;
 import org.ejml.simple.SimpleMatrix;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 
@@ -30,8 +33,6 @@ import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.DoubleArrayTopic;
-import edu.wpi.first.networktables.DoublePublisher;
-import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.networktables.MultiSubscriber;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
@@ -51,9 +52,9 @@ public final class WebotsSupervisor {
             System.getLogger(WebotsSupervisor.class.getName());
 
     private static NetworkTableInstance inst = null;
-    private static DoublePublisher simTimeSecPublisher = null;
     private static StringPublisher reloadStatusPublisher = null;
-    private static DoubleSubscriber robotTimeSecSubscriber = null;
+
+    private static SimDeviceSim timeSyncDeviceSim = null;
 
     // Use these to control NetworkTables logging.
     // - ntLoglevel = 0 means no NT logging
@@ -91,6 +92,10 @@ public final class WebotsSupervisor {
     private static Set<String> defPathsToPublish =
             new ConcurrentSkipListSet<String>();
 
+    private static boolean gotSimMode;
+
+    private static Timer delayer = null;
+
     /**
      * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
      * called before connecting to the robot code.
@@ -105,7 +110,22 @@ public final class WebotsSupervisor {
 
         addNetworkTablesLogger();
 
-        ConnectionProcessor.setThreadExecutor(queuedEvents::add);
+        delayer = new Timer();
+        // Set to something like 100 if you are trying to reproduce the latencies we sometimes see
+        // on some underpowered CI machines
+        long delayMs = 0;
+        ConnectionProcessor.setThreadExecutor((ev) -> {
+            if (delayMs == 0) {
+                queuedEvents.add(ev);
+            } else {
+                delayer.schedule(new TimerTask() {
+                    public void run() {
+                        LOG.log(Level.DEBUG, "Queueing halsim event");
+                        queuedEvents.add(ev);
+                    }
+                }, delayMs);
+            }
+        });
 
         NetworkTable watchedNodes =
                 inst.getTable(NTConstants.WATCHED_NODES_TABLE_NAME);
@@ -163,8 +183,8 @@ public final class WebotsSupervisor {
         }
         var reloadRequestSubscriber =
                 reloadRequestTopic.subscribe("", pubSubOptions);
-        inst.addListener(reloadRequestSubscriber, EnumSet.of(Kind.kValueRemote, Kind.kImmediate),
-                (event) -> {
+        inst.addListener(reloadRequestSubscriber,
+                EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     var reloadRequest = event.valueData.value.getString();
                     LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
                             reloadRequest);
@@ -178,19 +198,30 @@ public final class WebotsSupervisor {
                         return;
                     }
                     queuedEvents.add(() -> {
+                        LOG.log(Level.DEBUG, "Handling reload request");
                         // Ensure we don't leave any watchers waiting for values they requested
                         // before requesting a new world.
                         closePublishers();
                         waitUntilFlushed();
                         inst.stopClient();
                         inst.close();
+                        if (delayer != null) {
+                            delayer.cancel();
+                        }
 
+                        LOG.log(Level.DEBUG,
+                                "Updating simulation speed and mode");
                         // Unpause before reloading so that the new controller can take it's
                         // first step.
                         updateUsersSimulationSpeed(robot);
                         robot.simulationSetMode(usersSimulationSpeed);
                         isWorldLoading = true;
+                        LOG.log(Level.DEBUG, "Loading world {0}",
+                                reloadRequest);
                         robot.worldLoad(reloadRequest);
+                        // Allow Webots to process the request.
+                        robot.step(basicTimeStep);
+                        LOG.log(Level.DEBUG, "Loaded world {0}", reloadRequest);
                     });
                 });
 
@@ -219,6 +250,7 @@ public final class WebotsSupervisor {
                                 "Unrecognized simMode of ''{0}''. Must be either 'Fast' or 'Realtime'",
                                 simMode);
                     }
+                    gotSimMode = true;
                     queuedEvents.add(() -> {
                         robot.simulationSetMode(usersSimulationSpeed);
                     });
@@ -226,15 +258,15 @@ public final class WebotsSupervisor {
 
         // Add a listener for robotTimeSec updates that runs the sim code to catch up and notifies
         // the robot of the new sim time.
-        var robotTimeSecTopic = coordinator
-                .getDoubleTopic(NTConstants.ROBOT_TIME_SEC_TOPIC_NAME);
-        robotTimeSecTopic.setCached(false);
-        robotTimeSecSubscriber =
-                robotTimeSecTopic.subscribe(-1.0, pubSubOptions);
-        inst.addListener(robotTimeSecSubscriber,
-                EnumSet.of(Kind.kValueAll, Kind.kImmediate), (event) -> {
-                    final double robotTimeSec =
-                            event.valueData.value.getDouble();
+        timeSyncDeviceSim = new SimDeviceSim("DBSTimeSync");
+        timeSyncDeviceSim.registerValueChangedCallback("robotTimeSec",
+                (name, value) -> {
+                    if (value == null) {
+                        LOG.log(Level.WARNING,
+                                "Ignoring null value for robotTimeSec");
+                        return;
+                    }
+                    final double robotTimeSec = Double.parseDouble(value);
                     LOG.log(Level.DEBUG, "Received robotTimeSec={0}",
                             robotTimeSec);
                     queuedEvents.add(() -> {
@@ -254,13 +286,9 @@ public final class WebotsSupervisor {
                             simTimeSec = robot.getTime();
                             LOG.log(Level.DEBUG, "Sending simTimeSec of {0}",
                                     simTimeSec);
-                            if (simTimeSecPublisher == null) {
-                                LOG.log(Level.WARNING,
-                                        "simTimeSecPublisher == null. We are probably disconnected from the robot.");
-                            } else {
-                                simTimeSecPublisher.set(simTimeSec);
-                            }
-                            inst.flush();
+                            timeSyncDeviceSim.set("simTimeSec", simTimeSec);
+                            LOG.log(Level.DEBUG, "Sent simTimeSec of {0}",
+                                    simTimeSec);
                             if (isDone) {
                                 isDoneFuture.complete(true);
                                 break;
@@ -268,7 +296,7 @@ public final class WebotsSupervisor {
                             Simulation.runPeriodicMethods();
                         }
                     });
-                });
+                }, true);
 
         // When a connection is (re-)established with the server, tell it that we are ready. When
         // the server sees that message, it knows that we will receive future messages.
@@ -284,19 +312,6 @@ public final class WebotsSupervisor {
                     LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
                     reloadStatusPublisher
                             .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
-                    var simTimeSec = robot.getTime();
-
-                    // Create a publisher for communicating the sim time and request that updates to
-                    // it are
-                    // communicated as quickly as possible.
-                    var simTimeSecTopic = coordinator.getDoubleTopic(
-                            NTConstants.SIM_TIME_SEC_TOPIC_NAME);
-                    simTimeSecPublisher =
-                            simTimeSecTopic.publish(pubSubOptions);
-                    LOG.log(Level.DEBUG, "Sending initial simTimeSec of {0}",
-                            simTimeSec);
-                    simTimeSecPublisher.set(simTimeSec);
-                    simTimeSecTopic.setCached(false);
                     inst.flush();
                 });
                 LOG.log(Level.INFO,
@@ -344,6 +359,22 @@ public final class WebotsSupervisor {
         return robot.step(basicTimeStep);
     }
 
+    private static String lastMsg = "";
+    private static long lastMsgTimeMillis = 0,
+            minTimeBetweenRepeatsMillis = 10000;
+
+    private static void logDebugLimitingRepeats(String msg) {
+        long curTimeMillis = System.currentTimeMillis();
+        if (!msg.equals(lastMsg) || curTimeMillis
+                - lastMsgTimeMillis >= minTimeBetweenRepeatsMillis) {
+            LOG.log(Level.DEBUG,
+                    "(Duplicate messages suppressed for {0} ms) {1}",
+                    minTimeBetweenRepeatsMillis, msg);
+            lastMsgTimeMillis = curTimeMillis;
+        }
+        lastMsg = msg;
+    }
+
     /**
      * Processes messages from the robot code while advancing the simulation and running periodic
      * methods in time with the code.
@@ -363,12 +394,12 @@ public final class WebotsSupervisor {
                     break;
                 }
                 if (!queuedEvents.isEmpty()) {
-                    LOG.log(Level.DEBUG, "Processing next queued message");
+                    logDebugLimitingRepeats("Processing next queued message");
                     queuedEvents.takeFirst().run();
-                } else if (robotTimeSecSubscriber.exists()) {
+                } else if (gotSimMode) {
                     // We are expecting a message from the robot that will tell us when to step
                     // the simulation.
-                    LOG.log(Level.DEBUG,
+                    logDebugLimitingRepeats(
                             "Waiting up to 1 second for a new message");
                     var msg = queuedEvents.pollFirst(1, TimeUnit.SECONDS);
                     if (msg == null) {
@@ -383,17 +414,17 @@ public final class WebotsSupervisor {
                         .simulationGetMode() != Supervisor.SIMULATION_MODE_PAUSE) {
                     // The robot code isn't going to tell us when to step the simulation and the
                     // user has unpaused it.
-                    LOG.log(Level.DEBUG,
+                    logDebugLimitingRepeats(
                             "Simulation is not paused and no robot code in control. Stepping simulation.");
 
                     if (stepSimulation(robot, basicTimeStep) == -1) {
                         break;
                     }
-                    LOG.log(Level.DEBUG, "Step finished.");
+                    // LOG.log(Level.DEBUG, "robot.step(basicTimeStep) returned");
                 } else {
                     // The simulation is paused and robot code isn't in control so wait a beat
                     // before checking again (so we don't suck up all the CPU)
-                    LOG.log(Level.DEBUG,
+                    logDebugLimitingRepeats(
                             "Simulation is paused and no robot code in control. Sleeping for a step");
                     Thread.sleep(basicTimeStep);
                 }
@@ -407,9 +438,6 @@ public final class WebotsSupervisor {
     }
 
     private static void closePublishers() {
-        if (simTimeSecPublisher != null)
-            simTimeSecPublisher.close();
-        simTimeSecPublisher = null;
         if (reloadStatusPublisher != null)
             reloadStatusPublisher.close();
         reloadStatusPublisher = null;

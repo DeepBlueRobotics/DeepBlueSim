@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -217,7 +218,8 @@ public class MotorControllerTest {
 
     private Measurement m1, m2;
 
-    @Test
+    // @Test
+    @RepeatedTest(1)
     void testCANMotorRotationInAutonomous() throws Exception {
         assertCorrectRotationInAutonomous("NEO", "CAN_SHAFT");
     }
@@ -262,7 +264,7 @@ public class MotorControllerTest {
                 MotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
-            }).everyStep(s -> {
+            }).setMaxJitterSecs(0).everyStep(s -> {
                 LOG.log(Level.DEBUG,
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
