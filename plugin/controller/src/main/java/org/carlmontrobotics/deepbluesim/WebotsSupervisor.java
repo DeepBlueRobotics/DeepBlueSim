@@ -371,11 +371,7 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "Handling request");
             // Ensure we don't leave any watchers waiting for values they requested
             // before requesting a new world.
-            closePublishers();
-            waitUntilFlushed();
             close();
-            inst.close();
-            delayer.cancel();
 
             LOG.log(Level.DEBUG, "Updating simulation speed and mode");
             // Unpause before loading so that the new controller can take it's
@@ -512,7 +508,13 @@ public final class WebotsSupervisor {
     }
 
     public static void close() {
-        NetworkTableInstance.getDefault().stopClient();
+        delayer.cancel();
+        closePublishers();
+        if (inst != null) {
+            waitUntilFlushed();
+            inst.stopClient();
+            inst.close();
+        }
         if (wsConnection != null && wsConnection.object != null
                 && !wsConnection.object.isClosed()) {
             try {
