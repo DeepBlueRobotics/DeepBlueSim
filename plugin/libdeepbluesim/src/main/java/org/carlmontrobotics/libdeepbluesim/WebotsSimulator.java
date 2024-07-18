@@ -520,7 +520,7 @@ public class WebotsSimulator implements AutoCloseable {
         inst.flush();
 
         try {
-            halSimWSConnected.get(10000, TimeUnit.MILLISECONDS);
+            halSimWSConnected.get(30000, TimeUnit.MILLISECONDS);
         } catch (TimeoutException | InterruptedException
                 | ExecutionException e) {
             throw new RuntimeException(
