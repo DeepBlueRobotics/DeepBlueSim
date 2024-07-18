@@ -321,7 +321,7 @@ public class WebotsSimulator implements AutoCloseable {
         inst.stopServer();
 
         loadCount = 0;
-                // When DeepBlueSim says that load has completed, if it's the first time then request a
+        // When DeepBlueSim says that load has completed, if it's the first time then request a
         // load, otherwise we're ready.
         inst.addListener(statusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
@@ -493,10 +493,44 @@ public class WebotsSimulator implements AutoCloseable {
                                 "SimHooks.resumeTiming() returned");
                     });
                 }, true);
+
+        waitForHALSimWSConnection();
+
         listenerCallbackExecutor.execute(() -> {
             simTimeSec = 0.0;
             sendRobotTime();
         });
+    }
+
+    // NOTE: Until https://github.com/wpilibsuite/allwpilib/issues/6842 is fixed, this method should
+    // not be called until all SimDevices have been created (both in the robot code and our own
+    // "DBSTimeSync" SimDevice). Creating a SimDevice after the HALSimWS connection has been
+    // established can result in a deadlock.
+    private void waitForHALSimWSConnection() {
+        var halSimWSConnected = new CompletableFuture<Void>();
+        inst.addListener(statusSubscriber,
+                EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
+                    final var eventValue = event.valueData.value.getString();
+                    listenerCallbackExecutor.execute(() -> {
+                        LOG.log(Level.DEBUG, "In listener, status = {0}",
+                                eventValue);
+                        if (!eventValue.equals(
+                                NTConstants.STATUS_HALSIMWS_CONNECTED_VALUE))
+                            return;
+                        halSimWSConnected.complete(null);
+                    });
+                });
+
+        requestPublisher.set(NTConstants.REQUEST_HALSIMWS_CONNECTION_VERB);
+        inst.flush();
+
+        try {
+            halSimWSConnected.get(10000, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException | InterruptedException
+                | ExecutionException e) {
+            throw new RuntimeException(
+                    "Error while waiting for HALSimWS connection", e);
+        }
     }
 
     private void runAllCallbacks(double robotTimeSec, double simTimeSec) {

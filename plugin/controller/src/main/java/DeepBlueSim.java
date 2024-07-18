@@ -24,7 +24,6 @@ import org.carlmontrobotics.deepbluesim.SimRegisterer;
 import org.carlmontrobotics.deepbluesim.Simulation;
 import org.carlmontrobotics.deepbluesim.WebotsSupervisor;
 import org.carlmontrobotics.wpiws.connection.RunningObject;
-import org.carlmontrobotics.wpiws.connection.WSConnection;
 
 // NOTE: Webots expects the controller class to *not* be in a package and have a name that matches
 // the name of the jar.
@@ -33,8 +32,6 @@ public class DeepBlueSim {
     // are using the default system logger, edit the the
     // Webots/controllers/DeepBlueSim/logging.properties file so that ".level=FINE".
     private static Logger LOG = null;
-
-    private static RunningObject<WebSocketClient> wsConnection = null;
 
     private static void startNetworkTablesClient(NetworkTableInstance inst) {
         inst.startClient4("Webots controller");
@@ -97,12 +94,7 @@ public class DeepBlueSim {
         }
 
         if (connectToRobotCode) {
-            WebotsSupervisor.init(robot, basicTimeStep, () -> {
-                if (wsConnection == null)
-                    return null;
-                else
-                    return wsConnection.object;
-            });
+            WebotsSupervisor.init(robot, basicTimeStep);
         }
 
         // Wait until startup has completed to ensure that the Webots simulator is
@@ -118,16 +110,6 @@ public class DeepBlueSim {
             // Pause the simulation until either the robot code tells us to proceed or the
             // user does.
             robot.simulationSetMode(Supervisor.SIMULATION_MODE_PAUSE);
-
-            // Connect to the robot code on a separate thread. Does not block.
-            try {
-                wsConnection = WSConnection.connectHALSim(true);
-            } catch (URISyntaxException e) {
-                LOG.log(Level.ERROR,
-                        "Error occurred connecting to server:", e);
-                System.exit(1);
-                return;
-            }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 // If connections haven't already been closed, we try to close them now. Note that

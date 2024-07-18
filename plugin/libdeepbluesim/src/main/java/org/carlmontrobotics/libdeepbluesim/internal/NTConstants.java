@@ -33,11 +33,19 @@ public class NTConstants {
         /** The value signifying that Webots has finished reloading. */
         public static final String STATUS_COMPLETED_VALUE = "Completed";
 
+        /** The value signifying that the HALSimWS connection has been setup. */
+        public static final String STATUS_HALSIMWS_CONNECTED_VALUE =
+                "HALSimWSConnected";
+
         /** The name of the topic that is used to tell Webots which world file to load. */
         public static final String REQUEST_TOPIC_NAME = "request";
 
         /** The verb used to request that a world be loaded. */
         public static final String REQUEST_LOAD_VERB = "load";
+
+        /** The verb used to request a HALSimWS connection. */
+        public static final String REQUEST_HALSIMWS_CONNECTION_VERB =
+                "connectHALSimWS";
 
         /** The name of the table that contains the above topics. */
         public static final String COORDINATOR_TABLE_NAME =
