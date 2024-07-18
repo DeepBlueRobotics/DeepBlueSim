@@ -424,11 +424,6 @@ public class WebotsSimulator implements AutoCloseable {
     private void startTimeSync() {
         LOG.log(Level.DEBUG, "In startTimeSync()");
         ensureRobotTimingStarted();
-        timeSyncDevice = SimDevice.create("DBSTimeSync");
-        robotTimeSecSim = timeSyncDevice.createDouble("robotTimeSec",
-                SimDevice.Direction.kBidir, -1.0);
-        timeSyncDevice.createDouble("simTimeSec", SimDevice.Direction.kBidir,
-                -1.0);
         LOG.log(Level.DEBUG, "Created SimDevice with name {0}",
                 timeSyncDevice.getName());
         timeSyncDeviceSim = new SimDeviceSim("DBSTimeSync");
@@ -799,6 +794,12 @@ public class WebotsSimulator implements AutoCloseable {
         // HAL must be initialized or SmartDashboard might not work.
         HAL.initialize(500, 0);
         waitForUserToStart(worldFile.getAbsolutePath());
+
+        timeSyncDevice = SimDevice.create("DBSTimeSync");
+        robotTimeSecSim = timeSyncDevice.createDouble("robotTimeSec",
+                SimDevice.Direction.kOutput, -1.0);
+        timeSyncDevice.createDouble("simTimeSec", SimDevice.Direction.kInput,
+                -1.0);
 
         // Restart timing before robot is constructed to ensure that timed callbacks added during
         // the constructor (and our own onRobotInit callback) work properly.
