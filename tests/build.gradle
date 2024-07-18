@@ -2,7 +2,7 @@ plugins {
     id "java"
     id 'jvm-test-suite'
     id "edu.wpi.first.GradleRIO" version "2024.3.1"
-    id "org.carlmontrobotics.deepbluesim" version "2024.0.0"
+    id "org.carlmontrobotics.deepbluesim" version "unspecified"
 }
 
 java {
@@ -59,7 +59,7 @@ def includeDesktopSupport = true
 dependencies {
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
-    implementation "com.github.deepbluerobotics:lib199:5785769c553ade2a9e53640896efe3cd6ffdce45"
+    implementation "com.github.deepbluerobotics:lib199:f5cc814efd65ebe2e971eae4ae56439185cb083f"
 
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)

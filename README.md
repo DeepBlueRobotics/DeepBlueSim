@@ -33,6 +33,19 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
 
  1. In VSCode run the `WPILib: Create a new project` command and create the example project.
  1. Add the DeepBlueSim Gradle plugin to the `build.gradle` as described above.
+ 1. If you are not using [`lib199`](https://github.com/DeepBlueRobotics/lib199), add the following 2
+    lines to your robot's `simulationInit()` method (`lib199` handles this automatically):
+ ```java
+     @Override
+    public void simulationInit() {
+        // Regularly request a HALSimWS connection from the DeepBlueSim controller (if/when it is
+        // listening). To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, this must
+        // be done *after* any SimDevices have been created.
+        var reqPublisher = NetworkTableInstance.getDefault()
+                .getStringTopic("/DeepBlueSim/Coordinator/request").publish();
+        addPeriodic(() -> reqPublisher.set("connectHALSimWS"), kDefaultPeriod);
+    }
+ ```
  1. In VSCode run the `WPILib: Simulate Robot Code on Desktop` command and select both
  `libhalsim_gui` and `libhalsim_ws_server` as the extensions to use.
  1. Start Webots and open *your_example_project*`/Webots/worlds/DBSExample.wbt`

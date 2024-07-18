@@ -7,16 +7,18 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.StadiaController.Axis;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;
 import edu.wpi.first.wpilibj.motorcontrol.PWMMotorController;
 
 public class DBSExampleRobot extends TimedRobot {
 
-    private final Joystick m_stick = new Joystick(0);
+    private final GenericHID m_controller = new GenericHID(0);
     private final Timer m_timer = new Timer();
     private DifferentialDrive m_robotDrive;
     private PWMMotorController m_leftMaster;
@@ -43,6 +45,19 @@ public class DBSExampleRobot extends TimedRobot {
         m_robotDrive = new DifferentialDrive(m_leftMaster, m_rightMaster);
 
         m_elevator = new PWMVictorSPX(4);
+    }
+
+    /**
+     * This function is run when the robot is first started up in simulation.
+     */
+    @Override
+    public void simulationInit() {
+        // Regularly request a HALSimWS connection from the DeepBlueSim controller (if/when it is
+        // listening). To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, this must
+        // be done *after* any SimDevices have been created.
+        var reqPublisher = NetworkTableInstance.getDefault()
+                .getStringTopic("/DeepBlueSim/Coordinator/request").publish();
+        addPeriodic(() -> reqPublisher.set("connectHALSimWS"), kDefaultPeriod);
     }
 
     public void close() {
@@ -88,7 +103,9 @@ public class DBSExampleRobot extends TimedRobot {
      */
     @Override
     public void teleopPeriodic() {
-        m_robotDrive.arcadeDrive(m_stick.getY(), m_stick.getX());
+        m_robotDrive.arcadeDrive(-m_controller.getRawAxis(Axis.kLeftY.value),
+                m_controller.getRawAxis(Axis.kLeftX.value));
+        m_elevator.set(-m_controller.getRawAxis(Axis.kRightY.value));
     }
 
     /**
