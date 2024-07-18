@@ -226,17 +226,7 @@ public final class WebotsSupervisor {
                             break;
 
                         case NTConstants.REQUEST_HALSIMWS_CONNECTION_VERB:
-                            // Connect to the robot code on a separate thread. Does not block.
-                            try {
-                                wsConnection = WSConnection.connectHALSim(true);
-                                queuedEvents.add(
-                                        WebotsSupervisor::sendConnectedOnceHALSimIsQuiet);
-                            } catch (URISyntaxException e) {
-                                LOG.log(Level.ERROR,
-                                        "Error occurred connecting to server:",
-                                        e);
-                            }
-
+                            handleHALSimWSConnectionRequest();
                             break;
 
                         default:
@@ -354,6 +344,26 @@ public final class WebotsSupervisor {
                     inst.startClient4("Webots controller");
                     inst.setServer("localhost");
                 });
+            }
+        });
+    }
+
+    private static void handleHALSimWSConnectionRequest() {
+        queuedEvents.add(() -> {
+            if (wsConnection != null) {
+                // Note: Lib199Subsystem will send its own request even if WebotsSimulator has
+                // already sent one.
+                LOG.log(Level.DEBUG,
+                        "Ignoring duplicate request to make HALSimWS connection");
+                return;
+            }
+            // Connect to the robot code on a separate thread. Does not block.
+            try {
+                wsConnection = WSConnection.connectHALSim(true);
+                queuedEvents
+                        .add(WebotsSupervisor::sendConnectedOnceHALSimIsQuiet);
+            } catch (URISyntaxException e) {
+                LOG.log(Level.ERROR, "Error occurred connecting to server:", e);
             }
         });
     }
