@@ -315,6 +315,7 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 queuedEvents.add(() -> {
+                    gotSimMode = false;
                     var statusTopic = coordinator
                             .getStringTopic(NTConstants.STATUS_TOPIC_NAME);
                     statusTopic.setCached(false);
@@ -350,7 +351,8 @@ public final class WebotsSupervisor {
 
     private static void handleHALSimWSConnectionRequest() {
         queuedEvents.add(() -> {
-            if (wsConnection != null) {
+            if (wsConnection != null && wsConnection.object != null
+                    && !wsConnection.object.isClosed()) {
                 // Note: Lib199Subsystem will send its own request even if WebotsSimulator has
                 // already sent one.
                 LOG.log(Level.DEBUG,
@@ -359,7 +361,9 @@ public final class WebotsSupervisor {
             }
             // Connect to the robot code on a separate thread. Does not block.
             try {
-                wsConnection = WSConnection.connectHALSim(true);
+                // Don't reconnect automatically because we don't want to connect to soon if the
+                // robot program is restarted.
+                wsConnection = WSConnection.connectHALSim(false);
                 queuedEvents
                         .add(WebotsSupervisor::sendConnectedOnceHALSimIsQuiet);
             } catch (URISyntaxException e) {
