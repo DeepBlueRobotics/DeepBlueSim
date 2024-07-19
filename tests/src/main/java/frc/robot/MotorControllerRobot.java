@@ -78,6 +78,7 @@ public class MotorControllerRobot extends TimedRobot {
     @Override
     public void teleopPeriodic() {
         m_motorController.set(m_stick.getX());
+        m_canMotorController.set(m_stick.getX());
     }
 
 }

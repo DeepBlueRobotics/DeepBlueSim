@@ -2,7 +2,7 @@ plugins {
     id "java"
     id 'jvm-test-suite'
     id "edu.wpi.first.GradleRIO" version "2024.3.1"
-    id "org.carlmontrobotics.deepbluesim" version "2024.0.0"
+    id "org.carlmontrobotics.deepbluesim" version "unspecified"
 }
 
 java {

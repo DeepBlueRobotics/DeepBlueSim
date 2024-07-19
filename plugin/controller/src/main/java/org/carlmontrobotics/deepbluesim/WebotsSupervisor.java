@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -20,6 +21,8 @@ import java.util.function.Supplier;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 import org.carlmontrobotics.wpiws.connection.ConnectionProcessor;
+import org.carlmontrobotics.wpiws.connection.RunningObject;
+import org.carlmontrobotics.wpiws.connection.WSConnection;
 import org.carlmontrobotics.wpiws.devices.SimDeviceSim;
 import org.ejml.simple.SimpleMatrix;
 import org.java_websocket.client.WebSocketClient;
@@ -54,7 +57,7 @@ public final class WebotsSupervisor {
             System.getLogger(WebotsSupervisor.class.getName());
 
     private static NetworkTableInstance inst = null;
-    private static StringPublisher reloadStatusPublisher = null;
+    private static StringPublisher statusPublisher = null;
 
     private static SimDeviceSim timeSyncDeviceSim = null;
 
@@ -100,36 +103,31 @@ public final class WebotsSupervisor {
 
     private static final long minQuietTimeMs = 500;
 
+    private static RunningObject<WebSocketClient> wsConnection = null;
+
     private static final Timer delayer = new Timer();
-    private static volatile long lastMsgTimeMs = -1;
+    private static volatile long lastHALSimMsgTimeMs = -1;
 
     /**
      * 
      * @return milliseconds since the last message was received, or -1 if no message has been
      *         received yet.
      */
-    private static long getTimeSinceLastMessageMs() {
-        if (lastMsgTimeMs < 0) {
+    private static long getTimeSinceLastHALSimMessageMs() {
+        if (lastHALSimMsgTimeMs < 0) {
             return -1;
         }
-        return System.currentTimeMillis() - lastMsgTimeMs;
+        return System.currentTimeMillis() - lastHALSimMsgTimeMs;
     }
 
     /**
-     * Initializes the supervisor by creating the necessary NT tables and SimDevices. This should be
-     * called before connecting to the robot code.
+     * Initializes the supervisor by creating the necessary NT tables and SimDevices.
      *
      * @param robot The robot to report on
      * @param basicTimeStep The timestep to pass to {@link Supervisor#step(int)} to advance the
      *        simulation
-     * @param halSimWSClientSupplier The supplier of the WebSocket connection to the HALSim
-     *        WebSocket server
      */
-    public static void init(Supervisor robot, int basicTimeStep,
-            Supplier<WebSocketClient> halSimWSClientSupplier) {
-
-        wsClientSupplier = halSimWSClientSupplier;
-
+    public static void init(Supervisor robot, int basicTimeStep) {
         // Use the default NetworkTables instance to coordinate with robot code
         inst = NetworkTableInstance.getDefault();
 
@@ -139,7 +137,7 @@ public final class WebotsSupervisor {
         // on some underpowered CI machines
         long delayMs = 0;
         ConnectionProcessor.setThreadExecutor((ev) -> {
-            lastMsgTimeMs = System.currentTimeMillis();
+            lastHALSimMsgTimeMs = System.currentTimeMillis();
             if (delayMs == 0) {
                 queuedEvents.add(ev);
             } else {
@@ -200,52 +198,42 @@ public final class WebotsSupervisor {
         NetworkTable coordinator =
                 inst.getTable(NTConstants.COORDINATOR_TABLE_NAME);
 
-        // Add a listener to handle reload requests.
-        var reloadRequestTopic = coordinator
-                .getStringTopic(NTConstants.RELOAD_REQUEST_TOPIC_NAME);
-        try (var p = reloadRequestTopic.publish(pubSubOptions)) {
-            reloadRequestTopic.setCached(false);
+        // Add a listener to handle requests.
+        var requestTopic =
+                coordinator.getStringTopic(NTConstants.REQUEST_TOPIC_NAME);
+        try (var p = requestTopic.publish(pubSubOptions)) {
+            requestTopic.setCached(false);
         }
-        var reloadRequestSubscriber =
-                reloadRequestTopic.subscribe("", pubSubOptions);
-        inst.addListener(reloadRequestSubscriber,
+        var requestSubscriber = requestTopic.subscribe("", pubSubOptions);
+        inst.addListener(requestSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
-                    var reloadRequest = event.valueData.value.getString();
-                    LOG.log(Level.DEBUG, "In listener, reloadRequest = {0}",
-                            reloadRequest);
-                    if (reloadRequest == null)
+                    var request = event.valueData.value.getString();
+                    LOG.log(Level.DEBUG, "In listener, request = {0}", request);
+                    if (request == null)
                         return;
-                    var file = new File(reloadRequest);
-                    if (!file.isFile()) {
-                        LOG.log(Level.ERROR,
-                                "ERROR: Received a request to load file that does not exist: {0}",
-                                reloadRequest);
-                        return;
-                    }
-                    queuedEvents.add(() -> {
-                        LOG.log(Level.DEBUG, "Handling reload request");
-                        // Ensure we don't leave any watchers waiting for values they requested
-                        // before requesting a new world.
-                        closePublishers();
-                        waitUntilFlushed();
-                        close();
-                        inst.close();
-                        delayer.cancel();
+                    var requestParts = request.split(" ", 2);
+                    var requestVerb = requestParts[0];
+                    switch (requestVerb) {
+                        case NTConstants.REQUEST_LOAD_VERB:
+                            if (requestParts.length != 2) {
+                                LOG.log(Level.ERROR,
+                                        "Ignoring malformed load request: {0}",
+                                        request);
+                            } else {
+                                handleLoadRequest(robot, basicTimeStep,
+                                        requestParts[1]);
+                            }
+                            break;
 
-                        LOG.log(Level.DEBUG,
-                                "Updating simulation speed and mode");
-                        // Unpause before reloading so that the new controller can take it's
-                        // first step.
-                        updateUsersSimulationSpeed(robot);
-                        robot.simulationSetMode(usersSimulationSpeed);
-                        isWorldLoading = true;
-                        LOG.log(Level.DEBUG, "Loading world {0}",
-                                reloadRequest);
-                        robot.worldLoad(reloadRequest);
-                        // Allow Webots to process the request.
-                        robot.step(basicTimeStep);
-                        LOG.log(Level.DEBUG, "Loaded world {0}", reloadRequest);
-                    });
+                        case NTConstants.REQUEST_HALSIMWS_CONNECTION_VERB:
+                            handleHALSimWSConnectionRequest();
+                            break;
+
+                        default:
+                            LOG.log(Level.ERROR,
+                                    "Ignoring unrecognized request verb {0}",
+                                    requestVerb);
+                    }
                 });
 
         // Add a listener to handle simMode requests.
@@ -327,12 +315,13 @@ public final class WebotsSupervisor {
             LOG.log(Level.DEBUG, "In connection listener");
             if (event.is(Kind.kConnected)) {
                 queuedEvents.add(() -> {
-                    var reloadStatusTopic = coordinator.getStringTopic(
-                            NTConstants.RELOAD_STATUS_TOPIC_NAME);
-                    reloadStatusTopic.setCached(false);
-                    reloadStatusPublisher =
-                            reloadStatusTopic.publish(pubSubOptions);
-                    sendCompletedOnceHALSimIsQuiet();
+                    gotSimMode = false;
+                    var statusTopic = coordinator
+                            .getStringTopic(NTConstants.STATUS_TOPIC_NAME);
+                    statusTopic.setCached(false);
+                    statusPublisher = statusTopic.publish(pubSubOptions);
+                    statusPublisher.set(NTConstants.STATUS_COMPLETED_VALUE);
+                    inst.flush();
                 });
                 LOG.log(Level.INFO,
                         "Connected to NetworkTables server ''{0}'' at {1}:{2,number,#}",
@@ -360,16 +349,67 @@ public final class WebotsSupervisor {
         });
     }
 
-    private static void sendCompletedOnceHALSimIsQuiet() {
-        // To workaround https://github.com/wpilibsuite/allwpilib/issues/6842, wait until HALSim has
-        // been quiet for a bit. We take that as a sign that any of the server's onConnect callbacks
-        // have run and it will be safe for the WebotsSimulator to create SimDevices.
-        var timeSinceLastMsgMs = getTimeSinceLastMessageMs();
-        if (reloadStatusPublisher != null
-                && timeSinceLastMsgMs > minQuietTimeMs) {
-            LOG.log(Level.DEBUG, "Setting reloadStatus to Completed");
-            reloadStatusPublisher
-                    .set(NTConstants.RELOAD_STATUS_COMPLETED_VALUE);
+    private static void handleHALSimWSConnectionRequest() {
+        queuedEvents.add(() -> {
+            if (wsConnection != null && wsConnection.object != null
+                    && !wsConnection.object.isClosed()) {
+                // Note: Lib199Subsystem will send its own request even if WebotsSimulator has
+                // already sent one.
+                LOG.log(Level.DEBUG,
+                        "Ignoring duplicate request to make HALSimWS connection");
+                return;
+            }
+            // Connect to the robot code on a separate thread. Does not block.
+            try {
+                // Don't reconnect automatically because we don't want to connect to soon if the
+                // robot program is restarted.
+                wsConnection = WSConnection.connectHALSim(false);
+                queuedEvents
+                        .add(WebotsSupervisor::sendConnectedOnceHALSimIsQuiet);
+            } catch (URISyntaxException e) {
+                LOG.log(Level.ERROR, "Error occurred connecting to server:", e);
+            }
+        });
+    }
+
+    private static void handleLoadRequest(Supervisor robot, int basicTimeStep,
+            String worldFilePath) {
+        var file = new File(worldFilePath);
+        if (!file.isFile()) {
+            LOG.log(Level.ERROR,
+                    "ERROR: Received a request to load file that does not exist: {0}",
+                    worldFilePath);
+            return;
+        }
+        queuedEvents.add(() -> {
+            LOG.log(Level.DEBUG, "Handling request");
+            // Ensure we don't leave any watchers waiting for values they requested
+            // before requesting a new world.
+            close();
+
+            LOG.log(Level.DEBUG, "Updating simulation speed and mode");
+            // Unpause before loading so that the new controller can take it's
+            // first step.
+            updateUsersSimulationSpeed(robot);
+            robot.simulationSetMode(usersSimulationSpeed);
+            isWorldLoading = true;
+            LOG.log(Level.DEBUG, "Loading world {0}", worldFilePath);
+            robot.worldLoad(worldFilePath);
+            // Allow Webots to process the request.
+            robot.step(basicTimeStep);
+            LOG.log(Level.DEBUG, "Loaded world {0}", worldFilePath);
+        });
+    }
+
+    private static void sendConnectedOnceHALSimIsQuiet() {
+        // We wait until the initial barrage of HALSim messages have been received before saying the
+        // connection has been established so that we are confident we have the initial state of all
+        // the SimDevices before the WebotsSimulator tries to start the simulation.
+        var timeSinceLastMsgMs = getTimeSinceLastHALSimMessageMs();
+        if (statusPublisher != null && timeSinceLastMsgMs > minQuietTimeMs) {
+            LOG.log(Level.DEBUG, "Setting status to {0}",
+                    NTConstants.STATUS_HALSIMWS_CONNECTED_VALUE);
+            statusPublisher.set(NTConstants.STATUS_HALSIMWS_CONNECTED_VALUE);
             inst.flush();
         } else {
             LOG.log(Level.DEBUG,
@@ -378,7 +418,7 @@ public final class WebotsSupervisor {
             delayer.schedule(new TimerTask() {
                 public void run() {
                     queuedEvents.add(
-                            WebotsSupervisor::sendCompletedOnceHALSimIsQuiet);
+                            WebotsSupervisor::sendConnectedOnceHALSimIsQuiet);
                 }
             }, minQuietTimeMs);
         }
@@ -482,11 +522,17 @@ public final class WebotsSupervisor {
     }
 
     public static void close() {
-        NetworkTableInstance.getDefault().stopClient();
-        var wsClient = wsClientSupplier.get();
-        if (wsClient != null && !wsClient.isClosed()) {
+        delayer.cancel();
+        closePublishers();
+        if (inst != null) {
+            waitUntilFlushed();
+            inst.stopClient();
+            inst.close();
+        }
+        if (wsConnection != null && wsConnection.object != null
+                && !wsConnection.object.isClosed()) {
             try {
-                wsClient.closeBlocking();
+                wsConnection.object.closeBlocking();
             } catch (InterruptedException ex) {
                 LOG.log(Level.ERROR,
                         "Interrupted while closing HALSim WebSocket connection.",
@@ -497,9 +543,9 @@ public final class WebotsSupervisor {
     }
 
     private static void closePublishers() {
-        if (reloadStatusPublisher != null)
-            reloadStatusPublisher.close();
-        reloadStatusPublisher = null;
+        if (statusPublisher != null)
+            statusPublisher.close();
+        statusPublisher = null;
         for (var entry : publisherByTopic.entrySet()) {
             entry.getValue().close();
         }
