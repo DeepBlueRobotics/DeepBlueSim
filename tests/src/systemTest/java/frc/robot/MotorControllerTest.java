@@ -1,17 +1,21 @@
 package frc.robot;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.carlmontrobotics.libdeepbluesim.WebotsSimulator;
+import org.carlmontrobotics.libdeepbluesim.WebotsSimulator.SimulationState;
 import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.ResourceLock;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -29,7 +33,7 @@ public class MotorControllerTest {
             System.getLogger(MotorControllerTest.class.getName());
 
     // Should be the same as the basicTimeStep in the world's WorldInfo (default to 32ms)
-    private double simStepSizeSecs = 0.032;
+    private static final double simStepSizeSecs = 0.032;
 
     // Derivation of the math used below:
     // Let tau be the torque applied by the motor (Nm).
@@ -87,8 +91,9 @@ public class MotorControllerTest {
     // Rearranging gives:
     // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
 
-    private double computeSpeedRadPerSec(DCMotor gearMotor, double moiKgM2,
-            double throttle, double initialSpeedRadPerSec, double tSecs) {
+    private static double computeSpeedRadPerSec(DCMotor gearMotor,
+            double moiKgM2, double throttle, double initialSpeedRadPerSec,
+            double tSecs) {
         double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
                 * gearMotor.KvRadPerSecPerVolt;
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
@@ -98,8 +103,8 @@ public class MotorControllerTest {
                         * Math.exp(-tSecs / timeConstantSecs);
     }
 
-    private double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
-            double throttle, double initialSpeedRadPerSec,
+    private static double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
+                    double throttle, double initialSpeedRadPerSec,
             double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
         double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
@@ -111,25 +116,26 @@ public class MotorControllerTest {
                         * (1 - Math.exp(-tSecs / timeConstantSecs));
     }
 
-    private double computeTimeConstantSecs(DCMotor gearMotor, double moiKgM2) {
+    private static double computeTimeConstantSecs(DCMotor gearMotor,
+            double moiKgM2) {
         // t_c = R*J*k_v/k_T
         return gearMotor.rOhms * moiKgM2 * gearMotor.KvRadPerSecPerVolt
                 / gearMotor.KtNMPerAmp;
     }
 
-    private double computeCylinderMoiKgM2(double radiusMeters,
-            double heightMeters, double densityKgPerM3) {
+    private static double computeCylinderMoiKgM2(double radiusMeters,
+                    double heightMeters, double densityKgPerM3) {
         double massKg = densityKgPerM3 * Math.PI * radiusMeters * radiusMeters
                 * heightMeters;
         return massKg * radiusMeters * radiusMeters / 2.0;
     }
 
-    private double timeOfNextStepSecs(double tSecs) {
+    private static double timeOfNextStepSecs(double tSecs) {
         return Math.ceil(tSecs / simStepSizeSecs) * simStepSizeSecs;
     }
 
-    private double expectedSpeedRadPerSec(DCMotor gearMotor, double moiKgM2,
-            double tSecs) {
+    private static double expectedSpeedRadPerSec(DCMotor gearMotor,
+            double moiKgM2, double tSecs) {
         // The robot autonomous code runs the motor at 0.5 for 2 seconds and then stops it (i.e.
         // sets the speed to 0 and lets it stop on it's own).
         double tMotorStopsSecs = timeOfNextStepSecs(2.0);
@@ -142,8 +148,8 @@ public class MotorControllerTest {
                 tSecs - tMotorStopsSecs);
     }
 
-    private double expectedAngleRadians(DCMotor gearMotor, double moiKgM2,
-            double tSecs) {
+    private static double expectedAngleRadians(DCMotor gearMotor,
+            double moiKgM2, double tSecs) {
         // The robot autonomous code runs the motor at 0.5 for 2 seconds and then stops it (i.e.
         // sets the speed to 0 and lets it stop on it's own).
         double tMotorStopsSecs = timeOfNextStepSecs(2.0);
@@ -156,49 +162,13 @@ public class MotorControllerTest {
                 tSecs - tMotorStopsSecs);
     }
 
-    private void assertShaftCorrectAtSecs(DCMotor gearMotor, double moiKgM2,
-            double actualSpeedRadPerSec, double actualAngleRadians,
-            double tSecs) {
-        // TODO: Make sim accurate enough that this can be less than 1*simStepSizeSecs
-        // (https://github.com/DeepBlueRobotics/DeepBlueSim/issues/101)
-        double jitterSecs = 5 * simStepSizeSecs;
-        double expectedEarlierSpeedRadPerSec =
-                expectedSpeedRadPerSec(gearMotor, moiKgM2, tSecs - jitterSecs);
-        double expectedLaterSpeedRadPerSec =
-                expectedSpeedRadPerSec(gearMotor, moiKgM2, tSecs + jitterSecs);
-        LOG.log(Level.DEBUG, "expectedEarlierSpeedRadPerSec = {0}",
-                expectedEarlierSpeedRadPerSec);
-        LOG.log(Level.DEBUG, "expectedLaterSpeedRadPerSec = {0}",
-                expectedLaterSpeedRadPerSec);
-        assertEquals(
-                (expectedEarlierSpeedRadPerSec + expectedLaterSpeedRadPerSec)
-                        / 2,
-                actualSpeedRadPerSec,
-                Math.abs(expectedEarlierSpeedRadPerSec
-                        - expectedLaterSpeedRadPerSec) / 2,
-                "Shaft not close enough to target angular velocity");
-        double expectedEarlierAngleRadians =
-                expectedAngleRadians(gearMotor, moiKgM2, tSecs - jitterSecs);
-        double expectedLaterAngleRadians =
-                expectedAngleRadians(gearMotor, moiKgM2, tSecs + jitterSecs);
-        double expectedAngleRadians =
-                (expectedEarlierAngleRadians + expectedLaterAngleRadians) / 2;
-        double toleranceRadians = Math.abs(
-                expectedEarlierAngleRadians - expectedLaterAngleRadians) / 2;
-        assertTrue(
-                MathUtil.isNear(expectedAngleRadians, actualAngleRadians,
-                        toleranceRadians, 0, 2 * Math.PI),
-                "Shaft not close enough to target rotation. Expected %g +/- %g radians, but got %g radians."
-                        .formatted(expectedAngleRadians, toleranceRadians,
-                                actualAngleRadians));
-    }
-
-    private double computeGearing(DCMotor motor, double desiredFreeSpeedRPS) {
+    private static double computeGearing(DCMotor motor,
+            double desiredFreeSpeedRPS) {
         return motor.freeSpeedRadPerSec / (2 * Math.PI) / desiredFreeSpeedRPS;
     }
 
-    private double computeFlywheelThickness(DCMotor gearMotor,
-            double flywheelRadiusMeters, double flywheelDensityKgPerM3,
+    private static double computeFlywheelThickness(DCMotor gearMotor,
+                    double flywheelRadiusMeters, double flywheelDensityKgPerM3,
             double desiredTimeConstantSecs) {
         // for a time constant of t_c seconds:
         // t_c = R*J*k_v/k_T
@@ -216,99 +186,156 @@ public class MotorControllerTest {
             double speedRadPerSec) {
     }
 
-    private Measurement m1, m2;
+    private static class Model {
+        String shaftDefPath;
+        String motorModelName;
+        DCMotor gearMotor;
+        double moiKgM2;
+        Measurement m1, m2;
 
-    // @Test
+        Model(String motorModelName, String shaftDefPath) throws Exception {
+            this.motorModelName = motorModelName;
+            this.shaftDefPath = shaftDefPath;
+            // To ensure we the flywheel doesn't spin or accelerate too fast...
+            var desiredFlywheelFreeSpeedRPS = 1.0;
+            var desiredTimeConstantSecs = 1.0;
+
+            // For this test to pass, the motor and flywheel need to be setup in the world as
+            // follows.
+            var flywheelRadiusMeters = 0.5;
+            var flywheelDensityKgPerM3 = 1000.0;
+            var motor = (DCMotor) (DCMotor.class
+                    .getDeclaredMethod("get" + motorModelName, int.class)
+                    .invoke(null, 1));
+            var gearing = computeGearing(motor, desiredFlywheelFreeSpeedRPS);
+            gearMotor = motor.withReduction(gearing);
+            LOG.log(Level.INFO,
+                    "For a free speed of {0} RPS when using a {1}, assuming the gearing is {2}.\n",
+                    desiredFlywheelFreeSpeedRPS, motorModelName, gearing);
+            var flywheelThicknessMeters =
+                    computeFlywheelThickness(gearMotor, flywheelRadiusMeters,
+                            flywheelDensityKgPerM3, desiredTimeConstantSecs);
+            LOG.log(Level.INFO,
+                    "For a time constant of {0} second when using a {1} with a gearing of {2} and a flywheel with radius {3} meters and density {4} kg/m^3, assuming the flywheel thickness is {5} meters.\n",
+                    desiredTimeConstantSecs, motorModelName, gearing,
+                    flywheelRadiusMeters, flywheelDensityKgPerM3,
+                    flywheelThicknessMeters);
+
+            // With those settings, the flywheel MOI will be:
+            moiKgM2 = computeCylinderMoiKgM2(flywheelRadiusMeters,
+                    flywheelThicknessMeters, flywheelDensityKgPerM3);
+        }
+
+        public String toString() {
+            return "Model(\"%s\", \"%s\")".formatted(motorModelName,
+                    shaftDefPath);
+        }
+
+        private void assertShaftCorrectAtSecs(double actualSpeedRadPerSec,
+                double actualAngleRadians, double tSecs) {
+            // TODO: Make sim accurate enough that this can be less than 1*simStepSizeSecs
+            // (https://github.com/DeepBlueRobotics/DeepBlueSim/issues/101)
+            double jitterSecs = 2.5 * simStepSizeSecs;
+            double expectedEarlierSpeedRadPerSec = expectedSpeedRadPerSec(
+                    gearMotor, moiKgM2, tSecs - jitterSecs);
+            double expectedLaterSpeedRadPerSec = expectedSpeedRadPerSec(
+                    gearMotor, moiKgM2, tSecs + jitterSecs);
+            LOG.log(Level.DEBUG, "expectedEarlierSpeedRadPerSec = {0}",
+                    expectedEarlierSpeedRadPerSec);
+            LOG.log(Level.DEBUG, "expectedLaterSpeedRadPerSec = {0}",
+                    expectedLaterSpeedRadPerSec);
+            assertEquals(
+                    (expectedEarlierSpeedRadPerSec
+                            + expectedLaterSpeedRadPerSec) / 2,
+                    actualSpeedRadPerSec,
+                    Math.abs(expectedEarlierSpeedRadPerSec
+                            - expectedLaterSpeedRadPerSec) / 2,
+                    "Shaft not close enough to target angular velocity");
+            double expectedEarlierAngleRadians = expectedAngleRadians(gearMotor,
+                    moiKgM2, tSecs - jitterSecs);
+            double expectedLaterAngleRadians = expectedAngleRadians(gearMotor,
+                    moiKgM2, tSecs + jitterSecs);
+            double expectedAngleRadians =
+                    (expectedEarlierAngleRadians + expectedLaterAngleRadians)
+                            / 2;
+            double toleranceRadians = Math.abs(
+                    expectedEarlierAngleRadians - expectedLaterAngleRadians)
+                    / 2;
+            assertTrue(
+                    MathUtil.isNear(expectedAngleRadians, actualAngleRadians,
+                            toleranceRadians, 0, 2 * Math.PI),
+                    "Shaft not close enough to target rotation. Expected %g +/- %g radians, but got %g radians."
+                            .formatted(expectedAngleRadians, toleranceRadians,
+                                    actualAngleRadians));
+        }
+
+        private void assertCorrectTimeConstant(double throttle) {
+            var targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
+                    * gearMotor.KvRadPerSecPerVolt;
+            // Use the 2 measurements to measure the time constant.
+            // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
+            // Let w'(t) = w(t) - w_f = (w_0 - w_f) * exp(-t/t_c)
+            // w'(t1) = (w_0 - w_f) * exp(-t1/t_c)
+            // w'(t2) = (w_0 - w_f) * exp(-t2/t_c)
+            // w'(t2)/w'(t1) = exp((t1-t2)/t_c)
+            // ln(w'(t2)/w'(t1)) = (t1-t2)/t_c
+            // t_c = (t1-t2)/ln(w'(t2)/w'(t1))
+            var actualTimeConstantSecs = (m1.simTimeSec() - m2.simTimeSec())
+                    / (Math.log((m2.speedRadPerSec() - targetSpeedRadPerSec)
+                            / (m1.speedRadPerSec() - targetSpeedRadPerSec)));
+            assertEquals(computeTimeConstantSecs(gearMotor, moiKgM2),
+                    actualTimeConstantSecs, 0.02, "Time constant incorrect");
+        }
+    }
+
+    private ArrayList<Model> models = new ArrayList<>();
+
+    private Consumer<SimulationState> stateChecker(
+            BiConsumer<SimulationState, Model> checker) {
+        return (s) -> {
+            models.forEach((m) -> {
+                assertDoesNotThrow(() -> checker.accept(s, m),
+                        "Check failed for model %s".formatted(m));
+            });
+        };
+    }
+
     @RepeatedTest(1)
-    void testCANMotorRotationInAutonomous() throws Exception {
-        assertCorrectRotationInAutonomous("NEO", "CAN_SHAFT");
-    }
-
-    @Test
-    void testPWMMotorRotationInAutonomous() throws Exception {
-        assertCorrectRotationInAutonomous("MiniCIM", "PWM_SHAFT");
-    }
-
-    void assertCorrectRotationInAutonomous(String motorModelName,
-            String shaftDefPath) throws Exception {
-        // To ensure we the flywheel doesn't spin or accelerate too fast...
-        var desiredFlywheelFreeSpeedRPS = 1.0;
-        var desiredTimeConstantSecs = 1.0;
-
-        // For this test to pass, the motor and flywheel need to be setup in the world as follows.
-        var flywheelRadiusMeters = 0.5;
-        var flywheelDensityKgPerM3 = 1000.0;
-        var motor = (DCMotor) (DCMotor.class
-                .getDeclaredMethod("get" + motorModelName, int.class)
-                .invoke(null, 1));
-        var gearing = computeGearing(motor, desiredFlywheelFreeSpeedRPS);
-        var gearMotor = motor.withReduction(gearing);
-        LOG.log(Level.INFO,
-                "For a free speed of {0} RPS when using a {1}, assuming the gearing is {2}.\n",
-                desiredFlywheelFreeSpeedRPS, motorModelName, gearing);
-        var flywheelThicknessMeters =
-                computeFlywheelThickness(gearMotor, flywheelRadiusMeters,
-                        flywheelDensityKgPerM3, desiredTimeConstantSecs);
-        LOG.log(Level.INFO,
-                "For a time constant of {0} second when using a {1} with a gearing of {2} and a flywheel with radius {3} meters and density {4} kg/m^3, assuming the flywheel thickness is {5} meters.\n",
-                desiredTimeConstantSecs, motorModelName, gearing,
-                flywheelRadiusMeters, flywheelDensityKgPerM3,
-                flywheelThicknessMeters);
-
-        // With those settings, the flywheel MOI will be:
-        var moiKgM2 = computeCylinderMoiKgM2(flywheelRadiusMeters,
-                flywheelThicknessMeters, flywheelDensityKgPerM3);
+    void testCorrectRotationInAutonomous() throws Exception {
+        models.add(new Model("NEO", "CAN_SHAFT"));
+        models.add(new Model("MiniCIM", "PWM_SHAFT"));
 
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
                 MotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
                 s.enableAutonomous();
-            }).setMaxJitterSecs(0).everyStep(s -> {
+            }).setMaxJitterSecs(0).everyStep(stateChecker((s, m) -> {
                 LOG.log(Level.DEBUG,
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
-                        s.angularVelocity(shaftDefPath).getAngle());
-            }).atSec(5 * simStepSizeSecs, s -> {
-                m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity(shaftDefPath).getAngle());
-            }).atSec(1.0, s -> {
-                m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity(shaftDefPath).getAngle());
-                assertCorrectTimeConstant(gearMotor, moiKgM2, 0.5);
-                assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity(shaftDefPath).getAngle(),
-                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
-            }).atSec(2.0 + 5 * simStepSizeSecs, s -> {
-                m1 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity(shaftDefPath).getAngle());
-            }).atSec(3.0, s -> {
-                m2 = new Measurement(s.getSimTimeSec(),
-                        s.angularVelocity(shaftDefPath).getAngle());
-                assertCorrectTimeConstant(gearMotor, moiKgM2, 0.0);
-                assertShaftCorrectAtSecs(gearMotor, moiKgM2,
-                        s.angularVelocity(shaftDefPath).getAngle(),
-                        s.rotation(shaftDefPath).getZ(), s.getRobotTimeSec());
-            }).run();
+                        s.angularVelocity(m.shaftDefPath).getAngle());
+            })).atSec(5 * simStepSizeSecs, stateChecker((s, m) -> {
+                m.m1 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity(m.shaftDefPath).getAngle());
+            })).atSec(1.0, stateChecker((s, m) -> {
+                m.m2 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity(m.shaftDefPath).getAngle());
+                m.assertCorrectTimeConstant(0.5);
+                m.assertShaftCorrectAtSecs(
+                        s.angularVelocity(m.shaftDefPath).getAngle(),
+                        s.rotation(m.shaftDefPath).getZ(), s.getRobotTimeSec());
+            })).atSec(2.0 + 5 * simStepSizeSecs, stateChecker((s, m) -> {
+                m.m1 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity(m.shaftDefPath).getAngle());
+            })).atSec(3.0, stateChecker((s, m) -> {
+                m.m2 = new Measurement(s.getSimTimeSec(),
+                        s.angularVelocity(m.shaftDefPath).getAngle());
+                m.assertCorrectTimeConstant(0.0);
+                m.assertShaftCorrectAtSecs(
+                        s.angularVelocity(m.shaftDefPath).getAngle(),
+                        s.rotation(m.shaftDefPath).getZ(), s.getRobotTimeSec());
+            })).run();
         }
-    }
-
-    private void assertCorrectTimeConstant(DCMotor gearMotor, double moiKgM2,
-            double throttle) {
-        var targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
-                * gearMotor.KvRadPerSecPerVolt;
-        // Use the 2 measurements to measure the time constant.
-        // w(t) = w_f + (w_0 - w_f) * exp(-t/t_c)
-        // Let w'(t) = w(t) - w_f = (w_0 - w_f) * exp(-t/t_c)
-        // w'(t1) = (w_0 - w_f) * exp(-t1/t_c)
-        // w'(t2) = (w_0 - w_f) * exp(-t2/t_c)
-        // w'(t2)/w'(t1) = exp((t1-t2)/t_c)
-        // ln(w'(t2)/w'(t1)) = (t1-t2)/t_c
-        // t_c = (t1-t2)/ln(w'(t2)/w'(t1))
-        var actualTimeConstantSecs = (m1.simTimeSec() - m2.simTimeSec())
-                / (Math.log((m2.speedRadPerSec() - targetSpeedRadPerSec)
-                        / (m1.speedRadPerSec() - targetSpeedRadPerSec)));
-        assertEquals(computeTimeConstantSecs(gearMotor, moiKgM2),
-                actualTimeConstantSecs, 0.02, "Time constant incorrect");
     }
 }
