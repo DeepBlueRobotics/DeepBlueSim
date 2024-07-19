@@ -33,7 +33,7 @@ public class MotorControllerTest {
             System.getLogger(MotorControllerTest.class.getName());
 
     // Should be the same as the basicTimeStep in the world's WorldInfo (default to 32ms)
-    private static double simStepSizeSecs = 0.032;
+    private static final double simStepSizeSecs = 0.032;
 
     // Derivation of the math used below:
     // Let tau be the torque applied by the motor (Nm).
