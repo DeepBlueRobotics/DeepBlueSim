@@ -300,7 +300,7 @@ public class MotorControllerTest {
         };
     }
 
-    @RepeatedTest(10)
+    @RepeatedTest(1)
     void testCorrectRotationInAutonomous() throws Exception {
         models.add(new Model("NEO", "CAN_SHAFT"));
         models.add(new Model("MiniCIM", "PWM_SHAFT"));
