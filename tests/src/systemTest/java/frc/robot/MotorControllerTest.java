@@ -310,8 +310,9 @@ public class MotorControllerTest {
     // @RepeatedTest(value = 20, failureThreshold = 1)
     @RepeatedTest(1)
     void testCorrectRotationInAutonomous() throws Exception {
-        models.add(new Model("NEO", "CAN_SHAFT", 94.6, 0.392));
-        models.add(new Model("MiniCIM", "PWM_SHAFT", 97.3333, 0.215));
+        models.add(new Model("NeoVortex", "VORTEX_SHAFT", 113.067, 0.648614));
+        models.add(new Model("NEO", "NEO_SHAFT", 94.6, 0.392));
+        models.add(new Model("MiniCIM", "MINICIM_SHAFT", 97.3333, 0.215));
 
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",

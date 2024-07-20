@@ -24,7 +24,7 @@ RectangleArena {
 DEF ROBOT Robot {
   translation 0 0 0.06
   children [
-    DEF PWM_BASE Solid {
+    DEF MINICIM_BASE Solid {
       children [
         PoweredHingeJoint {
           devices [
@@ -37,7 +37,7 @@ DEF ROBOT Robot {
               gearing 97.3333
             }
           ]
-          endPoint DEF PWM_SHAFT Solid {
+          endPoint DEF MINICIM_SHAFT Solid {
             children [
               Shape {
                 appearance PBRAppearance {
@@ -60,7 +60,7 @@ DEF ROBOT Robot {
         }
       ]
     }
-    DEF CAN_BASE Solid {
+    DEF NEO_BASE Solid {
       translation 0 2 0
       children [
         PoweredHingeJoint {
@@ -74,7 +74,7 @@ DEF ROBOT Robot {
               gearing 94.6
             }
           ]
-          endPoint DEF CAN_SHAFT Solid {
+          endPoint DEF NEO_SHAFT Solid {
             children [
               Shape {
                 appearance PBRAppearance {
@@ -97,6 +97,46 @@ DEF ROBOT Robot {
         }
       ]
       name "solid(1)"
+    }
+    DEF VORTEX_BASE Solid {
+      translation 2 2 0
+      children [
+        PoweredHingeJoint {
+          devices [
+            REVBuiltinEncoder {
+            }
+            DBSBrake {
+            }
+            PreconfiguredDBSRotationalMotor {
+              motorType "NEOVortex"
+              controllerType "Spark Flex"
+              port 3
+              gearing 113.067
+            }
+          ]
+          endPoint DEF VORTEX_SHAFT Solid {
+            children [
+              Shape {
+                appearance PBRAppearance {
+                }
+                geometry Box {
+                  size 1 1 0.648614
+                }
+              }
+            ]
+            boundingObject Cylinder {
+              height 0.648614
+              radius 0.5
+            }
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            axis 0 0 1
+          }
+        }
+      ]
+      name "solid(2)"
     }
   ]
   controller "DeepBlueSim"

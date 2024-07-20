@@ -165,10 +165,9 @@ public final class WebotsSupervisor {
                                 name, defPath);
                         var node = robot.getFromDef(defPath);
                         if (node == null) {
-                            LOG.log(Level.ERROR,
-                                    "Could not find node for the following DEF path: {0}",
-                                    defPath);
-                            return;
+                            throw new RuntimeException(
+                                    "Could not find node for the following DEF path: %s"
+                                            .formatted(defPath));
                         }
                         switch (name) {
                             case NTConstants.POSITION_TOPIC_NAME:

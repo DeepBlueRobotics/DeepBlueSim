@@ -86,6 +86,13 @@
                 freeCurrentAmps: 1.4,
                 freeSpeedRPM: 11000
             },
+            NEOVortex: {
+                nominalVoltageVolts: 12,
+                stallTorqueNewtonMeters: 3.60,
+                stallCurrentAmps: 211,
+                freeCurrentAmps: 3.6,
+                freeSpeedRPM: 6784
+            },
             RomiBuiltin: {
                 nominalVoltageVolts: 4.5,
                 stallTorqueNewtonMeters: 0.1765,
