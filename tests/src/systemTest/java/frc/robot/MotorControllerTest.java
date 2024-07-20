@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.wpilibj.Timer;
 
 @Timeout(value = 30, unit = TimeUnit.MINUTES)
 @ResourceLock("WebotsSimulator")
@@ -91,6 +92,12 @@ public class MotorControllerTest {
     // Rearranging gives:
     // theta(t) = theta_0 + w_f*t + (w_0 - w_f) * t_c * (1-exp(-t/t_c))
 
+
+    // The robot autonomous code runs the motor at 0.5 for 2 seconds and then stops it (i.e.
+    // sets the speed to 0 and lets it stop on it's own).
+    private static double tMotorStartsSecs = 0.0;
+    private static double tMotorStopsSecs = timeOfNextStepSecs(2.0);
+
     private static double computeSpeedRadPerSec(DCMotor gearMotor,
             double moiKgM2, double throttle, double initialSpeedRadPerSec,
             double tSecs) {
@@ -104,8 +111,8 @@ public class MotorControllerTest {
     }
 
     private static double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
-                    double throttle, double initialSpeedRadPerSec,
-            double initialAngleRad, double tSecs) {
+            double throttle, double initialSpeedRadPerSec,
+                    double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
         double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
                 * gearMotor.KvRadPerSecPerVolt;
@@ -124,7 +131,7 @@ public class MotorControllerTest {
     }
 
     private static double computeCylinderMoiKgM2(double radiusMeters,
-                    double heightMeters, double densityKgPerM3) {
+            double heightMeters, double densityKgPerM3) {
         double massKg = densityKgPerM3 * Math.PI * radiusMeters * radiusMeters
                 * heightMeters;
         return massKg * radiusMeters * radiusMeters / 2.0;
@@ -136,12 +143,13 @@ public class MotorControllerTest {
 
     private static double expectedSpeedRadPerSec(DCMotor gearMotor,
             double moiKgM2, double tSecs) {
-        // The robot autonomous code runs the motor at 0.5 for 2 seconds and then stops it (i.e.
-        // sets the speed to 0 and lets it stop on it's own).
-        double tMotorStopsSecs = timeOfNextStepSecs(2.0);
 
+        if (tSecs <= tMotorStartsSecs) {
+            return 0.0;
+        }
         if (tSecs <= tMotorStopsSecs) {
-            return computeSpeedRadPerSec(gearMotor, moiKgM2, 0.5, 0, tSecs);
+            return computeSpeedRadPerSec(gearMotor, moiKgM2, 0.5, 0,
+                    tSecs - tMotorStartsSecs);
         }
         return computeSpeedRadPerSec(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
@@ -150,11 +158,12 @@ public class MotorControllerTest {
 
     private static double expectedAngleRadians(DCMotor gearMotor,
             double moiKgM2, double tSecs) {
-        // The robot autonomous code runs the motor at 0.5 for 2 seconds and then stops it (i.e.
-        // sets the speed to 0 and lets it stop on it's own).
-        double tMotorStopsSecs = timeOfNextStepSecs(2.0);
+        if (tSecs <= tMotorStartsSecs) {
+            return 0.0;
+        }
         if (tSecs <= tMotorStopsSecs) {
-            return computeAngleRadians(gearMotor, moiKgM2, 0.5, 0, 0, tSecs);
+            return computeAngleRadians(gearMotor, moiKgM2, 0.5, 0, 0,
+                    tSecs - tMotorStartsSecs);
         }
         return computeAngleRadians(gearMotor, moiKgM2, 0,
                 expectedSpeedRadPerSec(gearMotor, moiKgM2, tMotorStopsSecs),
@@ -168,8 +177,8 @@ public class MotorControllerTest {
     }
 
     private static double computeFlywheelThickness(DCMotor gearMotor,
-                    double flywheelRadiusMeters, double flywheelDensityKgPerM3,
-            double desiredTimeConstantSecs) {
+            double flywheelRadiusMeters, double flywheelDensityKgPerM3,
+                    double desiredTimeConstantSecs) {
         // for a time constant of t_c seconds:
         // t_c = R*J*k_v/k_T
         // J = t_c*k_T/(k_v*R)
@@ -193,7 +202,8 @@ public class MotorControllerTest {
         double moiKgM2;
         Measurement m1, m2;
 
-        Model(String motorModelName, String shaftDefPath) throws Exception {
+        Model(String motorModelName, String shaftDefPath, double gearing,
+                double flywheelThicknessMeters) throws Exception {
             this.motorModelName = motorModelName;
             this.shaftDefPath = shaftDefPath;
             // To ensure we the flywheel doesn't spin or accelerate too fast...
@@ -207,20 +217,20 @@ public class MotorControllerTest {
             var motor = (DCMotor) (DCMotor.class
                     .getDeclaredMethod("get" + motorModelName, int.class)
                     .invoke(null, 1));
-            var gearing = computeGearing(motor, desiredFlywheelFreeSpeedRPS);
+            assertEquals(computeGearing(motor, desiredFlywheelFreeSpeedRPS),
+                    gearing, 0.01 * gearing,
+                    "Incorrect gearing for a free speed of %g RPS when using a %s"
+                            .formatted(desiredFlywheelFreeSpeedRPS,
+                                    motorModelName));
             gearMotor = motor.withReduction(gearing);
-            LOG.log(Level.INFO,
-                    "For a free speed of {0} RPS when using a {1}, assuming the gearing is {2}.\n",
-                    desiredFlywheelFreeSpeedRPS, motorModelName, gearing);
-            var flywheelThicknessMeters =
+            assertEquals(
                     computeFlywheelThickness(gearMotor, flywheelRadiusMeters,
-                            flywheelDensityKgPerM3, desiredTimeConstantSecs);
-            LOG.log(Level.INFO,
-                    "For a time constant of {0} second when using a {1} with a gearing of {2} and a flywheel with radius {3} meters and density {4} kg/m^3, assuming the flywheel thickness is {5} meters.\n",
-                    desiredTimeConstantSecs, motorModelName, gearing,
-                    flywheelRadiusMeters, flywheelDensityKgPerM3,
-                    flywheelThicknessMeters);
-
+                            flywheelDensityKgPerM3, desiredTimeConstantSecs),
+                    flywheelThicknessMeters, 0.01 * flywheelThicknessMeters,
+                    "Incorrect flywheel thickness for a time constant of %g second when using a %s with a gearing of %g and a flywheel with radius %g meters and density %g kg/m^3"
+                            .formatted(desiredTimeConstantSecs, motorModelName,
+                                    gearing, flywheelRadiusMeters,
+                                    flywheelDensityKgPerM3));
             // With those settings, the flywheel MOI will be:
             moiKgM2 = computeCylinderMoiKgM2(flywheelRadiusMeters,
                     flywheelThicknessMeters, flywheelDensityKgPerM3);
@@ -233,9 +243,7 @@ public class MotorControllerTest {
 
         private void assertShaftCorrectAtSecs(double actualSpeedRadPerSec,
                 double actualAngleRadians, double tSecs) {
-            // TODO: Make sim accurate enough that this can be less than 1*simStepSizeSecs
-            // (https://github.com/DeepBlueRobotics/DeepBlueSim/issues/101)
-            double jitterSecs = 2.5 * simStepSizeSecs;
+            double jitterSecs = 0.5 * simStepSizeSecs;
             double expectedEarlierSpeedRadPerSec = expectedSpeedRadPerSec(
                     gearMotor, moiKgM2, tSecs - jitterSecs);
             double expectedLaterSpeedRadPerSec = expectedSpeedRadPerSec(
@@ -300,15 +308,20 @@ public class MotorControllerTest {
         };
     }
 
+    // @RepeatedTest(value = 20, failureThreshold = 1)
     @RepeatedTest(1)
     void testCorrectRotationInAutonomous() throws Exception {
-        models.add(new Model("NEO", "CAN_SHAFT"));
-        models.add(new Model("MiniCIM", "PWM_SHAFT"));
+        models.add(new Model("NEO", "CAN_SHAFT", 94.6, 0.392));
+        models.add(new Model("MiniCIM", "PWM_SHAFT", 97.3333, 0.215));
 
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
                 MotorControllerRobot::new)) {
             manager.atSec(0.0, s -> {
+                // Ensure that the timer didn't step beyond the "microstep" needed to ensure that
+                // the onInited callbacks get run.
+                assertEquals(2e-6, Timer.getFPGATimestamp(),
+                        "Timer.getFPGATimestamp() should be 2e-6");
                 s.enableAutonomous();
             }).setMaxJitterSecs(0).everyStep(stateChecker((s, m) -> {
                 LOG.log(Level.DEBUG,
