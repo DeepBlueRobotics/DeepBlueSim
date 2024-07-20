@@ -828,9 +828,9 @@ public class WebotsSimulator implements AutoCloseable {
             }
 
             // Schedule the onInited callbacks to be run once. Note: the offset is -period so they
-            // are run before
-            // other WPILib periodic methods the 1e-6 is so that it isn't scheduled for a timstamp
-            // of exactly 0.0 because that is a special value that causes startCompetition() to end.
+            // are run before other WPILib periodic methods the 1e-6 is so that it isn't scheduled
+            // for a timestamp of exactly 0.0 because that is a special value that causes
+            // startCompetition() to end.
             robot.addPeriodic(this::runRobotInitedCallbacksOnce,
                     robot.getPeriod(), -robot.getPeriod() + 1e-6);
 

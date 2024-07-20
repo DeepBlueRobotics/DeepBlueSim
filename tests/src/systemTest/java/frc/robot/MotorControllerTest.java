@@ -112,7 +112,7 @@ public class MotorControllerTest {
 
     private static double computeAngleRadians(DCMotor gearMotor, double moiKgM2,
             double throttle, double initialSpeedRadPerSec,
-                    double initialAngleRad, double tSecs) {
+            double initialAngleRad, double tSecs) {
         double timeConstantSecs = computeTimeConstantSecs(gearMotor, moiKgM2);
         double targetSpeedRadPerSec = throttle * gearMotor.nominalVoltageVolts
                 * gearMotor.KvRadPerSecPerVolt;
@@ -160,8 +160,7 @@ public class MotorControllerTest {
             double moiKgM2, double tSecs) {
         if (tSecs <= tMotorStartsSecs) {
             return 0.0;
-        }
-        if (tSecs <= tMotorStopsSecs) {
+        } else if (tSecs <= tMotorStopsSecs) {
             return computeAngleRadians(gearMotor, moiKgM2, 0.5, 0, 0,
                     tSecs - tMotorStartsSecs);
         }
@@ -178,7 +177,7 @@ public class MotorControllerTest {
 
     private static double computeFlywheelThickness(DCMotor gearMotor,
             double flywheelRadiusMeters, double flywheelDensityKgPerM3,
-                    double desiredTimeConstantSecs) {
+            double desiredTimeConstantSecs) {
         // for a time constant of t_c seconds:
         // t_c = R*J*k_v/k_T
         // J = t_c*k_T/(k_v*R)
