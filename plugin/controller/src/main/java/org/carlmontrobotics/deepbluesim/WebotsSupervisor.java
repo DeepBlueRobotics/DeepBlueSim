@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 import org.carlmontrobotics.wpiws.connection.ConnectionProcessor;
@@ -70,8 +69,6 @@ public final class WebotsSupervisor {
     private static volatile int ntTransientLogLevel = LogMessage.kInfo;
 
     private static volatile boolean isWorldLoading = false;
-
-    private static Supplier<WebSocketClient> wsClientSupplier = null;
 
     final static PubSubOption[] pubSubOptions =
             new PubSubOption[] {PubSubOption.sendAll(true), // Send every update
