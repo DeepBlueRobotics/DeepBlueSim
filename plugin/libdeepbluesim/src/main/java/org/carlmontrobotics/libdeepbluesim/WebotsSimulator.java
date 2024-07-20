@@ -86,8 +86,7 @@ public class WebotsSimulator implements AutoCloseable {
     private final StringPublisher simModePublisher;
 
     // We'll use this to run all NT listener callbacks sequentially on a single separate thread.
-    private final ExecutorService listenerCallbackExecutor =
-            Executors.newSingleThreadExecutor();
+    private ExecutorService listenerCallbackExecutor;
 
     // Use these to control NetworkTables logging.
     // - ntLoglevel = 0 means no NT logging
@@ -140,6 +139,13 @@ public class WebotsSimulator implements AutoCloseable {
         } catch (InterruptedException | IOException ex) {
             LOG.log(Level.ERROR, "Unable to acquire file lock", ex);
         }
+    }
+
+    private void runOnExecutorThread(Runnable r) {
+        if (listenerCallbackExecutor.isShutdown()) {
+            return;
+        }
+        listenerCallbackExecutor.execute(r);
     }
 
     private static synchronized void acquireFileLock()
@@ -326,7 +332,7 @@ public class WebotsSimulator implements AutoCloseable {
         inst.addListener(statusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final var eventValue = event.valueData.value.getString();
-                    listenerCallbackExecutor.execute(() -> {
+                    runOnExecutorThread(() -> {
                         LOG.log(Level.DEBUG, "In listener, status = {0}",
                                         eventValue);
                         if (!eventValue.equals(
@@ -433,7 +439,7 @@ public class WebotsSimulator implements AutoCloseable {
                     LOG.log(Level.DEBUG,
                             "In simTimeSec value changed callback");
                     final var eventValue = value.getDouble();
-                    listenerCallbackExecutor.execute(() -> {
+                    runOnExecutorThread(() -> {
                         LOG.log(Level.DEBUG, "Got simTimeSec value of {0}",
                                 eventValue);
                         if (eventValue < 0.0) {
@@ -491,7 +497,7 @@ public class WebotsSimulator implements AutoCloseable {
 
         waitForHALSimWSConnection();
 
-        listenerCallbackExecutor.execute(() -> {
+        runOnExecutorThread(() -> {
             simTimeSec = 0.0;
             sendRobotTime();
         });
@@ -506,14 +512,12 @@ public class WebotsSimulator implements AutoCloseable {
         inst.addListener(statusSubscriber,
                 EnumSet.of(Kind.kValueRemote, Kind.kImmediate), (event) -> {
                     final var eventValue = event.valueData.value.getString();
-                    listenerCallbackExecutor.execute(() -> {
-                        LOG.log(Level.DEBUG, "In listener, status = {0}",
-                                eventValue);
-                        if (!eventValue.equals(
-                                NTConstants.STATUS_HALSIMWS_CONNECTED_VALUE))
-                            return;
-                        halSimWSConnected.complete(null);
-                    });
+                    LOG.log(Level.DEBUG, "In listener, status = {0}",
+                            eventValue);
+                    if (!eventValue.equals(
+                            NTConstants.STATUS_HALSIMWS_CONNECTED_VALUE))
+                        return;
+                    halSimWSConnected.complete(null);
                 });
 
         requestPublisher.set(NTConstants.REQUEST_HALSIMWS_CONNECTION_VERB);
@@ -790,6 +794,8 @@ public class WebotsSimulator implements AutoCloseable {
     public void run() throws InstantiationException, IllegalAccessException,
             InvocationTargetException, NoSuchMethodException,
             SecurityException, TimeoutException {
+        listenerCallbackExecutor = Executors.newSingleThreadExecutor();
+
         endCompetitionCalled = false;
         // HAL must be initialized or SmartDashboard might not work.
         HAL.initialize(500, 0);
@@ -821,13 +827,23 @@ public class WebotsSimulator implements AutoCloseable {
                 });
             }
 
-            // Run the onInited callbacks once.
-            // Note: the offset is -period so they are run before other WPILib periodic methods
+            // Schedule the onInited callbacks to be run once. Note: the offset is -period so they
+            // are run before other WPILib periodic methods the 1e-6 is so that it isn't scheduled
+            // for a timestamp of exactly 0.0 because that is a special value that causes
+            // startCompetition() to end.
             robot.addPeriodic(this::runRobotInitedCallbacksOnce,
-                    robot.getPeriod(), -robot.getPeriod());
+                    robot.getPeriod(), -robot.getPeriod() + 1e-6);
+
+            // Step forward far enough that the onInited callbacks are run. This needs to happen on
+            // a separate thread because they won't be run until startCompetition() has been called
+            // and startCompetition() will block until timing advances.
+            runOnExecutorThread(() -> {
+                LOG.log(Level.INFO, "Calling stepTiming()");
+                SimHooks.stepTiming(2e-6);
+                LOG.log(Level.INFO, "Called stepTiming()");
+            });
 
             this.endNotifier = endNotifier;
-            SimHooks.resumeTiming();
             isRobotCodeRunning = true;
             try {
                 robot.startCompetition();
@@ -835,6 +851,7 @@ public class WebotsSimulator implements AutoCloseable {
                 // Always call endCompetition() so that WPILib's notifier is stopped. If it isn't
                 // future tests will hang on calls to stepTiming().
                 endCompetition(robot);
+                blockWhileShuttingDownExecutor();
             }
             if (runExitThrowable != null) {
                 throw new RuntimeException(runExitThrowable);
@@ -850,6 +867,27 @@ public class WebotsSimulator implements AutoCloseable {
         }
     }
 
+    private void blockWhileShuttingDownExecutor() {
+        if (listenerCallbackExecutor.isShutdown()) {
+            return;
+        }
+        try {
+            listenerCallbackExecutor.shutdown();
+            if (!listenerCallbackExecutor.awaitTermination(10,
+                    TimeUnit.SECONDS)) {
+                throw new TimeoutException(
+                        "Timed out awaiting termination of callback executor");
+            }
+            // This needs to be done after shutting down the listenerCallbackExecutor
+            // because some callbacks create Watchers and Watcher is not thread-safe.
+            Watcher.closeAll();
+        } catch (SecurityException | InterruptedException
+                | TimeoutException ex) {
+            throw new RuntimeException("Could not shutdown callback executor.",
+                    ex);
+        }
+    }
+
     private Notifier endNotifier = null;
 
     /**
@@ -857,21 +895,15 @@ public class WebotsSimulator implements AutoCloseable {
      */
     public void close() {
         LOG.log(Level.DEBUG, "Closing WebotsSimulator");
+        blockWhileShuttingDownExecutor();
         requestPublisher.close();
         statusSubscriber.close();
-        Watcher.closeAll();
         inst.close();
         inst.stopServer();
         pauser.close();
         if (timeSyncDevice != null) {
             timeSyncDevice.close();
         }
-        try {
-            listenerCallbackExecutor.shutdown();
-        } catch (SecurityException ex) {
-            LOG.log(Level.ERROR, "Could not shutdown callback executor.", ex);
-        }
-
         LOG.log(Level.DEBUG, "Done closing WebotsSimulator");
     }
 }
