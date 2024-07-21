@@ -5,7 +5,7 @@
 # A Motor with the properties necessary to interface with DeepBlueSim
 
 PROTO DBSRotationalMotorBase [
-    unconnectedField SFString{"Spark Max", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
+    unconnectedField SFString{"Spark Max", "Spark Flex", "Talon SRX", "Victor SPX", "PWM"} controllerType "Spark Max"
     unconnectedField SFInt32 port 0
     field SFFloat gearing 1
     unconnectedField SFBool inverted FALSE

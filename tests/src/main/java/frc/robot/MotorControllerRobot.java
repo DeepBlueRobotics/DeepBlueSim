@@ -17,14 +17,16 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMMotorController;
 import org.carlmontrobotics.lib199.MotorControllerFactory;
 import org.carlmontrobotics.lib199.MotorConfig;
 
+import com.revrobotics.CANSparkFlex;
 import com.revrobotics.CANSparkMax;
 
 public class MotorControllerRobot extends TimedRobot {
 
     private final Joystick m_stick = new Joystick(0);
     private final Timer m_timer = new Timer();
-    private PWMMotorController m_motorController;
-    private CANSparkMax m_canMotorController;
+    private PWMMotorController m_pwmMotorController;
+    private CANSparkMax m_sparkMaxMotorController;
+    private CANSparkFlex m_sparkFlexMotorController;
 
     /**
      * This function is run when the robot is first started up and should be used for any
@@ -32,9 +34,11 @@ public class MotorControllerRobot extends TimedRobot {
      */
     @Override
     public void robotInit() {
-        m_motorController = new PWMVictorSPX(1);
-        m_canMotorController =
+        m_pwmMotorController = new PWMVictorSPX(1);
+        m_sparkMaxMotorController =
                 MotorControllerFactory.createSparkMax(2, MotorConfig.NEO);
+        m_sparkFlexMotorController = MotorControllerFactory.createSparkFlex(3,
+                MotorConfig.NEO_VORTEX);
     }
 
     @Override
@@ -44,8 +48,9 @@ public class MotorControllerRobot extends TimedRobot {
 
     public void close() {
         System.out.println("Closing motors in Robot.close()");
-        m_motorController.close();
-        m_canMotorController.close();
+        m_pwmMotorController.close();
+        m_sparkMaxMotorController.close();
+        m_sparkFlexMotorController.close();
     }
 
     /**
@@ -64,11 +69,13 @@ public class MotorControllerRobot extends TimedRobot {
     public void autonomousPeriodic() {
         // Run the motor at 50% for 2 seconds.
         if (m_timer.get() < 2.0) {
-            m_motorController.set(0.5);
-            m_canMotorController.set(0.5);
+            m_pwmMotorController.set(0.5);
+            m_sparkMaxMotorController.set(0.5);
+            m_sparkFlexMotorController.set(0.5);
         } else {
-            m_motorController.stopMotor();
-            m_canMotorController.stopMotor();
+            m_pwmMotorController.stopMotor();
+            m_sparkMaxMotorController.stopMotor();
+            m_sparkFlexMotorController.stopMotor();
         }
     }
 
@@ -77,8 +84,9 @@ public class MotorControllerRobot extends TimedRobot {
      */
     @Override
     public void teleopPeriodic() {
-        m_motorController.set(m_stick.getX());
-        m_canMotorController.set(m_stick.getX());
+        m_pwmMotorController.set(m_stick.getX());
+        m_sparkMaxMotorController.set(m_stick.getX());
+        m_sparkFlexMotorController.set(m_stick.getX());
     }
 
 }
