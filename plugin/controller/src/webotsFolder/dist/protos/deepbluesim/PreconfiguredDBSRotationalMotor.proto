@@ -19,8 +19,8 @@ PROTO PreconfiguredDBSRotationalMotor [
         import {assert} from 'wbutility.js';
         assert(!fields.motorType.value.startsWith("NEO") || ["Spark Max", "Spark Flex", "PWM"].includes(fields.controllerType.value),
             `PreconfiguredDCDBSMotor: Brushless motor "${fields.motorType.value}" cannot be driven by brushed motor controller "${fields.controllerType.value}"!`);
-        assert(fields.controllerType.value !== "NEO Vortex" || ["NEOVortex"].includes(fields.motorType.value),
-            `PreconfiguredDCDBSMotor: NEO Vortex controller can not drive a "${fields.motorType.value}"!`);
+        assert(fields.controllerType.value !== "Spark Flex" || ["NEOVortex"].includes(fields.motorType.value),
+            `PreconfiguredDCDBSMotor: Spark Flex controller can not drive a "${fields.motorType.value}"!`);
         let motor = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsmotor.js`));
     >%
     DBSRotationalMotorBase {
