@@ -16,25 +16,33 @@ EXTERNPROTO "SparkMaxAnalogSensor.proto"
 
 EXTERNPROTO "DBSBrake.proto"
 
-PROTO PoweredHingeJoint [
+PROTO PoweredHinge2Joint [
     field MFNode{
         DBSRotationalMotorBase{}, PreconfiguredDBSRotationalMotor{}
         CANCoder{}, DBSQuadratureEncoder{}, REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{},
         DBSBrake{}
     } devices [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} DBSBrake{}]
+    field MFNode{
+        DBSRotationalMotorBase{}, PreconfiguredDBSRotationalMotor{}
+        CANCoder{}, DBSQuadratureEncoder{}, REVBuiltinEncoder{}, SparkMaxAbsoluteEncoder{}, SparkMaxAlternateEncoder{}, SparkMaxAnalogSensor{},
+        DBSBrake{}
+    } devices2 [PreconfiguredDBSRotationalMotor{} REVBuiltinEncoder{} DBSBrake{}]
     field SFNode{Solid{}} endPoint Solid{}
     field SFNode{HingeJointParameters{}} jointParameters HingeJointParameters{}
+    field SFNode{JointParameters{}} jointParameters2 JointParameters{}
 ]
 {
     %<
         import {assert} from 'wbutility.js';
         let dbsutility = eval(wbfile.readTextFile(`${context.project_path}protos/deepbluesim/dbsutility.js`));
-        dbsutility.assertValidPoweredJointDevices(fields.devices.value, "PoweredHingeJoint.devices", assert);
-
+        dbsutility.assertValidPoweredJointDevices(fields.devices.value, "PoweredHinge2Joint.devices", assert);
+        dbsutility.assertValidPoweredJointDevices(fields.devices2.value, "PoweredHinge2Joint.devices2", assert);
     >%
-    HingeJoint {
+    Hinge2Joint {
         device IS devices
+        device2 IS devices2
         endPoint IS endPoint
         jointParameters IS jointParameters
+        jointParameters2 IS jointParameters2
     }
 }

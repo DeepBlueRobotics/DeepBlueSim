@@ -18,6 +18,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -240,8 +241,14 @@ public class MotorControllerTest {
                     shaftDefPath);
         }
 
-        private void assertShaftCorrectAtSecs(double actualSpeedRadPerSec,
-                double actualAngleRadians, double tSecs) {
+        protected double getActualShaftRotation(SimulationState s) {
+            return s.rotation(shaftDefPath).getZ();
+        }
+
+        private void assertShaftCorrectAtSecs(SimulationState s, double tSecs) {
+            double actualSpeedRadPerSec =
+                    s.angularVelocity(shaftDefPath).getAngle();
+            double actualAngleRadians = getActualShaftRotation(s);
             double jitterSecs = 0.5 * simStepSizeSecs;
             double expectedEarlierSpeedRadPerSec = expectedSpeedRadPerSec(
                     gearMotor, moiKgM2, tSecs - jitterSecs);
@@ -295,6 +302,21 @@ public class MotorControllerTest {
         }
     }
 
+    private static class Hinge2Model extends Model {
+
+        Hinge2Model(String motorModelName, String shaftDefPath, double gearing,
+                double flywheelThicknessMeters) throws Exception {
+            super(motorModelName, shaftDefPath, gearing,
+                    flywheelThicknessMeters);
+        }
+
+        @Override
+        protected double getActualShaftRotation(SimulationState s) {
+            return s.rotation(shaftDefPath)
+                    .rotateBy(new Rotation3d(0, -Math.PI / 2, 0)).getZ();
+        }
+    }
+
     private ArrayList<Model> models = new ArrayList<>();
 
     private Consumer<SimulationState> stateChecker(
@@ -313,6 +335,8 @@ public class MotorControllerTest {
         models.add(new Model("NeoVortex", "VORTEX_SHAFT", 113.067, 0.648614));
         models.add(new Model("NEO", "NEO_SHAFT", 94.6, 0.392));
         models.add(new Model("MiniCIM", "MINICIM_SHAFT", 97.3333, 0.215));
+        models.add(new Hinge2Model("MiniCIM", "HINGE2JOINT_SHAFT", 97.3333,
+                0.215));
 
         try (var manager = new WebotsSimulator(
                 "../plugin/controller/src/webotsFolder/dist/worlds/MotorController.wbt",
@@ -335,9 +359,7 @@ public class MotorControllerTest {
                 m.m2 = new Measurement(s.getSimTimeSec(),
                         s.angularVelocity(m.shaftDefPath).getAngle());
                 m.assertCorrectTimeConstant(0.5);
-                m.assertShaftCorrectAtSecs(
-                        s.angularVelocity(m.shaftDefPath).getAngle(),
-                        s.rotation(m.shaftDefPath).getZ(), s.getRobotTimeSec());
+                m.assertShaftCorrectAtSecs(s, s.getRobotTimeSec());
             })).atSec(2.0 + 5 * simStepSizeSecs, stateChecker((s, m) -> {
                 m.m1 = new Measurement(s.getSimTimeSec(),
                         s.angularVelocity(m.shaftDefPath).getAngle());
@@ -345,9 +367,7 @@ public class MotorControllerTest {
                 m.m2 = new Measurement(s.getSimTimeSec(),
                         s.angularVelocity(m.shaftDefPath).getAngle());
                 m.assertCorrectTimeConstant(0.0);
-                m.assertShaftCorrectAtSecs(
-                        s.angularVelocity(m.shaftDefPath).getAngle(),
-                        s.rotation(m.shaftDefPath).getZ(), s.getRobotTimeSec());
+                m.assertShaftCorrectAtSecs(s, s.getRobotTimeSec());
             })).run();
         }
     }
