@@ -1,4 +1,4 @@
-#VRML_SIM R2023b utf8
+#VRML_SIM R2024a utf8
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
@@ -63,6 +63,7 @@ DEF ROBOT Robot {
     }
     DEF HINGE2JOINT Solid {
       translation 0 -2 0
+      rotation 0 1 0 0
       children [
         DEF HINGE2JOINT_BASE Pose {
           children [
@@ -98,16 +99,20 @@ DEF ROBOT Robot {
           ]
           endPoint DEF HINGE2JOINT_SHAFT Solid {
             translation 0 0 2
-            rotation 0 1 0 1.5708
             children [
-              Shape {
-                appearance PBRAppearance {
-                }
-                geometry DEF HINGE2JOINT_SHAFT_GEOM Cylinder {
-                  height 0.215
-                  radius 0.5
-                  subdivision 8
-                }
+              DEF HINGE2JOINT_SHAFT_GEOM Pose {
+                rotation 0 1 0 1.5701
+                children [
+                  Shape {
+                    appearance PBRAppearance {
+                    }
+                    geometry Cylinder {
+                      height 0.215
+                      radius 0.5
+                      subdivision 8
+                    }
+                  }
+                ]
               }
             ]
             boundingObject USE HINGE2JOINT_SHAFT_GEOM
@@ -115,7 +120,7 @@ DEF ROBOT Robot {
             }
           }
           jointParameters HingeJointParameters {
-            axis 0 0 1
+            axis 0 1 0
             anchor 0 0 2
           }
           jointParameters2 JointParameters {

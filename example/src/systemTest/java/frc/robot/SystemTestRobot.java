@@ -28,7 +28,7 @@ public class SystemTestRobot {
                         0.1, "Robot close to target velocity");
                 assertEquals(0.0,
                         Units.radiansToDegrees(
-                                s.angularVelocity("ROBOT").getAngle()),
+                                s.angularVelocity("ROBOT").norm()),
                         1, "Robot close to target angular velocity");
             }).atSec(3.0, s -> {
                 assertEquals(0.0,
@@ -45,7 +45,7 @@ public class SystemTestRobot {
                         0.05, "Robot close to target velocity");
                 assertEquals(0.0,
                         Units.radiansToDegrees(
-                                s.angularVelocity("ROBOT").getAngle()),
+                                s.angularVelocity("ROBOT").norm()),
                         1, "Robot close to target angular velocity");
             }).run();
         }
@@ -78,10 +78,10 @@ public class SystemTestRobot {
                                 .getDistance(new Translation3d(0, 0, 0)),
                         0.1, "Robot close to target velocity");
                 assertEquals(63.9, Units.radiansToDegrees(
-                                s.angularVelocity("ROBOT").getAngle()),
-                        5.0, "Robot close to target angular velocity");
+                        s.angularVelocity("ROBOT").norm()), 5.0,
+                        "Robot close to target angular velocity");
                 assertEquals(0.0,
-                        new Translation3d(s.angularVelocity("ROBOT").getAxis())
+                        new Translation3d(s.angularVelocity("ROBOT").unit())
                                 .getDistance(new Translation3d(0, 0, 1)),
                         0.1, "Robot close to target angular velocity axis");
             }).atSec(1.5, s -> {
@@ -96,7 +96,7 @@ public class SystemTestRobot {
                         0.1, "Robot close to target velocity");
                 assertEquals(0.0,
                         Units.radiansToDegrees(
-                                s.angularVelocity("ROBOT").getAngle()),
+                                s.angularVelocity("ROBOT").norm()),
                         1, "Robot close to target angular velocity");
             }).run();
         }
