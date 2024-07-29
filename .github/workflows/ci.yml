@@ -80,9 +80,11 @@ jobs:
 
     - name: Setup Webots
       id: setupWebots
-      uses: DeepBlueRobotics/setup-webots@v2
+      uses: DeepBlueRobotics/setup-webots@v2.1
       with:
-        webotsVersion: R2023b
+        webotsVersion: R2024a
+        webotsRepository: DeepBlueRobotics/webots
+        webotsTag: R2024a_DeepBlueSim_2024_07_28
 
     - name: Checkout source
       uses: actions/checkout@v4
