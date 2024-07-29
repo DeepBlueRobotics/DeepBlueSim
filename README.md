@@ -22,7 +22,7 @@ advantage of the WPILib's WebSockets server desktop simulation extension.
 
 ### Installation
 
- 1. Install [this unofficial version](https://github.com/DeepBlueRobotics/webots/releases/tag/R2024a_DeepBlueSim_2024_07_29) of Webots which contains fixes needed by DeepBlueSim. The latest [official nightly build of Webots](https://github.com/cyberbotics/webots/releases) will likely work as well (because it typically contains the same fixes), but we haven't tested DeepBlueSim with it.
+ 1. Install the latest [official nightly build of Webots](https://github.com/cyberbotics/webots/releases).
  1. Add the DeepBlueSim Gradle plugin to your `build.gradle` by adding the following line
  in your `plugins` section:
  ```
