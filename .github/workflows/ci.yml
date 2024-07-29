@@ -35,6 +35,7 @@ jobs:
         webotsVersion: R2024a
         webotsRepository: DeepBlueRobotics/webots
         webotsTag: R2024a_DeepBlueSim_testMacSwigDep
+        webotsBaseUrl: 'https://github.com/DeepBlueRobotics/webots/releases/download/untagged-0d3bbfe0095f1a39e50f/'
 
     - name: Do the system test
       uses: ./.github/actions/run-system-test
