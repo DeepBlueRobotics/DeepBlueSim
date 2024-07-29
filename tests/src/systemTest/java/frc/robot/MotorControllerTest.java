@@ -276,12 +276,11 @@ public class MotorControllerTest {
                         "robotTime = {0}, simTimeSec = {1}, speedRadPerSec = {2}",
                         s.getRobotTimeSec(), s.getSimTimeSec(),
                         s.angularVelocity(m.shaftDefPath).norm());
-                    })).atSec(
+            })).atSec(
                     MotorControllerRobot.tStartMotorsSecs + 5 * simStepSizeSecs,
                     stateChecker((s, m) -> {
                         m.m1 = new Measurement(s.getSimTimeSec(),
                                 m.getActualShaftSpeedRadPerSec(s));
-        
                     }))
                     .atSec((MotorControllerRobot.tStartMotorsSecs
                             + MotorControllerRobot.tStopMotorsSecs) / 2,
@@ -290,11 +289,11 @@ public class MotorControllerTest {
                                         m.getActualShaftSpeedRadPerSec(s));
                                 m.assertCorrectTimeConstant(0.5);
                             }))
-                            .atSec(MotorControllerRobot.tStopMotorsSecs
+                    .atSec(MotorControllerRobot.tStopMotorsSecs
                             + 5 * simStepSizeSecs, stateChecker((s, m) -> {
                                 m.m1 = new Measurement(s.getSimTimeSec(),
                                         m.getActualShaftSpeedRadPerSec(s));
-                                    }))
+                            }))
                     .atSec(MotorControllerRobot.tStopMotorsSecs
                             + (MotorControllerRobot.tStopMotorsSecs
                                     - MotorControllerRobot.tStartMotorsSecs)
