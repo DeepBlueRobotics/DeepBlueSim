@@ -2,9 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ test-build ]
 
 jobs:
   build:
@@ -36,7 +34,7 @@ jobs:
       with:
         webotsVersion: R2024a
         webotsRepository: DeepBlueRobotics/webots
-        webotsTag: R2024a_DeepBlueSim_2024_07_28
+        webotsTag: R2024a_DeepBlueSim_testMacSwigDep
 
     - name: Do the system test
       uses: ./.github/actions/run-system-test
