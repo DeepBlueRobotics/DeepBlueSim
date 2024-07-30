@@ -1,4 +1,4 @@
-#VRML_SIM R2023b utf8
+#VRML_SIM R2024a utf8
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
@@ -7,12 +7,13 @@ EXTERNPROTO "../protos/deepbluesim/PoweredHingeJoint.proto"
 EXTERNPROTO "../protos/deepbluesim/PreconfiguredDBSRotationalMotor.proto"
 EXTERNPROTO "../protos/deepbluesim/DBSBrake.proto"
 EXTERNPROTO "../protos/deepbluesim/REVBuiltinEncoder.proto"
+EXTERNPROTO "../protos/deepbluesim/PoweredHinge2Joint.proto"
 
 WorldInfo {
 }
 Viewpoint {
   orientation -0.24402898166491363 0.33039742727224586 0.9117496345814823 1.5165266004776918
-  position -0.6005906535473244 -4.740227792969629 3.113219051699273
+  position -1.136298742206523 -8.781932059872242 5.731292223532602
 }
 TexturedBackground {
 }
@@ -59,6 +60,78 @@ DEF ROBOT Robot {
           }
         }
       ]
+    }
+    DEF HINGE2JOINT Solid {
+      translation 0 -2 0
+      rotation 0 1 0 0
+      children [
+        DEF HINGE2JOINT_BASE Pose {
+          children [
+            Shape {
+              appearance PBRAppearance {
+              }
+              geometry Box {
+                size 1 1 0.1
+              }
+            }
+          ]
+        }
+        PoweredHinge2Joint {
+          devices [
+            PreconfiguredDBSRotationalMotor {
+              motorType "MiniCIM"
+              controllerType "PWM"
+              port 2
+              gearing 97.3333
+            }
+            DBSBrake {
+            }
+          ]
+          devices2 [
+            PreconfiguredDBSRotationalMotor {
+              motorType "MiniCIM"
+              controllerType "PWM"
+              port 3
+              gearing 97.3333
+            }
+            DBSBrake {
+            }
+          ]
+          endPoint DEF HINGE2JOINT_SHAFT Solid {
+            translation 0 0 2
+            children [
+              DEF HINGE2JOINT_SHAFT_GEOM Pose {
+                rotation 0 1 0 1.5701
+                children [
+                  Shape {
+                    appearance PBRAppearance {
+                    }
+                    geometry Cylinder {
+                      height 0.215
+                      radius 0.5
+                      subdivision 8
+                    }
+                  }
+                ]
+              }
+            ]
+            boundingObject USE HINGE2JOINT_SHAFT_GEOM
+            physics Physics {
+            }
+          }
+          jointParameters HingeJointParameters {
+            axis 0 1 0
+            anchor 0 0 2
+          }
+          jointParameters2 JointParameters {
+            axis 1 0 0
+          }
+        }
+      ]
+      name "solid(3)"
+      boundingObject USE HINGE2JOINT_BASE
+      physics Physics {
+      }
     }
     DEF NEO_BASE Solid {
       translation 0 2 0

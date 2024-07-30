@@ -9,8 +9,11 @@ import java.util.concurrent.CompletableFuture;
 
 import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
 import edu.wpi.first.networktables.NetworkTable;
@@ -40,7 +43,8 @@ class Watcher {
     private volatile CompletableFuture<Void> velocityReady =
             new CompletableFuture<>();
     private volatile Translation3d position = null, velocity = null;
-    private volatile Rotation3d rotation = null, angularVelocity = null;
+    private volatile Vector<N3> angularVelocity = null;
+    private volatile Rotation3d rotation = null;
     private final NetworkTableInstance inst;
     private final String defPath;
     private final NetworkTable table;
@@ -106,8 +110,8 @@ class Watcher {
                                 value.valueData.value.getDoubleArray();
                         velocity = new Translation3d(velAsArray[0],
                                 velAsArray[1], velAsArray[2]);
-                        angularVelocity = new Rotation3d(velAsArray[3],
-                                velAsArray[4], velAsArray[5]);
+                        angularVelocity = VecBuilder.fill(velAsArray[3],
+                                        velAsArray[4], velAsArray[5]);
                         velocityReady.complete(null);
                         break;
                 }
@@ -204,7 +208,7 @@ class Watcher {
      * 
      * @return the node's angular velocity.
      */
-    Rotation3d getAngularVelocity() {
+    Vector<N3> getAngularVelocity() {
         if (!inst.isConnected()) {
             LOG.log(Level.DEBUG,
                     "NetworkTables is not connected, so starting server");

@@ -31,8 +31,10 @@ import org.carlmontrobotics.libdeepbluesim.internal.NTConstants;
 import edu.wpi.first.hal.HAL;
 import edu.wpi.first.hal.SimDevice;
 import edu.wpi.first.hal.SimDouble;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.LogMessage;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEvent.Kind;
@@ -673,11 +675,11 @@ public class WebotsSimulator implements AutoCloseable {
 
         /**
          * Gets the angular velocity of a specific node in the simulated world.
-         * 
+         *
          * @param defPath the DEF path to the Webots node to get the position of.
          * @return the angular velocity of the requested node.
          */
-        public Rotation3d angularVelocity(String defPath) {
+        public Vector<N3> angularVelocity(String defPath) {
             // ntTransientLogLevel = LogMessage.kDebug4;
             try {
                 var watcher = Watcher.getByDefPath(defPath);
